@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "patchkit"
+description = "Image patch extraction, pairing and reconstruction utilities for super-resolution and dataset pipelines."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [{ name = "Leonardo Marques de Souza" }]
+keywords = ["image", "patches", "super-resolution", "dataset", "torch"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dynamic = ["version"]
+dependencies = [
+    "numpy>=1.26",
+    "torch>=2.6",
+    "pillow>=10",
+]
+
+[project.optional-dependencies]
+cache = ["zstandard>=0.22"]
+dev = [
+    "pytest>=8",
+    "pytest-cov",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/LeoPR/patchkit"
+Issues = "https://github.com/LeoPR/patchkit/issues"
+
+[tool.hatch.version]
+path = "src/patchkit/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/patchkit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "slow: long-running tests (deselect with -m 'not slow')",
+    "gpu: requires CUDA",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true

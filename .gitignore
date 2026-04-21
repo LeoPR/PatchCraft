@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual envs (lives on Z:, but guard anyway)
+.venv/
+venv/
+env/
+
+# Test and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# Type checkers / linters
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+*.lnk
+
+# Env vars
+.env
+.env.local
+
+# Experiment outputs
+outputs/
+runs/
+
+# Archive (reference material, not part of the package)
+/archive/
+
+# Datasets and caches live on Z:
+data/
