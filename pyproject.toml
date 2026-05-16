@@ -41,8 +41,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/LeoPR/patchkit"
-Issues = "https://github.com/LeoPR/patchkit/issues"
+Homepage = "https://github.com/LeoPR/PatchKit"
+Issues = "https://github.com/LeoPR/PatchKit/issues"
 
 [tool.hatch.version]
 path = "src/patchkit/__init__.py"

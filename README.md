@@ -31,9 +31,9 @@ transform = transforms.Compose([
 - **Extract** patches from a single image with configurable size, stride and dilation (`extract`, `Patchify`).
 - **Reconstruct** an image from its patches — exact and weighted-overlap (`reconstruct`).
 - **Plan** the geometry ahead of time: `num_patches((H, W), ...)` for the count, `tilings((H, W), allow_overlap=...)` for every full-coverage `(patch_size, stride)` combo (no image, no allocation — just arithmetic).
-- **Pair** LR and HR patches with metadata sufficient to reconstruct either (`pair`, M4).
-- **Resize** with pluggable backends — PIL or torch (`resize`, M5).
-- **Cache** results on disk with content-addressed keys (`Cache`, M5).
+- **Pair** LR and HR patches with metadata sufficient to reconstruct either (`pair`, `PatchPair`, `PatchMeta`).
+- **Resize** with pluggable backends — PIL or torch (`resize`).
+- **Cache** results on disk with content-addressed keys, OneDrive-race retry, optional zstd (`Cache`).
 
 ## Scope (what the car does NOT do)
 
@@ -54,7 +54,7 @@ pip install patchkit[cache]     # adds zstandard for compressed Cache entries
 ### From source (development)
 
 ```
-git clone https://github.com/LeoPR/patchkit.git
+git clone https://github.com/LeoPR/PatchKit.git
 cd patchkit
 pip install -e ".[dev,cache]"
 ```

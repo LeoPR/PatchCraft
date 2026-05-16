@@ -86,4 +86,4 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) — installation, the car-vs-track metaphor,
   validation lab.
 
-[0.1.0]: https://github.com/LeoPR/patchkit/releases/tag/v0.1.0
+[0.1.0]: https://github.com/LeoPR/PatchKit/releases/tag/v0.1.0
