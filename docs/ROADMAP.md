@@ -56,11 +56,10 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 
 ## M5 — Resize + cache
 
-- [ ] `patchkit.resize(image, target_size, backend="pil"|"torch") -> Image | Tensor`.
-- [ ] Content-addressed disk cache (optional `zstandard` dep for compression).
-- [ ] Tests:
-  - Resize parity within a backend across runs.
-  - Cache hit/miss behaviour with controlled configuration changes.
+- [x] `patchkit.resize(image, target_size, backend="pil"|"torch", resample=None) -> Image | Tensor`. Output type matches input; cross-backend conversions via float32 [0,1] / uint8 hop. CUDA tensors only with backend="torch".
+- [ ] `patchkit.Cache(root, namespace, version=1)` — content-addressed disk cache with OneDrive-race retry, optional `zstandard` compression, sidecar JSON with checksum.
+- [x] Resize tests: PIL/torch backends, default resamples, cross-backend, rejection cases (38 tests, 2 GPU skip).
+- [ ] Cache tests: roundtrip, version invalidation, checksum corruption, retry simulation.
 
 ## M6 — *(removed)*
 

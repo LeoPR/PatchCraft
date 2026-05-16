@@ -87,7 +87,8 @@ PatchKit/
 │   ├── extract.py                  M2: patches via F.unfold; Patchify wrapper (ADR 0002)
 │   ├── reconstruct.py              M3: inverse via F.fold + count map
 │   ├── geometry.py                 pre-flight: num_patches, tilings, TilingSpec
-│   └── pair.py                     M4: LR↔HR pairing; PatchPair, PatchMeta
+│   ├── pair.py                     M4: LR↔HR pairing; PatchPair, PatchMeta
+│   └── resize.py                   M5a: resize with PIL or torch backends
 ├── tests/                          pytest suite (contract tests for src/)
 │   ├── test_extract.py
 │   └── _datasets.py                dev-only fixtures (MNIST, etc) — NOT public API
