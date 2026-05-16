@@ -47,9 +47,12 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 
 ## M4 — LR ↔ HR pairing
 
-- [ ] `patchkit.pair(lr_image, hr_image, lr_patch_size, scale_factor, stride) -> PairIterator`.
-- [ ] Invariant tests: same `k` yields patches covering the same image region.
-- [ ] Metadata contract documented (image id, patch index, coords).
+- [x] `patchkit.pair(lr_image, hr_image, lr_patch_size, scale_factor, stride, *, image_id=None) -> PatchPair`.
+- [x] `PatchPair` frozen dataclass: `lr_patches`, `hr_patches`, `metas`. `__len__` and `zip(...)` iteration sugar.
+- [x] `PatchMeta` frozen dataclass: `patch_index`, `row`, `col` (LR coords), `lr_patch_size`, `hr_patch_size`, `image_id`.
+- [x] Invariant test: same `k` yields LR and HR patches covering the same image region (validated via subview equality on both sides).
+- [x] Metadata contract documented in THEORY §3 / §9.3.
+- [x] Rejection tests for §9.3 negatives (shape mismatch, scale non-int, channel/dtype/device mismatch).
 
 ## M5 — Resize + cache
 

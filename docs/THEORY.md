@@ -90,7 +90,11 @@ So `num_h_lr == num_h_hr` (and analogously for width) exactly when the scale fac
 
 **Recommended defaults.** For tiling (no overlap): `stride_lr = ph_lr`, `stride_hr = ph_hr = r · ph_lr`. For 2× overlap training data: `stride_lr = ph_lr // 2`.
 
-**Design decision.** PatchKit exposes `patchkit.pair(lr_image, hr_image, lr_patch_size, scale_factor, stride)` that returns an iterator of `(lr_patch, hr_patch, meta)` tuples. `scale_factor` must be a positive `int` (non-integer scale is rejected — irrational alignment has no clean semantics). `lr_patch_size` and `stride` are `int` or `(int, int)`; HR equivalents are derived. `dilation=1` is fixed (not exposed) because dilation breaks the reconstruction story. `meta` is a small dataclass (`PatchMeta`) holding `image_id`, `patch_index`, `row`, `col`, `lr_patch_size`, `hr_patch_size` — readable, not GPU-resident (metadata stays on CPU). See §7 for why a dataclass over a dict/tensor.
+**Design decision.** `patchkit.pair(lr_image, hr_image, lr_patch_size, scale_factor, stride, *, image_id=None) -> PatchPair`. `scale_factor` must be a positive `int` (non-integer scale is rejected — irrational alignment has no clean semantics). `lr_patch_size` and `stride` are `int` or `(int, int)`; HR `patch_size` and `stride` are derived as `scale_factor * lr_*`. `dilation=1` is fixed (not exposed) because dilation breaks the reconstruction story.
+
+The return type is `PatchPair`, a frozen `@dataclass(slots=True)` with three fields: `lr_patches` (`Tensor[L, C, ph_lr, pw_lr]`), `hr_patches` (`Tensor[L, C, ph_hr, pw_hr]`), `metas` (`tuple[PatchMeta, ...]` of length `L`). This deviates from the earlier "iterator of tuples" sketch — tensors are what downstream code actually wants (a batch of LR patches and the corresponding batch of HR patches), iteration over the dataclass is one `zip(...)` away, and the materialized form is cheap because both `extract` calls are already eager. `PatchMeta` is `@dataclass(frozen=True, slots=True)` holding `patch_index`, `row`, `col` (in LR coords; multiply by `scale_factor` for HR), `lr_patch_size`, `hr_patch_size`, `image_id` — small, CPU-only, never gets pushed to GPU. See §7 for why a dataclass over a dict/tensor.
+
+LR and HR must agree on dtype and device; mismatch is rejected (caller normalizes upstream — implicit conversion would surprise people training mixed-precision pipelines).
 
 ## 4. Cache semantics
 
@@ -188,25 +192,34 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 - Promoção automática float16 → float32.
 - Output em PIL.
 
-### 9.3 `pair(lr_image, hr_image, lr_patch_size, scale_factor, stride)`
+### 9.3 `pair(lr_image, hr_image, lr_patch_size, scale_factor, stride, *, image_id=None)`
+
+Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slots__`).
 
 **Aceita:**
-- `scale_factor ∈ ℤ⁺` (inteiro positivo).
-- `lr_image.shape == (C, H_lr, W_lr)` e `hr_image.shape == (C, scale_factor * H_lr, scale_factor * W_lr)`.
-- Mesmo `C` e dtype em LR e HR.
+- `lr_image` e `hr_image` são `torch.Tensor` 3D com mesmo `C`, dtype e device.
+- `scale_factor ∈ ℤ⁺` (`int`, ≥ 1). `scale_factor=1` é válido (LR == HR; útil em testes).
+- `hr_image.shape == (C, scale_factor * H_lr, scale_factor * W_lr)`.
 - `lr_patch_size`, `stride` como `int` ou `(int, int)` positivos.
+- `image_id: str | None = None` — metadado CPU-only, propagado a todos os `PatchMeta`.
+- Patch maior que a imagem LR → ambos os lados retornam `(0, C, …)` e `metas == ()`.
 
-**Rejeita (`ValueError`):**
-- `scale_factor` não-inteiro ou ≤ 0.
-- `hr_image.shape` não bate com `scale_factor * lr_image.shape`.
-- `C_lr != C_hr`.
-- LR ou HR não 3D.
+**Rejeita (`ValueError` / `TypeError`):**
+- `lr_image` ou `hr_image` não-tensor.
+- `lr_image.ndim != 3` ou `hr_image.ndim != 3`.
+- `scale_factor` não-int (incluindo `bool`), zero, ou negativo.
+- `hr_image.shape` não bate com `scale_factor * lr_image.shape` em qualquer eixo espacial.
+- Mismatch de canais entre LR e HR.
+- Mismatch de dtype entre LR e HR.
+- Mismatch de device entre LR e HR.
+- `lr_patch_size` ou `stride` não-positivo / não-int.
 
 **Fora de escopo v0.1:**
-- `dilation` customizado (fixo em 1 — reconstrução pareada precisa funcionar).
+- `scale_factor` não-inteiro (alinhamento irracional).
 - Pareamento N:1 (várias LRs degradadas pra mesmo HR).
 - Channels-last.
-- Mismatch de dtype LR vs HR (caller normaliza antes).
+- `dilation` customizado (fixo em 1 — round-trip exige).
+- Coerção implícita LR→HR de dtype/device (caller normaliza antes).
 
 ### 9.4 `resize(image, target_size, backend="pil", resample=None)`
 
