@@ -49,6 +49,7 @@ path = "src/patchkit/__init__.py"
 packages = ["src/patchkit"]
 
 [tool.pytest.ini_options]
+cache_dir = "Z:\\caches\\pytest"
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 markers = [
@@ -68,3 +69,10 @@ ignore = []
 python_version = "3.12"
 strict = true
 warn_unused_configs = true
+
+[dependency-groups]
+dev = [
+    "pip>=26.1.1",
+    "setuptools>=82.0.1",
+    "wheel>=0.47.0",
+]
