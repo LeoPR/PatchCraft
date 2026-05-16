@@ -26,21 +26,23 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 - [x] Implementation via `torch.nn.functional.unfold`.
 - [x] Tests:
   - Shape invariants for several `(H, W, ph, pw, sh, sw, d)` combinations.
-  - [ ] Round-trip with reconstruction — deferred to M3 (needs `reconstruct`).
+  - [x] Round-trip with reconstruction — covered by M3 tests.
   - [x] `torch.cuda` path when GPU available (marker `gpu`).
   - [x] Rejection tests for §9.1 negative conditions.
   - [x] `Patchify` delegation, eager validation, repr, statelessness.
 
 ## M3 — Reconstruction
 
-- [ ] `patchkit.reconstruct(patches, image_shape, stride, dilation) -> Tensor[C, H, W]`.
-- [ ] Implementation via `torch.nn.functional.fold` plus overlap normalization.
-- [ ] Tests:
-  - Bit-exact round-trip for `stride == patch_size`.
-  - Weighted reconstruction matches expected behaviour for known overlaps.
-  - Rejects `dilation != 1` with a clear error (§9.2).
+- [x] `patchkit.reconstruct(patches, image_shape, stride, dilation) -> Tensor[C, H, W]`.
+- [x] Implementation via `torch.nn.functional.fold` plus overlap normalization.
+- [x] Tests:
+  - Bit-exact round-trip for `stride == patch_size` (basic, rectangular, multichannel, single-patch, patch_size=1).
+  - Weighted reconstruction for overlap (half overlap, max overlap stride=1, asymmetric, float32+float64).
+  - Count-map correctness (uniform image reconstructs uniformly; corners covered).
+  - Rejects `dilation != 1` (§9.2).
   - Rejects `sh > ph` or `sw > pw` (partial coverage forbidden, §9.2).
-- [ ] First `lab/` script: `imagem → extract → reconstruct → assert close` on MNIST.
+  - Rejects shape/arity/channel/L-mismatch/image-too-small with explicit messages.
+- [x] First `lab/` script: `imagem → extract → reconstruct → assert close` on MNIST.
 
 ## M4 — LR ↔ HR pairing
 
