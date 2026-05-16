@@ -100,6 +100,9 @@ PatchKit/
 │   ├── README.md                   bench rules (tracked)
 │   └── .gitignore                  ignores everything else (tracked)
 ├── docs/
+│   ├── USAGE.md                    live REPL walkthrough of every public API
+│   ├── SCOPE.md                    responsibilities matrix + parallelization analysis
+│   ├── AUXILIARY.md                tests/_datasets, lab/, Z:\ conventions (NOT part of the wheel)
 │   ├── THEORY.md                   distilled design + §9 condition contract; §0 binding scope
 │   ├── ROADMAP.md                  milestone plan
 │   └── ADR/
@@ -123,9 +126,17 @@ Datasets used by tests/lab are downloaded lazily into `Z:\caches\datasets\<name>
 
 The [`archive/`](archive/) folder contains prior implementations kept strictly as reading material to extract theory and design ideas. **Do not import code from archive at runtime.** When a pattern from the archive proves useful, reimplement cleanly in `src/patchkit/` with tests.
 
-## Roadmap
+## Where to read next
 
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the ordered list of milestones.
+| If you want… | Open |
+|---|---|
+| A hands-on tour with real REPL outputs for every public API | [`docs/USAGE.md`](docs/USAGE.md) |
+| The line between "PatchKit's job" and "your pipeline's job", plus the parallelization story | [`docs/SCOPE.md`](docs/SCOPE.md) |
+| The auxiliary test fixtures and lab conventions (not shipped) | [`docs/AUXILIARY.md`](docs/AUXILIARY.md) |
+| Design decisions, math, the per-API contract | [`docs/THEORY.md`](docs/THEORY.md) |
+| Architecture Decision Records | [`docs/ADR/`](docs/ADR/) |
+| Milestone plan | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
+| Per-release changes | [`CHANGELOG.md`](CHANGELOG.md) |
 
 ## Author
 
