@@ -9,15 +9,15 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 - [x] `tests/test_import.py` verifying the package imports.
 - [x] `docs/THEORY.md` and `docs/ROADMAP.md` skeletons.
 - [x] `archive/` populated with reference implementations.
-- [ ] Venv on `Z:\venvs\patchkit` with torch+CUDA (**Stage 3** in the parent workflow).
-- [ ] `pytest` green with the single import test.
+- [x] Venv on `Z:\venvs\patchkit` with torch+CUDA (**Stage 3** in the parent workflow).
+- [x] `pytest` green with the single import test.
 
 ## M1 — Theory distilled
 
-- [ ] Read `archive/PatchHub/src/patchhub/{cache,quantization,resize,resize_cache,subset}.py`.
-- [ ] Read `archive/QSVM_patchkit/patchkit/{patches,processed,quantize,image_utils,superres}.py`.
-- [ ] Fill in the "Design decision" paragraph of each section in `docs/THEORY.md`.
-- [ ] Write `docs/ADR/0001-patch-extraction-api.md` (first Architecture Decision Record).
+- [x] Read `archive/PatchHub/src/patchhub/{cache,quantization,resize,resize_cache,subset}.py`.
+- [x] Read `archive/QSVM_patchkit/patchkit/{patches,processed,quantize,image_utils,superres}.py`.
+- [x] Fill in the "Design decision" paragraph of each section in `docs/THEORY.md`.
+- [x] Write `docs/ADR/0001-patch-extraction-api.md` (first Architecture Decision Record).
 
 ## M2 — Patch extraction
 
