@@ -1,6 +1,6 @@
 """Patch extraction via torch.nn.functional.unfold.
 
-Contract: docs/THEORY.md §1 and §10.1, docs/ADR/0001-patch-extraction-api.md,
+Contract: docs/THEORY.md §1 and §9.1, docs/ADR/0001-patch-extraction-api.md,
 docs/ADR/0002-patchify-transform.md.
 """
 from __future__ import annotations

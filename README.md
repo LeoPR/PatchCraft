@@ -2,7 +2,7 @@
 
 A small library for **encoding an image into patches and decoding it back**. Built to slot into other people's `torch` pipelines as one transform among many — like a `GaussianBlur` step in a `Compose([...])`.
 
-> **Status (2026-05-16):** M0 scaffold, M1 theory + ADR 0001, M2 `extract` + `Patchify` (ADR 0002) shipped, validation lab in place. Next: M3 `reconstruct`.
+> **Status (2026-05-16):** v0.1.0 ready. Public API stable: `extract`, `Patchify`, `reconstruct`, `pair`, `resize`, `Cache`, plus `num_patches`/`tilings`/`TilingSpec` (geometry helpers) and `PatchPair`/`PatchMeta`.
 
 ## The lib vs. this repo
 
@@ -42,34 +42,30 @@ transform = transforms.Compose([
 - No SVMs, no kernels, no quantum circuits — those belong to other projects.
 - No neural network training — PatchKit is infrastructure, not a model.
 
-## Install (development, from source)
+## Install
 
-```powershell
-# Create venv on Z: (outside OneDrive)
-py -V:3.13 -m venv Z:\venvs\patchkit
-Z:\venvs\patchkit\Scripts\Activate.ps1
+### From PyPI
 
-# Install uv (fast package manager)
-pip install uv
-
-# Install torch with CUDA wheels (RTX 3060 + driver 596.21 → cu124)
-uv pip install torch --extra-index-url https://download.pytorch.org/whl/cu124
-
-# Install PatchKit editable + dev extras
-uv pip install -e ".[dev,cache]"
+```
+pip install patchkit            # core only
+pip install patchkit[cache]     # adds zstandard for compressed Cache entries
 ```
 
-## Install (once published)
+### From source (development)
 
-```powershell
-pip install patchkit
 ```
+git clone https://github.com/LeoPR/patchkit.git
+cd patchkit
+pip install -e ".[dev,cache]"
+```
+
+For GPU support, install a matching torch wheel before PatchKit
+(e.g. `pip install torch --index-url https://download.pytorch.org/whl/cu124`).
 
 ## Run tests
 
-```powershell
+```
 pytest
-pytest -m "not slow"       # skip slow tests
 pytest -m "not gpu"        # skip GPU-requiring tests
 ```
 
@@ -83,15 +79,22 @@ PatchKit/
 ├── .python-version                 3.13
 ├── .gitignore                      ignores archive/, venvs, caches, outputs
 ├── src/patchkit/                   library core — one-image-at-a-time primitives
-│   ├── __init__.py                 re-exports: extract, Patchify, reconstruct, num_patches, tilings
-│   ├── extract.py                  M2: patches via F.unfold; Patchify wrapper (ADR 0002)
-│   ├── reconstruct.py              M3: inverse via F.fold + count map
+│   ├── __init__.py                 re-exports the full public API
+│   ├── extract.py                  patches via F.unfold; Patchify wrapper (ADR 0002)
+│   ├── reconstruct.py              inverse via F.fold + count map
 │   ├── geometry.py                 pre-flight: num_patches, tilings, TilingSpec
-│   ├── pair.py                     M4: LR↔HR pairing; PatchPair, PatchMeta
-│   ├── resize.py                   M5a: resize with PIL or torch backends
-│   └── cache.py                    M5b: content-addressed disk cache
+│   ├── pair.py                     LR↔HR pairing; PatchPair, PatchMeta
+│   ├── resize.py                   resize with PIL or torch backends
+│   └── cache.py                    content-addressed disk cache
 ├── tests/                          pytest suite (contract tests for src/)
-│   ├── test_extract.py
+│   ├── test_extract.py             extract + Patchify
+│   ├── test_reconstruct.py
+│   ├── test_geometry.py            num_patches + tilings
+│   ├── test_pair.py
+│   ├── test_resize.py
+│   ├── test_cache.py
+│   ├── test_datasets_helper.py     label_subset
+│   ├── test_import.py
 │   └── _datasets.py                dev-only fixtures (MNIST, etc) — NOT public API
 ├── lab/                            ephemeral experiments; see lab/README.md
 │   ├── README.md                   bench rules (tracked)
@@ -111,7 +114,7 @@ PatchKit/
 
 The library is "one image in, one tensor out" by design — but you only know it works once you run it end-to-end on real images. That happens in two places, neither of which is part of the shipped package:
 
-- [`tests/`](tests/) — formal pytest suite that defines the contract from [`docs/THEORY.md`](docs/THEORY.md) §10.
+- [`tests/`](tests/) — formal pytest suite that defines the contract from [`docs/THEORY.md`](docs/THEORY.md) §9.
 - [`lab/`](lab/) — ephemeral scripts and notebooks for fast hypothesis-checking. See [`lab/README.md`](lab/README.md) for the bench rules; outputs go to `Z:\outputs\patchkit\` (off-tree).
 
 Datasets used by tests/lab are downloaded lazily into `Z:\caches\datasets\<name>\` on first use; they do not ship with the package and are never bundled into the wheel.
