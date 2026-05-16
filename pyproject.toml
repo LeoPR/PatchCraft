@@ -36,6 +36,8 @@ dev = [
     "pytest-cov",
     "ruff>=0.5",
     "mypy>=1.10",
+    # framework auxiliar (test fixtures, lab/): NOT a runtime dep of patchkit
+    "torchvision>=0.20",
 ]
 
 [project.urls]
