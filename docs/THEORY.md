@@ -126,7 +126,7 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 ### 10.1 `extract(image, patch_size, stride, dilation=1)`
 
 **Aceita:**
-- `image` é `Tensor` 3D `(C, H, W)` com `C ≥ 1` arbitrário; qualquer dtype suportado pelo torch; CPU ou CUDA (preservados na saída).
+- `image` é `Tensor` 3D `(C, H, W)` com `C ≥ 1` arbitrário; dtype suportado por `torch.nn.functional.unfold` (todos os float — `float16/float32/float64/bfloat16` — e integer ≥ 16 bits no caminho CUDA; em CPU, `uint8` não é suportado por `im2col_cpu` e o caller deve converter pra float antes); CPU ou CUDA (preservados na saída).
 - `patch_size`, `stride`, `dilation` como `int` (quadrado) ou `(int, int)` com valores positivos.
 - Patch maior que imagem → retorna `Tensor[0, C, ph, pw]` (não levanta).
 - `stride > patch_size` (grid esparso com lacunas — válido para features que não fazem round-trip; ver §10.2 para a contrapartida em `reconstruct`).

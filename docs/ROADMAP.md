@@ -21,12 +21,13 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 
 ## M2 — Patch extraction
 
-- [ ] `patchkit.extract(image, patch_size, stride, dilation) -> Tensor[L, C, ph, pw]`.
-- [ ] Implementation via `torch.nn.functional.unfold`.
-- [ ] Tests:
+- [x] `patchkit.extract(image, patch_size, stride, dilation) -> Tensor[L, C, ph, pw]`.
+- [x] Implementation via `torch.nn.functional.unfold`.
+- [x] Tests:
   - Shape invariants for several `(H, W, ph, pw, sh, sw, d)` combinations.
-  - Round-trip with reconstruction (see M3) when `sh == ph`.
-  - `torch.cuda` path when GPU available (marker `gpu`).
+  - [ ] Round-trip with reconstruction — deferred to M3 (needs `reconstruct`).
+  - [x] `torch.cuda` path when GPU available (marker `gpu`).
+  - [x] Rejection tests for §10.1 negative conditions.
 
 ## M3 — Reconstruction
 
