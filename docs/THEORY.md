@@ -34,6 +34,31 @@ Multi-image batching is **out of scope**, not under-specified: callers use a Pyt
 
 **Composability with torch transforms (Patchify).** ADR 0002 adds a thin callable companion: `patchkit.Patchify(patch_size, stride, dilation=1)` is a class with `__call__(image) -> Tensor[L, C, ph, pw]` that delegates to `extract`. It exists to slot into `torchvision.transforms.Compose([..., Patchify(4, 2), ...])` without forcing callers to write a lambda — lambdas are not repr-friendly and they skip eager validation. `Patchify` validates the geometry in `__init__` (so a bad `patch_size` fails when the pipeline is built, not when the first batch arrives), and carries **only** the geometry ints (`__slots__`, no `__dict__`, no cache, no buffer). The function is the contract; the class is a convenience. Same shape contract, same dtype/device preservation, same truncation policy.
 
+## 1.5 Pre-flight geometry helpers
+
+**Topic.** Before extracting patches, callers often need to answer questions that depend only on the *shape* of the image, never on its pixels:
+
+- "How many patches will I get for this `(H, W, ph, pw, sh, sw, d)`?" — for memory planning, for shape assertions, for filling a progress bar before allocating.
+- "What patch sizes tile my image cleanly, with no overlap and no truncation?" — for picking a geometry whose round-trip is bit-exact by construction (§2 exact regime).
+- "Which `(p, s)` pairs cover my image without truncation but with overlap?" — for picking a geometry whose round-trip is weighted-exact (§2 overlap regime).
+
+The naïve way is to materialize patches with `extract` and check `.shape[0]`, or to try every plausible geometry by brute force. Both waste cycles on operations whose answers are arithmetic.
+
+**Counts.** `num_patches(image_shape, patch_size, stride, dilation=1) -> (num_h, num_w)` is the formula from §1, exposed as a function. Accepts `(H, W)` or `(C, H, W)` (channels are not used). Returns `(0, *)` or `(*, 0)` when the effective patch does not fit on that axis — same boundary behavior as `extract` returning `Tensor[0, C, ph, pw]`.
+
+**Enumeration.** `tilings(image_shape, *, allow_overlap=False, min_patch_size=2, max_patch_size=None) -> list[TilingSpec]` walks the square patch sizes from `min_patch_size` to `max_patch_size` and emits every geometry that **fully covers** the image:
+
+- *Exact tiling* (always emitted): `patch_size == stride` and `H % p == 0` and `W % p == 0`. The clean grid case, bit-exact round-trip.
+- *Overlap with clean edges* (emitted when `allow_overlap=True`): `stride < patch_size` with `(H - p) % s == 0` and `(W - p) % s == 0`. The last patch's last pixel lands on the image edge; full coverage with shared pixels in the middle.
+
+Truncated geometries (where the last patch falls short of the edge) are deliberately not emitted — the function answers "which geometries are sound by construction?", not "which geometries `extract` will accept" (`extract` accepts any positive `(p, s, d)`).
+
+**Worked example (28×28 MNIST).** Divisors of 28 ≥ 2 are `{2, 4, 7, 14, 28}`, so `tilings((28, 28))` returns exactly 5 specs: `(p=2, total=196)`, `(p=4, total=49)`, `(p=7, total=16)`, `(p=14, total=4)`, `(p=28, total=1)`. With `allow_overlap=True` the set grows to 100 specs.
+
+**Dilation.** `tilings` always emits `dilation=(1, 1)` in v0.1 — dilated full-coverage tilings are a non-trivial enumeration (the patch footprint has gaps; you can interleave multiple dilated patches per pixel) and no consumer has asked for them yet. `num_patches` does honor `dilation` because the formula already does.
+
+**Design decision.** Two pure functions and one `NamedTuple`: `num_patches`, `tilings`, `TilingSpec`. No tensors, no images, no dataset abstractions — only ints in, ints out. They live in `src/patchkit/geometry.py` and are re-exported from `patchkit`. The `TilingSpec` fields are `patch_size`, `stride`, `dilation`, `num_patches`, `total_patches`, `overlap` — destructurable for tests, sortable, hashable. Square-only enumeration in v0.1; rectangular comes when a real consumer asks (the function signature accommodates it by always returning `(int, int)` tuples).
+
 ## 2. Reconstruction
 
 **Topic.** Inverse of extraction via `torch.nn.functional.fold`. Two regimes:
@@ -227,4 +252,28 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 - Backends pluggáveis (memory, shelve, diskcache).
 - TTL ou limpeza automática.
 
-<!-- §9.6 (label_subset) removido: a função vive em tests/_datasets.py (framework auxiliar), não no core. Ver §7 ("Label-stratified subsets") em Resolved questions. -->
+<!-- §9.6 was `label_subset` until 2026-05-16; moved to tests/_datasets.py. The slot below is now `num_patches` + `tilings` (geometry helpers, §1.5). -->
+
+### 9.6 `num_patches(image_shape, patch_size, stride, dilation=1)` and `tilings(image_shape, *, allow_overlap, min_patch_size, max_patch_size)`
+
+**Aceita (`num_patches`):**
+- `image_shape` is a 2-tuple `(H, W)` or 3-tuple `(C, H, W)`; channels ignored.
+- `patch_size`, `stride`, `dilation` as `int` or `(int, int)` positive.
+- Patch larger than image on any axis → that axis returns 0 (mirror of `extract` empty grid).
+
+**Aceita (`tilings`):**
+- `image_shape` as above; `allow_overlap: bool`; `min_patch_size: int >= 1`; `max_patch_size: int >= 1` or `None`.
+- Always emits square geometries (`ph == pw`, `sh == sw`) with `dilation=(1, 1)`.
+- Always emits *full-coverage* geometries only — exact tilings always; overlap-with-clean-edges if `allow_overlap=True`.
+- Returns sorted list of `TilingSpec` (a `NamedTuple`).
+
+**Rejeita (`ValueError`):**
+- `image_shape` not a 2-tuple or 3-tuple of positive ints.
+- Any of `patch_size`, `stride`, `dilation` non-positive or non-int.
+- `min_patch_size <= 0`, `max_patch_size <= 0`, or `min_patch_size > max_patch_size`.
+
+**Fora de escopo v0.1:**
+- Rectangular `(ph, pw)` enumeration in `tilings` (`num_patches` already handles it on input).
+- Dilated `tilings` (`dilation > 1` enumeration is non-trivial; defer until requested).
+- Truncated-coverage enumeration (the contract is full-coverage only).
+- Multi-image planning (e.g. "max patch that tiles every image in this list"); compose externally.

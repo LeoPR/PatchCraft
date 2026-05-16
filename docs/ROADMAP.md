@@ -30,6 +30,7 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
   - [x] `torch.cuda` path when GPU available (marker `gpu`).
   - [x] Rejection tests for §9.1 negative conditions.
   - [x] `Patchify` delegation, eager validation, repr, statelessness.
+- [x] `patchkit.num_patches(image_shape, patch_size, stride, dilation=1)` and `patchkit.tilings(image_shape, allow_overlap=..., min_patch_size=..., max_patch_size=...)` — pre-flight geometry helpers (THEORY §1.5 / §9.6). 28 tests, incl. 28×28 divisor enumeration and exhaustive round-trip guarantee.
 
 ## M3 — Reconstruction
 

@@ -29,7 +29,8 @@ transform = transforms.Compose([
 ## Scope (what the car does)
 
 - **Extract** patches from a single image with configurable size, stride and dilation (`extract`, `Patchify`).
-- **Reconstruct** an image from its patches — exact and weighted-overlap (`reconstruct`, M3).
+- **Reconstruct** an image from its patches — exact and weighted-overlap (`reconstruct`).
+- **Plan** the geometry ahead of time: `num_patches((H, W), ...)` for the count, `tilings((H, W), allow_overlap=...)` for every full-coverage `(patch_size, stride)` combo (no image, no allocation — just arithmetic).
 - **Pair** LR and HR patches with metadata sufficient to reconstruct either (`pair`, M4).
 - **Resize** with pluggable backends — PIL or torch (`resize`, M5).
 - **Cache** results on disk with content-addressed keys (`Cache`, M5).
@@ -82,8 +83,10 @@ PatchKit/
 ├── .python-version                 3.13
 ├── .gitignore                      ignores archive/, venvs, caches, outputs
 ├── src/patchkit/                   library core — one-image-at-a-time primitives
-│   ├── __init__.py                 re-exports: extract, Patchify
-│   └── extract.py                  M2: patches via F.unfold; Patchify wrapper (ADR 0002)
+│   ├── __init__.py                 re-exports: extract, Patchify, reconstruct, num_patches, tilings
+│   ├── extract.py                  M2: patches via F.unfold; Patchify wrapper (ADR 0002)
+│   ├── reconstruct.py              M3: inverse via F.fold + count map
+│   └── geometry.py                 pre-flight: num_patches, tilings, TilingSpec
 ├── tests/                          pytest suite (contract tests for src/)
 │   ├── test_extract.py
 │   └── _datasets.py                dev-only fixtures (MNIST, etc) — NOT public API
