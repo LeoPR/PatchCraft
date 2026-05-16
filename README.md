@@ -88,7 +88,8 @@ PatchKit/
 │   ├── reconstruct.py              M3: inverse via F.fold + count map
 │   ├── geometry.py                 pre-flight: num_patches, tilings, TilingSpec
 │   ├── pair.py                     M4: LR↔HR pairing; PatchPair, PatchMeta
-│   └── resize.py                   M5a: resize with PIL or torch backends
+│   ├── resize.py                   M5a: resize with PIL or torch backends
+│   └── cache.py                    M5b: content-addressed disk cache
 ├── tests/                          pytest suite (contract tests for src/)
 │   ├── test_extract.py
 │   └── _datasets.py                dev-only fixtures (MNIST, etc) — NOT public API
