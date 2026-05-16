@@ -50,6 +50,9 @@ path = "src/patchkit/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/patchkit"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"src/patchkit/py.typed" = "patchkit/py.typed"
+
 [tool.pytest.ini_options]
 cache_dir = "Z:\\caches\\pytest"
 testpaths = ["tests"]
