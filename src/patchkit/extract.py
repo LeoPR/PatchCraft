@@ -1,13 +1,14 @@
 """Patch extraction via torch.nn.functional.unfold.
 
-Contract: docs/THEORY.md §1 and §10.1, docs/ADR/0001-patch-extraction-api.md.
+Contract: docs/THEORY.md §1 and §10.1, docs/ADR/0001-patch-extraction-api.md,
+docs/ADR/0002-patchify-transform.md.
 """
 from __future__ import annotations
 
 import torch
 import torch.nn.functional as F  # noqa: N812 (torch convention)
 
-__all__ = ["extract"]
+__all__ = ["Patchify", "extract"]
 
 
 def _as_pair(value: int | tuple[int, int], name: str) -> tuple[int, int]:
@@ -63,3 +64,53 @@ def extract(
         stride=(sh, sw),
     )
     return unfolded[0].view(c, ph, pw, -1).permute(3, 0, 1, 2).contiguous()
+
+
+class Patchify:
+    """Callable that extracts patches with a frozen geometry.
+
+    Drop-in for `torchvision.transforms.Compose([...])`:
+
+        transform = Compose([
+            ToTensor(),
+            GaussianBlur(kernel_size=3),
+            Patchify(patch_size=4, stride=2),
+        ])
+        patches = transform(pil_image)  # Tensor[L, C, 4, 4]
+
+    Equivalent to `lambda img: extract(img, patch_size, stride, dilation)`,
+    but composable, repr-friendly, and validates the geometry at construction
+    instead of at first call. Holds no state beyond the geometry — no cache,
+    no fixed image size, no device. See ADR 0002.
+
+    Output shape is `(L, C, ph, pw)`, the same as `extract`. Subsequent
+    transforms in the Compose chain receive the patch stack, not a single
+    patch; they must accept `(N, C, H, W)` or be wrapped.
+    """
+
+    __slots__ = ("_dh", "_dw", "_ph", "_pw", "_sh", "_sw")
+
+    def __init__(
+        self,
+        patch_size: int | tuple[int, int],
+        stride: int | tuple[int, int],
+        dilation: int | tuple[int, int] = 1,
+    ) -> None:
+        self._ph, self._pw = _as_pair(patch_size, "patch_size")
+        self._sh, self._sw = _as_pair(stride, "stride")
+        self._dh, self._dw = _as_pair(dilation, "dilation")
+
+    def __call__(self, image: torch.Tensor) -> torch.Tensor:
+        return extract(
+            image,
+            patch_size=(self._ph, self._pw),
+            stride=(self._sh, self._sw),
+            dilation=(self._dh, self._dw),
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"Patchify(patch_size=({self._ph}, {self._pw}), "
+            f"stride=({self._sh}, {self._sw}), "
+            f"dilation=({self._dh}, {self._dw}))"
+        )

@@ -4,6 +4,16 @@ Working document. The goal is to distill the useful theory from the reference im
 
 > Every section should end with a paragraph titled **Design decision** stating what PatchKit will actually implement and why.
 
+## 0. Scope (binding)
+
+PatchKit operates on **one image at a time**: a `(C, H, W)` tensor in, a derived tensor out. No batching across images, no dataset abstractions, no dataloader integration.
+
+The lib is the *car*; this repo also contains the *track and pit crew* (`tests/`, `lab/`, `tests/_datasets.py`) that prove the car works. Anything that needs a dataset, a labeled subset, a download, or batching belongs to the track, not the car. The wheel that ships via `pip install patchkit` contains only `src/patchkit/`.
+
+The car must be **acoplável** to other people's torch pipelines: `Patchify` (see §1) is a `torchvision.transforms`-style callable so callers can drop PatchKit into `Compose([..., Patchify(...), ...])` and get `DataLoader` worker parallelism for free. The lib gives them the primitive; they own the pipeline.
+
+Multi-image batching is **out of scope**, not under-specified: callers use a Python loop, `torch.vmap`, or a `DataLoader`. The grey-area "maybe if trivially cheap" was resolved against batching — patch counts vary per image (different `H`, `W` give different `L`), so any batched API would need padding or list-of-tensor outputs, both of which leak complexity into a primitive that has no reason to carry it.
+
 ## 1. Patch extraction
 
 **Topic.** Given an image of shape `(C, H, W)`, a patch size `(ph, pw)`, a stride `(sh, sw)` and an optional dilation `d`, define:
@@ -21,6 +31,8 @@ Working document. The goal is to distill the useful theory from the reference im
 **Memory layout.** `F.unfold(x.unsqueeze(0), (ph,pw), dilation=d, stride=(sh,sw))` yields shape `(1, C·ph·pw, L)`. Reshape as `.view(C, ph, pw, L).permute(3, 0, 1, 2).contiguous()` to obtain `(L, C, ph, pw)`. Device and dtype are preserved from the input.
 
 **Design decision.** `patchkit.extract(image, patch_size, stride, dilation=1) -> Tensor[L, C, ph, pw]` is a pure function built on `F.unfold`. `image` must be `(C, H, W)`; batching is explicit (call in a loop or `vmap`) and is not part of the v0.1 signature. `patch_size` and `stride` accept `int` (square) or `(int, int)`. Truncation is the only boundary policy. When no patch fits, we return an empty tensor `Tensor[0, C, ph, pw]` rather than raising — callers decide. No caching inside the function; caching is a separate concern (see §4). Dilation is supported here even though reconstruction rejects it (see §2). See also [ADR 0001](ADR/0001-patch-extraction-api.md) for the API rationale.
+
+**Composability with torch transforms (Patchify).** ADR 0002 adds a thin callable companion: `patchkit.Patchify(patch_size, stride, dilation=1)` is a class with `__call__(image) -> Tensor[L, C, ph, pw]` that delegates to `extract`. It exists to slot into `torchvision.transforms.Compose([..., Patchify(4, 2), ...])` without forcing callers to write a lambda — lambdas are not repr-friendly and they skip eager validation. `Patchify` validates the geometry in `__init__` (so a bad `patch_size` fails when the pipeline is built, not when the first batch arrives), and carries **only** the geometry ints (`__slots__`, no `__dict__`, no cache, no buffer). The function is the contract; the class is a convenience. Same shape contract, same dtype/device preservation, same truncation policy.
 
 ## 2. Reconstruction
 
@@ -53,7 +65,7 @@ So `num_h_lr == num_h_hr` (and analogously for width) exactly when the scale fac
 
 **Recommended defaults.** For tiling (no overlap): `stride_lr = ph_lr`, `stride_hr = ph_hr = r · ph_lr`. For 2× overlap training data: `stride_lr = ph_lr // 2`.
 
-**Design decision.** PatchKit exposes `patchkit.pair(lr_image, hr_image, lr_patch_size, scale_factor, stride)` that returns an iterator of `(lr_patch, hr_patch, meta)` tuples. `scale_factor` must be a positive `int` (non-integer scale is rejected — irrational alignment has no clean semantics). `lr_patch_size` and `stride` are `int` or `(int, int)`; HR equivalents are derived. `dilation=1` is fixed (not exposed) because dilation breaks the reconstruction story. `meta` is a small dataclass (`PatchMeta`) holding `image_id`, `patch_index`, `row`, `col`, `lr_patch_size`, `hr_patch_size` — readable, not GPU-resident (metadata stays on CPU). See §8 for why a dataclass over a dict/tensor.
+**Design decision.** PatchKit exposes `patchkit.pair(lr_image, hr_image, lr_patch_size, scale_factor, stride)` that returns an iterator of `(lr_patch, hr_patch, meta)` tuples. `scale_factor` must be a positive `int` (non-integer scale is rejected — irrational alignment has no clean semantics). `lr_patch_size` and `stride` are `int` or `(int, int)`; HR equivalents are derived. `dilation=1` is fixed (not exposed) because dilation breaks the reconstruction story. `meta` is a small dataclass (`PatchMeta`) holding `image_id`, `patch_index`, `row`, `col`, `lr_patch_size`, `hr_patch_size` — readable, not GPU-resident (metadata stays on CPU). See §7 for why a dataclass over a dict/tensor.
 
 ## 4. Cache semantics
 
@@ -95,35 +107,26 @@ So `num_h_lr == num_h_hr` (and analogously for width) exactly when the scale fac
 
 **Design decision.** **Out of scope for v0.1.** Quantization is deferred. When a pattern emerges across multiple consumers, revisit as either (a) a companion package (`patchkit-quant`), or (b) a plug-in hook point in the extraction pipeline. For now, callers that need quantization apply it *before* calling `patchkit.extract` — the `(C, H, W)` tensor they pass in is whatever they want patches of. The archive implementations stay in `archive/` as reference material for whoever builds the companion.
 
-## 7. Label-stratified subsets
+## 7. Resolved questions
 
-**Topic.** Given a labeled dataset, pick `n` samples per label with a deterministic seed. Reference: `archive/PatchHub/src/patchhub/subset.py` — `LabelSubset`.
-
-**Functional vs class.** PatchHub's `LabelSubset` was a wrapper class that reimplemented `__getitem__` to forward to the base dataset. That's redundant: `torch.utils.data.Subset` already does exactly this given an index list. So the only real work is producing the index list.
-
-**Deterministic seeding.** Use `numpy.random.Generator(PCG64(seed))` — not the global `numpy.random` state. An explicit `int` seed is required; no "auto" mode. Same seed + same label distribution ⇒ same indices, regardless of process order, thread count, or torch state.
-
-**Label extraction.** Prefer `dataset.targets` (torchvision convention). If absent, try `dataset.labels`. If both absent, iterate once and collect — warn the user because this forces a full pass that may be expensive on large datasets.
-
-**Design decision.** `patchkit.label_subset(dataset, n_per_label, seed, classes=None) -> torch.utils.data.Subset`. Strictly functional — no wrapper class. `n_per_label` is an `int`; no float-percentage overloading (PatchHub's dual semantics for `int|float` was a source of confusion). `classes=None` selects every class; pass a `Sequence[int]` to subset. If a requested class has fewer than `n_per_label` samples available, take all of them and emit a warning (do not raise — partial stratification is almost always what the caller wants).
-
-## 8. Resolved questions
-
-- **`PatchPairDataset` vs decoupled primitives?** Decoupled. v0.1 ships `extract`, `reconstruct`, `pair`, `resize`, `label_subset`, `Cache` as independent pieces. Consumers that want a `torch.utils.data.Dataset` compose them themselves (5 lines). This mirrors the M2–M6 ordering in the roadmap and avoids the QSVM_patchkit problem where `SuperResPatchDataset` baked in assumptions (ProcessedDataset, specific caching, specific labels) that the next consumer does not share.
+- **`PatchPairDataset` vs decoupled primitives?** Decoupled. v0.1 ships `extract`, `Patchify`, `reconstruct`, `pair`, `resize`, `Cache` as independent pieces. Consumers that want a `torch.utils.data.Dataset` compose them themselves. This mirrors the M2–M5 ordering in the roadmap and avoids the QSVM_patchkit problem where `SuperResPatchDataset` baked in assumptions (ProcessedDataset, specific caching, specific labels) that the next consumer does not share.
 - **`meta` shape — dict, structured tensor, or dataclass?** Dataclass (`PatchMeta`). Dicts lose type info; structured tensors force CPU→GPU transfers for fields that are never used on device (image id, patch index). Metadata stays on CPU; the pixel payload is the only thing that should move to GPU. `@dataclass(frozen=True, slots=True)` keeps it cheap.
 - **Minimum torch?** `>=2.6` as per `pyproject.toml`. Sticking with this until a feature we want (e.g., `vmap` improvements) forces a bump.
+- **Label-stratified subsets** (was §7). Moved to `tests/_datasets.py::label_subset(labels, n_per_label, seed)` as a pure function over a labels sequence. Not part of the public API: it operates on dataset-level concerns (which §0 declares out of scope for the core), and is used only by tests and `lab/` scripts.
 
-## 9. Remaining open questions
+## 8. Remaining open questions
 
 - **Channels-first only, or also channels-last?** Currently every API assumes `(C, H, W)`. A `channels_last=True` flag may be desirable for interop with CV libraries that default to HWC. Defer to a real consumer request.
 - **Tensor-vs-PIL in `extract`/`reconstruct`.** Extraction is tensor-only. Should we allow PIL input with an internal conversion? Current lean: no — converting before `extract` is one line, and mixed-type APIs hide cost.
-- **Batched extraction.** For datasets of many small images, calling `extract` in a Python loop may be slow. Benchmark after M2 and decide whether to add a batched variant or document `torch.vmap` as the pattern.
+- **Batched extraction.** Resolved against by §0 (one image at a time). Reopen only if a benchmark shows the per-call overhead of `extract` is the bottleneck in a real consumer's loop *and* `torch.vmap` doesn't already solve it.
 
-## 10. Contrato de condições suportadas
+## 9. Contrato de condições suportadas
 
-Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rejeitar** (com `ValueError` e mensagem explícita) e tratar como **fora de escopo** (não implementado, documentar como tal). Serve de fonte do plano de testes: cada item "Aceita" vira teste positivo; cada "Rejeita", teste negativo (`pytest.raises(ValueError)`). Onde esta seção diverge dos parágrafos "Design decision" de §1–§7, §10 é a verdade — ajuste os outros parágrafos no marco que implementar a API correspondente.
+Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rejeitar** (com `ValueError` e mensagem explícita) e tratar como **fora de escopo** (não implementado, documentar como tal). Serve de fonte do plano de testes: cada item "Aceita" vira teste positivo; cada "Rejeita", teste negativo (`pytest.raises(ValueError)`). Onde esta seção diverge dos parágrafos "Design decision" de §1–§6, §9 é a verdade — ajuste os outros parágrafos no marco que implementar a API correspondente.
 
-### 10.1 `extract(image, patch_size, stride, dilation=1)`
+### 9.1 `extract(image, patch_size, stride, dilation=1)` and `Patchify(patch_size, stride, dilation=1)`
+
+`Patchify(...)(image)` is the callable form and delegates to `extract` — same contract, plus eager geometry validation at `__init__`.
 
 **Aceita:**
 - `image` é `Tensor` 3D `(C, H, W)` com `C ≥ 1` arbitrário; dtype suportado por `torch.nn.functional.unfold` (todos os float — `float16/float32/float64/bfloat16` — e integer ≥ 16 bits no caminho CUDA; em CPU, `uint8` não é suportado por `im2col_cpu` e o caller deve converter pra float antes); CPU ou CUDA (preservados na saída).
@@ -143,7 +146,7 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 - Layout channels-last `(H, W, C)` — converter antes.
 - Devices não-CUDA acelerados (MPS, XPU) — provavelmente funcionam via torch, mas não testados.
 
-### 10.2 `reconstruct(patches, image_shape, stride, dilation=1)`
+### 9.2 `reconstruct(patches, image_shape, stride, dilation=1)`
 
 **Aceita:**
 - `sh ≤ ph` e `sw ≤ pw` (cobertura total ou overlap).
@@ -160,7 +163,7 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 - Promoção automática float16 → float32.
 - Output em PIL.
 
-### 10.3 `pair(lr_image, hr_image, lr_patch_size, scale_factor, stride)`
+### 9.3 `pair(lr_image, hr_image, lr_patch_size, scale_factor, stride)`
 
 **Aceita:**
 - `scale_factor ∈ ℤ⁺` (inteiro positivo).
@@ -180,7 +183,7 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 - Channels-last.
 - Mismatch de dtype LR vs HR (caller normaliza antes).
 
-### 10.4 `resize(image, target_size, backend="pil", resample=None)`
+### 9.4 `resize(image, target_size, backend="pil", resample=None)`
 
 **Aceita:**
 - `image` é `PIL.Image` em qualquer mode suportado pelo PIL.
@@ -200,7 +203,7 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 - DSL para `target_size` (`"50%"`, `"min:256"`).
 - Aviso de fator de escala extremo.
 
-### 10.5 `Cache(root, namespace, version=1)`
+### 9.5 `Cache(root, namespace, version=1)`
 
 **Aceita:**
 - `root` inexistente → auto-criado (`mkdir(parents=True, exist_ok=True)`).
@@ -224,21 +227,4 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 - Backends pluggáveis (memory, shelve, diskcache).
 - TTL ou limpeza automática.
 
-### 10.6 `label_subset(dataset, n_per_label, seed, classes=None)`
-
-**Aceita:**
-- `n_per_label ∈ ℤ⁺`.
-- Dataset com `.targets`, ou `.labels`, ou iterável (warn no terceiro caso por causa do custo do full pass).
-- `classes=None` (todas as classes) ou `Sequence[int]` (subset das classes existentes).
-- Classe com menos de `n_per_label` amostras → take all + warn (parcial é o desejado).
-- Mesmo `seed` + mesmo dataset ⇒ mesmos índices, independente de plataforma, thread count, ou estado do torch.
-
-**Rejeita (`ValueError`):**
-- `n_per_label ≤ 0`.
-- `seed` não é `int`.
-- `classes` contém id que não existe no dataset.
-
-**Fora de escopo v0.1:**
-- Datasets multi-label (lista de labels por amostra).
-- Estratificação por proporção (`n_per_label` como `float` em `(0, 1]`).
-- Reweighting / sampler ponderado.
+<!-- §9.6 (label_subset) removido: a função vive em tests/_datasets.py (framework auxiliar), não no core. Ver §7 ("Label-stratified subsets") em Resolved questions. -->

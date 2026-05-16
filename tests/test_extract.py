@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from patchkit import extract
+from patchkit import Patchify, extract
 
 
 def _ramp(c: int, h: int, w: int, dtype: torch.dtype = torch.float32) -> torch.Tensor:
@@ -182,3 +182,69 @@ class TestRejects:
         img = _ramp(1, 8, 8)
         with pytest.raises(ValueError):
             extract(img, patch_size=True, stride=2)  # type: ignore[arg-type]
+
+
+# ----------------------------------------------------------------- Patchify ---
+
+class TestPatchify:
+    """ADR 0002: callable wrapper that delegates to `extract`."""
+
+    def test_delegates_to_extract(self) -> None:
+        img = _ramp(3, 32, 32)
+        p = Patchify(patch_size=8, stride=8)
+        assert torch.equal(p(img), extract(img, patch_size=8, stride=8))
+
+    def test_rectangular_geometry(self) -> None:
+        img = _ramp(1, 20, 30)
+        p = Patchify(patch_size=(4, 6), stride=(2, 3))
+        out = p(img)
+        assert out.shape == (81, 1, 4, 6)
+
+    def test_dilation_forwarded(self) -> None:
+        img = _ramp(1, 16, 16)
+        p = Patchify(patch_size=3, stride=1, dilation=2)
+        assert torch.equal(
+            p(img), extract(img, patch_size=3, stride=1, dilation=2)
+        )
+
+    def test_eager_validation_at_construction(self) -> None:
+        """Config error must fail at __init__, not at first call (ADR 0002)."""
+        with pytest.raises(ValueError, match="patch_size must be positive"):
+            Patchify(patch_size=0, stride=4)
+        with pytest.raises(ValueError, match="stride must be positive"):
+            Patchify(patch_size=4, stride=-1)
+        with pytest.raises(ValueError, match="dilation must be positive"):
+            Patchify(patch_size=4, stride=4, dilation=0)
+
+    def test_repr_includes_geometry(self) -> None:
+        p = Patchify(patch_size=(4, 5), stride=2, dilation=1)
+        r = repr(p)
+        assert "Patchify" in r
+        assert "(4, 5)" in r
+        assert "(2, 2)" in r
+        assert "(1, 1)" in r
+
+    def test_reuses_across_image_sizes(self) -> None:
+        """No fixed image_size: same Patchify works on different shapes (ADR 0001)."""
+        p = Patchify(patch_size=4, stride=4)
+        assert p(_ramp(1, 8, 8)).shape == (4, 1, 4, 4)
+        assert p(_ramp(1, 16, 16)).shape == (16, 1, 4, 4)
+        assert p(_ramp(3, 12, 8)).shape == (6, 3, 4, 4)
+
+    def test_no_state_beyond_geometry(self) -> None:
+        """ADR 0002: only __slots__ are the 6 geometry ints. No cache, no buffer."""
+        p = Patchify(patch_size=4, stride=4)
+        assert set(p.__slots__) == {"_ph", "_pw", "_sh", "_sw", "_dh", "_dw"}
+        assert not hasattr(p, "__dict__")
+
+    def test_composes_like_torchvision_transform(self) -> None:
+        """Acts as a Compose element: callable(image) -> tensor."""
+        img = _ramp(1, 8, 8)
+
+        def fake_compose(transforms: list, x: torch.Tensor) -> torch.Tensor:
+            for t in transforms:
+                x = t(x)
+            return x
+
+        out = fake_compose([Patchify(patch_size=4, stride=4)], img)
+        assert out.shape == (4, 1, 4, 4)

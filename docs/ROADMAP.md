@@ -22,12 +22,14 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 ## M2 — Patch extraction
 
 - [x] `patchkit.extract(image, patch_size, stride, dilation) -> Tensor[L, C, ph, pw]`.
+- [x] `patchkit.Patchify(patch_size, stride, dilation)` — callable wrapper for `torchvision.transforms.Compose`, ADR 0002.
 - [x] Implementation via `torch.nn.functional.unfold`.
 - [x] Tests:
   - Shape invariants for several `(H, W, ph, pw, sh, sw, d)` combinations.
   - [ ] Round-trip with reconstruction — deferred to M3 (needs `reconstruct`).
   - [x] `torch.cuda` path when GPU available (marker `gpu`).
-  - [x] Rejection tests for §10.1 negative conditions.
+  - [x] Rejection tests for §9.1 negative conditions.
+  - [x] `Patchify` delegation, eager validation, repr, statelessness.
 
 ## M3 — Reconstruction
 
@@ -36,7 +38,9 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 - [ ] Tests:
   - Bit-exact round-trip for `stride == patch_size`.
   - Weighted reconstruction matches expected behaviour for known overlaps.
-  - Rejects `dilation != 1` with a clear error (documented limitation).
+  - Rejects `dilation != 1` with a clear error (§9.2).
+  - Rejects `sh > ph` or `sw > pw` (partial coverage forbidden, §9.2).
+- [ ] First `lab/` script: `imagem → extract → reconstruct → assert close` on MNIST.
 
 ## M4 — LR ↔ HR pairing
 
@@ -52,10 +56,9 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
   - Resize parity within a backend across runs.
   - Cache hit/miss behaviour with controlled configuration changes.
 
-## M6 — Label-stratified subsets
+## M6 — *(removed)*
 
-- [ ] `patchkit.label_subset(dataset, n_per_label, seed) -> torch.utils.data.Subset`.
-- [ ] Tests for determinism and correct counts.
+Label-stratified subsetting was moved out of the core library per the binding scope in [`THEORY.md`](THEORY.md) §0 (PatchKit operates on one image at a time; no dataset abstractions). The function lives in [`tests/_datasets.py::label_subset`](../tests/_datasets.py) as part of the auxiliary framework (test fixtures + `lab/`). The roadmap renumbers no further — there is no M6 in v0.1.
 
 ## M7 — First release
 

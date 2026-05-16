@@ -1,22 +1,43 @@
 # PatchKit
 
-Image patch extraction, pairing and reconstruction utilities. Focused on providing a clean, tested toolkit for building **super-resolution datasets** (low-resolution ↔ high-resolution patch pairs) and for any workflow that benefits from deterministic patch-based manipulation of images.
+A small library for **encoding an image into patches and decoding it back**. Built to slot into other people's `torch` pipelines as one transform among many — like a `GaussianBlur` step in a `Compose([...])`.
 
-> **Status (2026-05-15):** M0 scaffold, M1 theory + ADR 0001, M2 `extract` shipped. Working on the validation lab before M3 (`reconstruct`).
+> **Status (2026-05-16):** M0 scaffold, M1 theory + ADR 0001, M2 `extract` + `Patchify` (ADR 0002) shipped, validation lab in place. Next: M3 `reconstruct`.
 
-## Scope
+## The lib vs. this repo
 
-PatchKit operates on **one image at a time**. The core takes a `(C, H, W)` tensor and produces patches, reconstructed images, paired LR/HR tensors, resized variants, or a cache hit. Dataset orchestration, batching across many images, and training loops live outside this library.
+Think of the lib as a **car** and this repo as the **car plus its test track**.
 
-- **Extract** patches from a single image with configurable size, stride and dilation.
-- **Pair** LR and HR patches with metadata sufficient to reconstruct either image.
-- **Reconstruct** an image from its patches (exact and weighted overlap modes).
-- **Resize** with pluggable backends (PIL, torch).
-- **Cache** results on disk with content-addressed keys.
+- **The car** — [`src/patchkit/`](src/patchkit/) — is what gets installed by `pip install patchkit`. It is a single library with one job: take one image (`Tensor[C, H, W]`), encode it into patches, decode patches back into the image, optionally pair LR/HR, resize, cache. **One image at a time, every time.** No datasets, no training, no orchestration, no batching across images. Multi-image is the caller's `for` loop, or `torch.vmap`, or a `DataLoader`.
+- **The track** — [`tests/`](tests/), [`lab/`](lab/), [`tests/_datasets.py`](tests/_datasets.py), and the dev extras (`torchvision`, etc.) — is the pit crew, telemetry, driver and stopwatch that **prove the car works** on real images (MNIST today; more later). It downloads datasets, drives the lib through varied geometries, measures correctness. It never ships in the wheel.
 
-## Scope (what PatchKit is NOT)
+The car is also **acoplável** — designed to drop into someone else's pipeline:
 
-- **Not a dataset manager.** PatchKit does not load, download, batch, shuffle, or stream datasets. Test fixtures that exercise the core against real images (MNIST, etc.) live in [`tests/_datasets.py`](tests/_datasets.py) and are dev-only — `torchvision` is in the `[dev]` extra, not in the runtime deps.
+```python
+from patchkit import Patchify
+from torchvision import transforms
+
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.GaussianBlur(kernel_size=3),
+    Patchify(patch_size=4, stride=2),   # ← PatchKit as one step
+])
+```
+
+`Patchify` is a callable; chain it inside a `Compose`, let `DataLoader` parallelize over workers. PatchKit gives you the primitive; the surrounding pipeline stays your code.
+
+## Scope (what the car does)
+
+- **Extract** patches from a single image with configurable size, stride and dilation (`extract`, `Patchify`).
+- **Reconstruct** an image from its patches — exact and weighted-overlap (`reconstruct`, M3).
+- **Pair** LR and HR patches with metadata sufficient to reconstruct either (`pair`, M4).
+- **Resize** with pluggable backends — PIL or torch (`resize`, M5).
+- **Cache** results on disk with content-addressed keys (`Cache`, M5).
+
+## Scope (what the car does NOT do)
+
+- **Not a dataset manager.** PatchKit does not load, download, batch, shuffle, or stream datasets. That's the track's job — `tests/_datasets.py` has `mnist_subset(...)` for dev fixtures, and `torchvision` is in the `[dev]` extra (never a runtime dep of the car).
+- **Not a multi-image API.** Every primitive takes one image. Use `vmap` or a Python loop if you need to apply it to many.
 - No SVMs, no kernels, no quantum circuits — those belong to other projects.
 - No neural network training — PatchKit is infrastructure, not a model.
 
@@ -61,8 +82,8 @@ PatchKit/
 ├── .python-version                 3.13
 ├── .gitignore                      ignores archive/, venvs, caches, outputs
 ├── src/patchkit/                   library core — one-image-at-a-time primitives
-│   ├── __init__.py
-│   └── extract.py                  M2: patches via F.unfold
+│   ├── __init__.py                 re-exports: extract, Patchify
+│   └── extract.py                  M2: patches via F.unfold; Patchify wrapper (ADR 0002)
 ├── tests/                          pytest suite (contract tests for src/)
 │   ├── test_extract.py
 │   └── _datasets.py                dev-only fixtures (MNIST, etc) — NOT public API
@@ -70,9 +91,11 @@ PatchKit/
 │   ├── README.md                   bench rules (tracked)
 │   └── .gitignore                  ignores everything else (tracked)
 ├── docs/
-│   ├── THEORY.md                   distilled design + §10 condition contract
+│   ├── THEORY.md                   distilled design + §9 condition contract; §0 binding scope
 │   ├── ROADMAP.md                  milestone plan
-│   └── ADR/                        architecture decision records
+│   └── ADR/
+│       ├── 0001-patch-extraction-api.md   pure function `extract`
+│       └── 0002-patchify-transform.md     callable wrapper for Compose pipelines
 └── archive/                        reference-only; gitignored
     ├── PatchHub/                   earlier standalone patch library (own .git)
     └── QSVM_patchkit/              relevant subset of the QSVM legacy project
