@@ -19,6 +19,12 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python: ["3.12", "3.13"]
+    env:
+      # Force uv to use the matrix Python in every uv* invocation
+      # (otherwise `uv run` re-resolves to its default, which is the
+      # newest installed interpreter -- masking the matrix and leaking
+      # the dev deps installed under a different version).
+      UV_PYTHON: ${{ matrix.python }}
     steps:
       - uses: actions/checkout@v4
 
@@ -28,10 +34,10 @@ jobs:
           enable-cache: true
 
       - name: Set up Python ${{ matrix.python }}
-        run: uv python install ${{ matrix.python }}
+        run: uv python install
 
       - name: Install project with dev + cache extras
-        run: uv sync --extra cache --extra dev --python ${{ matrix.python }}
+        run: uv sync --extra cache --extra dev
 
       - name: Ruff
         run: uv run ruff check src tests
