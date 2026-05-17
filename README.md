@@ -8,8 +8,8 @@ A small library for **encoding an image into patches and decoding it back**. Bui
 
 Think of the lib as a **car** and this repo as the **car plus its test track**.
 
-- **The car** — [`src/patchcraft/`](src/patchcraft/) — is what gets installed by `pip install patchcraft`. It is a single library with one job: take one image (`Tensor[C, H, W]`), encode it into patches, decode patches back into the image, optionally pair LR/HR, resize, cache. **One image at a time, every time.** No datasets, no training, no orchestration, no batching across images. Multi-image is the caller's `for` loop, or `torch.vmap`, or a `DataLoader`.
-- **The track** — [`tests/`](tests/), [`lab/`](lab/), [`tests/_datasets.py`](tests/_datasets.py), and the dev extras (`torchvision`, etc.) — is the pit crew, telemetry, driver and stopwatch that **prove the car works** on real images (MNIST today; more later). It downloads datasets, drives the lib through varied geometries, measures correctness. It never ships in the wheel.
+- **The car** — the [`patchcraft`](https://github.com/LeoPR/PatchCraft/tree/main/src/patchcraft) package — is what gets installed by `pip install patchcraft`. It is a single library with one job: take one image (`Tensor[C, H, W]`), encode it into patches, decode patches back into the image, optionally pair LR/HR, resize, cache. **One image at a time, every time.** No datasets, no training, no orchestration, no batching across images. Multi-image is the caller's `for` loop, or `torch.vmap`, or a `DataLoader`.
+- **The track** — `tests/`, `lab/`, `tests/_datasets.py`, and the dev extras (`torchvision`, etc.) in the repo — is the pit crew, telemetry, driver and stopwatch that **prove the car works** on real images. It downloads datasets, drives the lib through varied geometries, measures correctness. It never ships in the wheel. See [CONTRIBUTING.md](https://github.com/LeoPR/PatchCraft/blob/main/CONTRIBUTING.md) if you're contributing.
 
 The car is also **acoplável** — designed to drop into someone else's pipeline:
 
@@ -111,7 +111,7 @@ Use when patches were modified by a model and uniform averaging shows boundary s
        out     = stitch(result, ...)       # PatchCraft primitive
 ```
 
-Multi-image parallelism is the caller's pipeline (`torch.vmap`, `DataLoader` workers, etc.) — see [`SCOPE.md`](docs/SCOPE.md) §2.
+Multi-image parallelism is the caller's pipeline (`torch.vmap`, `DataLoader` workers, etc.) — see [SCOPE.md](https://github.com/LeoPR/PatchCraft/blob/main/docs/SCOPE.md) §2.
 
 ## Scope (what the car does)
 
@@ -151,75 +151,16 @@ pip install -e ".[dev,cache]"
 For GPU support, install a matching torch wheel before PatchCraft
 (e.g. `pip install torch --index-url https://download.pytorch.org/whl/cu124`).
 
-## Run tests
-
-```
-pytest
-pytest -m "not gpu"        # skip GPU-requiring tests
-```
-
-## Layout
-
-```
-PatchCraft/
-├── pyproject.toml                  package metadata, build backend (hatchling)
-├── README.md                       this file
-├── LICENSE                         MIT
-├── .python-version                 3.13
-├── .gitignore                      ignores archive/, venvs, caches, outputs
-├── src/patchcraft/                   library core — one-image-at-a-time primitives
-│   ├── __init__.py                 re-exports the full public API
-│   ├── extract.py                  patches via F.unfold; Patchify wrapper (ADR 0002)
-│   ├── reconstruct.py              inverse via F.fold + count map
-│   ├── geometry.py                 pre-flight: num_patches, tilings, TilingSpec
-│   ├── pair.py                     LR↔HR pairing; PatchPair, PatchMeta
-│   ├── resize.py                   resize with PIL or torch backends
-│   └── cache.py                    content-addressed disk cache
-├── tests/                          pytest suite (contract tests for src/)
-│   ├── test_extract.py             extract + Patchify
-│   ├── test_reconstruct.py
-│   ├── test_geometry.py            num_patches + tilings
-│   ├── test_pair.py
-│   ├── test_resize.py
-│   ├── test_cache.py
-│   ├── test_datasets_helper.py     label_subset
-│   ├── test_import.py
-│   └── _datasets.py                dev-only fixtures (MNIST, etc) — NOT public API
-├── lab/                            ephemeral experiments; see lab/README.md
-│   ├── README.md                   bench rules (tracked)
-│   └── .gitignore                  ignores everything else (tracked)
-├── docs/
-│   ├── USAGE.md                    live REPL walkthrough of every public API
-│   ├── SCOPE.md                    responsibilities matrix + parallelization analysis
-│   ├── AUXILIARY.md                tests/_datasets, lab/, Z:\ conventions (NOT part of the wheel)
-│   ├── THEORY.md                   distilled design + §9 condition contract; §0 binding scope
-│   ├── ROADMAP.md                  milestone plan
-│   └── ADR/
-│       ├── 0001-patch-extraction-api.md   pure function `extract`
-│       └── 0002-patchify-transform.md     callable wrapper for Compose pipelines
-└── archive/                        reference-only; gitignored (pruned 2026-05-17 — only HISTORY.md kept)
-```
-
-## Validation lab
-
-The library is "one image in, one tensor out" by design — but you only know it works once you run it end-to-end on real images. That happens in two places, neither of which is part of the shipped package:
-
-- [`tests/`](tests/) — formal pytest suite that defines the contract from [`docs/THEORY.md`](docs/THEORY.md) §9.
-- [`lab/`](lab/) — ephemeral scripts and notebooks for fast hypothesis-checking. See [`lab/README.md`](lab/README.md) for the bench rules; outputs go to `Z:\outputs\patchcraft\` (off-tree).
-
-Datasets used by tests/lab are downloaded lazily into `Z:\caches\datasets\<name>\` on first use; they do not ship with the package and are never bundled into the wheel.
-
 ## Where to read next
 
 | If you want… | Open |
 |---|---|
-| A hands-on tour with real REPL outputs for every public API | [`docs/USAGE.md`](docs/USAGE.md) |
-| The line between "PatchCraft's job" and "your pipeline's job", plus the parallelization story | [`docs/SCOPE.md`](docs/SCOPE.md) |
-| The auxiliary test fixtures and lab conventions (not shipped) | [`docs/AUXILIARY.md`](docs/AUXILIARY.md) |
-| Design decisions, math, the per-API contract | [`docs/THEORY.md`](docs/THEORY.md) |
-| Architecture Decision Records | [`docs/ADR/`](docs/ADR/) |
-| Milestone plan | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
-| Per-release changes | [`CHANGELOG.md`](CHANGELOG.md) |
+| A hands-on tour with real REPL outputs for every public API | [USAGE.md](https://github.com/LeoPR/PatchCraft/blob/main/docs/USAGE.md) |
+| The line between "PatchCraft's job" and "your pipeline's job", plus the parallelization story | [SCOPE.md](https://github.com/LeoPR/PatchCraft/blob/main/docs/SCOPE.md) |
+| Design decisions, math, the per-API contract | [THEORY.md](https://github.com/LeoPR/PatchCraft/blob/main/docs/THEORY.md) |
+| Architecture Decision Records | [ADR/](https://github.com/LeoPR/PatchCraft/tree/main/docs/ADR) |
+| Per-release changes | [CHANGELOG.md](https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md) |
+| Cloning and contributing (run tests, layout, validation conventions) | [CONTRIBUTING.md](https://github.com/LeoPR/PatchCraft/blob/main/CONTRIBUTING.md) |
 
 ## Author
 
