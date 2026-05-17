@@ -1,4 +1,4 @@
-"""Tests for `patchkit.patch_metrics`, `per_patch_mse`, `per_patch_psnr`.
+"""Tests for `patchforge.patch_metrics`, `per_patch_mse`, `per_patch_psnr`.
 
 Contract: docs/THEORY.md §1.6 and §9.7.
 """
@@ -9,7 +9,7 @@ import math
 import pytest
 import torch
 
-from patchkit import patch_metrics, per_patch_mse, per_patch_psnr
+from patchforge import patch_metrics, per_patch_mse, per_patch_psnr
 
 # ----------------------------------------------------------- patch_metrics ---
 
@@ -161,7 +161,7 @@ class TestRoundtripIntegration:
     """patch_metrics is the natural way to validate extract + reconstruct."""
 
     def test_exact_roundtrip_psnr_is_infinite(self) -> None:
-        from patchkit import extract, reconstruct
+        from patchforge import extract, reconstruct
         img = torch.arange(28 * 28, dtype=torch.float64).reshape(1, 28, 28)
         patches = extract(img, patch_size=7, stride=7)
         recon = reconstruct(patches, image_shape=img.shape, stride=7)

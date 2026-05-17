@@ -1,14 +1,14 @@
-# PatchKit — auxiliary tooling (NOT part of the wheel)
+# PatchForge — auxiliary tooling (NOT part of the wheel)
 
 The lib is the car. This document describes the **track**: the
 auxiliary tooling in this repo that exists to test, exercise, and
 visualize the core, but is deliberately kept out of `pip install
-patchkit`. Nothing here is public API; nothing here is stable;
+patchforge`. Nothing here is public API; nothing here is stable;
 nothing here ships.
 
 Two boundaries are load-bearing:
 
-1. **Files** in `src/patchkit/` get shipped. Files anywhere else
+1. **Files** in `src/patchforge/` get shipped. Files anywhere else
    (`tests/`, `lab/`, `examples/` if it ever exists) do not.
 2. **Docs** in this file describe the auxiliary side. Docs in
    [`THEORY.md`](THEORY.md), [`USAGE.md`](USAGE.md),
@@ -20,7 +20,7 @@ Two boundaries are load-bearing:
 
 ## 1. `tests/_datasets.py` — dev fixtures, leading underscore on purpose
 
-PatchKit core takes one image at a time. The test suite needs *real*
+PatchForge core takes one image at a time. The test suite needs *real*
 images to drive the primitives through varied conditions, but the
 lib must not ship a dataset loader. `tests/_datasets.py` resolves
 that tension:
@@ -43,7 +43,7 @@ from tests._datasets import label_subset, mnist_subset
   indices per distinct label, deterministically seeded.
   *Not* part of the published API; if a downstream consumer needs
   label stratification, they implement it (it is ~15 lines).
-  Originally proposed as `patchkit.label_subset(dataset, ...)`; moved
+  Originally proposed as `patchforge.label_subset(dataset, ...)`; moved
   here when the binding scope ruled out dataset-shaped APIs in core
   (see [`SCOPE.md`](SCOPE.md) §1, "Label-stratified subset selection"
   row, and [`THEORY.md`](THEORY.md) §7).
@@ -51,11 +51,11 @@ from tests._datasets import label_subset, mnist_subset
   -> list[tuple[Tensor[1,28,28], int]]`** — downloads MNIST on first
   call into `Z:\caches\datasets\mnist\`; subsequent calls hit the
   cache. Returns balanced `(image, label)` pairs as `float32` in
-  `[0, 1]`, ready to feed straight into `patchkit.extract`.
+  `[0, 1]`, ready to feed straight into `patchforge.extract`.
 
 ### Why it stays auxiliary
 
-- A "dataset loader" is multi-image orchestration. PatchKit core
+- A "dataset loader" is multi-image orchestration. PatchForge core
   refuses to grow that.
 - Different consumers want different splits, different transforms,
   different formats. Forcing one in the wheel pleases none of them.
@@ -80,10 +80,10 @@ local to your working copy. The rules:
    stable. If something deserves to survive, it migrates: turned
    into a test under `tests/`, or (later) promoted to
    `experiments/<NNN>-slug/`.
-2. **Nothing in `lab/` is imported by `src/patchkit/`.** One-way
+2. **Nothing in `lab/` is imported by `src/patchforge/`.** One-way
    dependency: lab uses the lib, the lib never uses lab.
 3. **Outputs go off-tree.** Lab scripts write to
-   `Z:\outputs\patchkit\<YYYY-MM-DD-slug>\`, *never* into the project
+   `Z:\outputs\patchforge\<YYYY-MM-DD-slug>\`, *never* into the project
    root. The script creates the directory; nothing in this repo
    tracks the artefacts.
 4. **Suggested naming:** `YYYY-MM-DD-slug.{py,ipynb}`. Prefix-sorts
@@ -99,7 +99,7 @@ The current local working copy has, at the time of writing:
 - `lab/2026-05-16-roundtrip-mnist.py` — the script that validated
   M2 + M3 end-to-end on MNIST (4 geometries, max diff `1.19e-7`
   on `stride=1 float32`). Produced
-  `Z:\outputs\patchkit\2026-05-16-roundtrip-mnist\sample0-digit0-half-overlap.png`.
+  `Z:\outputs\patchforge\2026-05-16-roundtrip-mnist\sample0-digit0-half-overlap.png`.
 - `lab/usage_demo.py` + `lab/usage_demo.out` — the script and
   captured output behind [`USAGE.md`](USAGE.md). Re-run if any
   public API signature changes.
@@ -114,32 +114,32 @@ this README and the `.gitignore`.
 The dev environment uses [`Z:\caches`](../../../caches) and
 [`Z:\venvs`](../../../venvs) for everything that should not live
 inside a OneDrive-synced project root. Two sub-conventions are
-specific to PatchKit:
+specific to PatchForge:
 
 | Path | Contents | Created by | Cleanable |
 |---|---|---|---|
 | `Z:\caches\datasets\<name>\` | Downloaded reference datasets (MNIST so far; CIFAR-10 / DIV2K when needed). | `tests/_datasets.py` on first call | Yes — will re-download |
-| `Z:\outputs\patchkit\<slug>\` | Artefacts from `lab/` scripts: PNGs, JSONs, CSVs, dumps. | Each lab script creates its own subdir. | Yes — these are derived |
+| `Z:\outputs\patchforge\<slug>\` | Artefacts from `lab/` scripts: PNGs, JSONs, CSVs, dumps. | Each lab script creates its own subdir. | Yes — these are derived |
 
-Neither path is created by `pip install patchkit`. Both are created
+Neither path is created by `pip install patchforge`. Both are created
 on demand by the auxiliary tooling. If you move machines and your
 new dev environment doesn't have `Z:\`, edit
 [`tests/_datasets.py::DATASETS_ROOT`](../tests/_datasets.py) and the
-hardcoded paths inside your lab scripts. There is no PatchKit setting
+hardcoded paths inside your lab scripts. There is no PatchForge setting
 for these — they belong to the bench, not the lib.
 
 The canonical reference for `Z:\` is the project-external
-`dev-environment/README.md` outside this repo. PatchKit knows nothing
+`dev-environment/README.md` outside this repo. PatchForge knows nothing
 about it; that doc is operator-facing.
 
 ---
 
 ## 4. What the wheel ships vs. what stays local
 
-| In `dist/patchkit-0.1.0-py3-none-any.whl` | NOT in the wheel |
+| In `dist/patchforge-0.1.0-py3-none-any.whl` | NOT in the wheel |
 |---|---|
-| `src/patchkit/*.py` | `tests/` (including `_datasets.py`) |
-| `src/patchkit/py.typed` | `lab/` |
+| `src/patchforge/*.py` | `tests/` (including `_datasets.py`) |
+| `src/patchforge/py.typed` | `lab/` |
 | `LICENSE` (via wheel `licenses/`) | `docs/` (including this file) |
 | `METADATA` (from `pyproject.toml`) | `pyproject.toml` (only metadata is extracted) |
 | | `archive/` (gitignored anyway) |
@@ -148,10 +148,10 @@ about it; that doc is operator-facing.
 If you want to confirm the boundary, after a build:
 
 ```
-python -m zipfile -l dist/patchkit-0.1.0-py3-none-any.whl
+python -m zipfile -l dist/patchforge-0.1.0-py3-none-any.whl
 ```
 
-You should see only `patchkit/` (the seven primitives + `py.typed`)
+You should see only `patchforge/` (the seven primitives + `py.typed`)
 and the `*.dist-info/` metadata. Nothing else.
 
 ---

@@ -1,7 +1,7 @@
-# PatchKit — usage walkthrough
+# PatchForge — usage walkthrough
 
 Every snippet below was captured from a live REPL session against
-`patchkit==0.1.0`. Outputs are real, not pseudocode. Re-run the
+`patchforge==0.1.0`. Outputs are real, not pseudocode. Re-run the
 script behind it at any time:
 
 ```
@@ -17,10 +17,10 @@ The script is intentionally not part of the wheel — see
 ## 0. Setup
 
 ```python
->>> import patchkit
->>> patchkit.__version__
+>>> import patchforge
+>>> patchforge.__version__
 '0.1.0'
->>> sorted(patchkit.__all__)
+>>> sorted(patchforge.__all__)
 ['Cache', 'PairedTilingSpec', 'PatchMeta', 'PatchPair', 'Patchify',
  'TilingSpec', 'extract', 'num_patches', 'pair', 'paired_tilings',
  'patch_metrics', 'per_patch_mse', 'per_patch_psnr', 'reconstruct',
@@ -41,7 +41,7 @@ function. Takes `(H, W)` or `(C, H, W)`; channels are ignored. Returns
 `(num_h, num_w)` without touching a tensor.
 
 ```python
->>> from patchkit import num_patches
+>>> from patchforge import num_patches
 >>> num_patches((28, 28), patch_size=7, stride=7)
 (4, 4)
 >>> num_patches((28, 28), patch_size=4, stride=2)
@@ -60,7 +60,7 @@ or to fill in a progress bar.
 ## 2. `tilings` — every full-coverage geometry for an image
 
 ```python
->>> from patchkit import tilings
+>>> from patchforge import tilings
 >>> for t in tilings((28, 28)):
 ...     print(t)
 TilingSpec(patch_size=(2,  2), stride=(2,  2), dilation=(1, 1), num_patches=(14, 14), total_patches=196, overlap=False)
@@ -91,7 +91,7 @@ be exact.
 
 ```python
 >>> import torch
->>> from patchkit import extract
+>>> from patchforge import extract
 >>> img = torch.arange(28 * 28, dtype=torch.float32).reshape(1, 28, 28)
 >>> img.shape
 torch.Size([1, 28, 28])
@@ -111,7 +111,7 @@ callers decide whether that's an error.
 ## 4. `Patchify` — callable companion for `transforms.Compose`
 
 ```python
->>> from patchkit import Patchify
+>>> from patchforge import Patchify
 >>> patchify = Patchify(patch_size=4, stride=2)
 >>> patchify
 Patchify(patch_size=(4, 4), stride=(2, 2), dilation=(1, 1))
@@ -129,7 +129,7 @@ the rationale.
 ## 5. `reconstruct` — bit-exact when `stride == patch_size`
 
 ```python
->>> from patchkit import reconstruct
+>>> from patchforge import reconstruct
 >>> recon = reconstruct(patches, image_shape=img.shape, stride=7)
 >>> recon.shape
 torch.Size([1, 28, 28])
@@ -186,7 +186,7 @@ Hann zeros the patch edges (the `0.5 * (1 - cos(...))` is `0` at
 pw) / 4)` so the edge weight is small but never zero.
 
 ```python
->>> from patchkit import stitch, reconstruct, extract
+>>> from patchforge import stitch, reconstruct, extract
 >>> img_small = torch.full((1, 8, 8), 0.5)  # uniform gray
 >>> patches_small = extract(img_small, patch_size=4, stride=4)  # 4 patches
 
@@ -225,7 +225,7 @@ and §9.9 for the full contract.
 ## 7. `pair` — LR / HR correspondences
 
 ```python
->>> from patchkit import pair
+>>> from patchforge import pair
 >>> lr = torch.arange(8 * 8,   dtype=torch.float32).reshape(1, 8,  8)
 >>> hr = torch.arange(16 * 16, dtype=torch.float32).reshape(1, 16, 16)
 >>> result = pair(lr, hr,
@@ -260,7 +260,7 @@ both spatial axes.
 ## 8. `resize` — output type matches input
 
 ```python
->>> from patchkit import resize
+>>> from patchforge import resize
 >>> from PIL import Image
 >>> import numpy as np
 
@@ -288,7 +288,7 @@ with `backend="torch"`.
 
 ```python
 >>> import tempfile
->>> from patchkit import Cache
+>>> from patchforge import Cache
 >>> tmp = tempfile.mkdtemp()
 >>> c = Cache(tmp, namespace="demo", version=1)
 >>> c
@@ -333,7 +333,7 @@ logic.
 ## 10. `scale_factor` — integer scale between two image shapes
 
 ```python
->>> from patchkit import scale_factor
+>>> from patchforge import scale_factor
 >>> scale_factor((14, 14), (28, 28))
 2
 >>> scale_factor((28, 28), (28, 28))      # identity
@@ -353,7 +353,7 @@ integer `k` exists such that `hr == k * lr`. Accepts `(H, W)` or
 ## 11. `paired_tilings` — aligned LR↔HR geometries
 
 ```python
->>> from patchkit import paired_tilings
+>>> from patchforge import paired_tilings
 >>> for p in paired_tilings((14, 14), (28, 28)):
 ...     print(f"lr={p.lr.patch_size} stride={p.lr.stride} | "
 ...           f"hr={p.hr.patch_size} stride={p.hr.stride} | "
@@ -382,7 +382,7 @@ your pick based on how big a patch you want vs how many examples.
 
 ```python
 >>> import torch
->>> from patchkit import extract, patch_metrics, per_patch_psnr
+>>> from patchforge import extract, patch_metrics, per_patch_psnr
 >>> img = torch.arange(28 * 28, dtype=torch.float32).reshape(1, 28, 28) / 784.0
 >>> patches_a = extract(img, patch_size=7, stride=7)
 >>> patches_b = patches_a + 0.01  # uniform +0.01 noise
@@ -424,7 +424,7 @@ Both reject shape, dtype, and device mismatches.
 (14, 14) <--> (28, 28) (1 patches each)
 
 >>> # Step 2: pick a spec and call pair() with the LR/HR pixel data:
->>> # from patchkit import pair
+>>> # from patchforge import pair
 >>> # result = pair(lr_img, hr_img,
 >>> #               lr_patch_size=2, scale_factor=2, stride=2,
 >>> #               image_id='mnist-0')
@@ -437,24 +437,24 @@ Both reject shape, dtype, and device mismatches.
 ```
 
 This is the loop QPatchSR (and any similar consumer) will run.
-PatchKit covers steps 1, 2, and 4. Step 3 is the consumer's job.
+PatchForge covers steps 1, 2, and 4. Step 3 is the consumer's job.
 
 ---
 
 ## 14. Composing in a `torch` pipeline
 
-PatchKit is built to drop into someone else's pipeline. `Patchify`
+PatchForge is built to drop into someone else's pipeline. `Patchify`
 is the integration point.
 
 ```python
-from patchkit import Patchify
+from patchforge import Patchify
 from torchvision import transforms
 from torch.utils.data import DataLoader
 
 transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.GaussianBlur(kernel_size=3),
-    Patchify(patch_size=4, stride=2),  # PatchKit as one step
+    Patchify(patch_size=4, stride=2),  # PatchForge as one step
 ])
 
 dataset = MNIST(root="...", transform=transform)
@@ -462,7 +462,7 @@ loader = DataLoader(dataset, num_workers=4, batch_size=...)
 ```
 
 The `DataLoader` parallelizes over images for free (worker processes
-each apply the full `transform` to one image at a time). PatchKit
+each apply the full `transform` to one image at a time). PatchForge
 itself remains one-image-at-a-time; multi-image throughput is the
 pipeline's job, not the lib's. See [`SCOPE.md`](SCOPE.md) for the
 full responsibilities table.
@@ -472,9 +472,9 @@ full responsibilities table.
 ## What this page deliberately does not show
 
 - **Dataset loading** — `tests/_datasets.py::mnist_subset` is the dev
-  fixture; see [`AUXILIARY.md`](AUXILIARY.md). PatchKit core never
+  fixture; see [`AUXILIARY.md`](AUXILIARY.md). PatchForge core never
   touches a dataset.
-- **Training loops** — out of scope. PatchKit is infrastructure.
+- **Training loops** — out of scope. PatchForge is infrastructure.
 - **Multi-image batching** — use `torch.vmap`, a Python loop, or a
   `DataLoader`. The lib stays one-image-at-a-time on purpose.
 - **GPU details** — `extract`, `Patchify`, `reconstruct`, `pair`, and

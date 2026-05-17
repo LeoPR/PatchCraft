@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import torch
 
-from patchkit.extract import _as_pair, extract
+from patchforge.extract import _as_pair, extract
 
 __all__ = ["PatchMeta", "PatchPair", "pair"]
 

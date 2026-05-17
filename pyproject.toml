@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "patchkit"
-description = "Image patch extraction, pairing and reconstruction utilities for super-resolution and dataset pipelines."
+name = "patchforge"
+description = "Image patch extraction, reconstruction, pairing and seam-aware stitching for super-resolution and dataset pipelines."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
@@ -39,25 +39,25 @@ dev = [
     "pytest-cov",
     "ruff>=0.5",
     "mypy>=1.10",
-    # framework auxiliar (test fixtures, lab/): NOT a runtime dep of patchkit
+    # framework auxiliar (test fixtures, lab/): NOT a runtime dep of patchforge
     "torchvision>=0.20",
 ]
 
 [project.urls]
-Homepage = "https://github.com/LeoPR/PatchKit"
-Repository = "https://github.com/LeoPR/PatchKit"
-Issues = "https://github.com/LeoPR/PatchKit/issues"
-Changelog = "https://github.com/LeoPR/PatchKit/blob/main/CHANGELOG.md"
-Documentation = "https://github.com/LeoPR/PatchKit/blob/main/docs/USAGE.md"
+Homepage = "https://github.com/LeoPR/PatchForge"
+Repository = "https://github.com/LeoPR/PatchForge"
+Issues = "https://github.com/LeoPR/PatchForge/issues"
+Changelog = "https://github.com/LeoPR/PatchForge/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/LeoPR/PatchForge/blob/main/docs/USAGE.md"
 
 [tool.hatch.version]
-path = "src/patchkit/__init__.py"
+path = "src/patchforge/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/patchkit"]
+packages = ["src/patchforge"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"src/patchkit/py.typed" = "patchkit/py.typed"
+"src/patchforge/py.typed" = "patchforge/py.typed"
 
 [tool.pytest.ini_options]
 cache_dir = "Z:\\caches\\pytest"

@@ -1,4 +1,4 @@
-# PatchKit
+# PatchForge
 
 A small library for **encoding an image into patches and decoding it back**. Built to slot into other people's `torch` pipelines as one transform among many — like a `GaussianBlur` step in a `Compose([...])`.
 
@@ -8,23 +8,23 @@ A small library for **encoding an image into patches and decoding it back**. Bui
 
 Think of the lib as a **car** and this repo as the **car plus its test track**.
 
-- **The car** — [`src/patchkit/`](src/patchkit/) — is what gets installed by `pip install patchkit`. It is a single library with one job: take one image (`Tensor[C, H, W]`), encode it into patches, decode patches back into the image, optionally pair LR/HR, resize, cache. **One image at a time, every time.** No datasets, no training, no orchestration, no batching across images. Multi-image is the caller's `for` loop, or `torch.vmap`, or a `DataLoader`.
+- **The car** — [`src/patchforge/`](src/patchforge/) — is what gets installed by `pip install patchforge`. It is a single library with one job: take one image (`Tensor[C, H, W]`), encode it into patches, decode patches back into the image, optionally pair LR/HR, resize, cache. **One image at a time, every time.** No datasets, no training, no orchestration, no batching across images. Multi-image is the caller's `for` loop, or `torch.vmap`, or a `DataLoader`.
 - **The track** — [`tests/`](tests/), [`lab/`](lab/), [`tests/_datasets.py`](tests/_datasets.py), and the dev extras (`torchvision`, etc.) — is the pit crew, telemetry, driver and stopwatch that **prove the car works** on real images (MNIST today; more later). It downloads datasets, drives the lib through varied geometries, measures correctness. It never ships in the wheel.
 
 The car is also **acoplável** — designed to drop into someone else's pipeline:
 
 ```python
-from patchkit import Patchify
+from patchforge import Patchify
 from torchvision import transforms
 
 transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.GaussianBlur(kernel_size=3),
-    Patchify(patch_size=4, stride=2),   # ← PatchKit as one step
+    Patchify(patch_size=4, stride=2),   # ← PatchForge as one step
 ])
 ```
 
-`Patchify` is a callable; chain it inside a `Compose`, let `DataLoader` parallelize over workers. PatchKit gives you the primitive; the surrounding pipeline stays your code.
+`Patchify` is a callable; chain it inside a `Compose`, let `DataLoader` parallelize over workers. PatchForge gives you the primitive; the surrounding pipeline stays your code.
 
 ## Visual cheat sheet
 
@@ -106,9 +106,9 @@ Use when patches were modified by a model and uniform averaging shows boundary s
 
 ```
    for image in images:
-       patches = extract(image, ...)       # PatchKit primitive
+       patches = extract(image, ...)       # PatchForge primitive
        result  = model(patches)            # caller's work
-       out     = stitch(result, ...)       # PatchKit primitive
+       out     = stitch(result, ...)       # PatchForge primitive
 ```
 
 Multi-image parallelism is the caller's pipeline (`torch.vmap`, `DataLoader` workers, etc.) — see [`SCOPE.md`](docs/SCOPE.md) §2.
@@ -126,29 +126,29 @@ Multi-image parallelism is the caller's pipeline (`torch.vmap`, `DataLoader` wor
 
 ## Scope (what the car does NOT do)
 
-- **Not a dataset manager.** PatchKit does not load, download, batch, shuffle, or stream datasets. That's the track's job — `tests/_datasets.py` has `mnist_subset(...)` for dev fixtures, and `torchvision` is in the `[dev]` extra (never a runtime dep of the car).
+- **Not a dataset manager.** PatchForge does not load, download, batch, shuffle, or stream datasets. That's the track's job — `tests/_datasets.py` has `mnist_subset(...)` for dev fixtures, and `torchvision` is in the `[dev]` extra (never a runtime dep of the car).
 - **Not a multi-image API.** Every primitive takes one image. Use `vmap` or a Python loop if you need to apply it to many.
 - No SVMs, no kernels, no quantum circuits — those belong to other projects.
-- No neural network training — PatchKit is infrastructure, not a model.
+- No neural network training — PatchForge is infrastructure, not a model.
 
 ## Install
 
 ### From PyPI
 
 ```
-pip install patchkit            # core only
-pip install patchkit[cache]     # adds zstandard for compressed Cache entries
+pip install patchforge            # core only
+pip install patchforge[cache]     # adds zstandard for compressed Cache entries
 ```
 
 ### From source (development)
 
 ```
-git clone https://github.com/LeoPR/PatchKit.git
-cd patchkit
+git clone https://github.com/LeoPR/PatchForge.git
+cd patchforge
 pip install -e ".[dev,cache]"
 ```
 
-For GPU support, install a matching torch wheel before PatchKit
+For GPU support, install a matching torch wheel before PatchForge
 (e.g. `pip install torch --index-url https://download.pytorch.org/whl/cu124`).
 
 ## Run tests
@@ -161,13 +161,13 @@ pytest -m "not gpu"        # skip GPU-requiring tests
 ## Layout
 
 ```
-PatchKit/
+PatchForge/
 ├── pyproject.toml                  package metadata, build backend (hatchling)
 ├── README.md                       this file
 ├── LICENSE                         MIT
 ├── .python-version                 3.13
 ├── .gitignore                      ignores archive/, venvs, caches, outputs
-├── src/patchkit/                   library core — one-image-at-a-time primitives
+├── src/patchforge/                   library core — one-image-at-a-time primitives
 │   ├── __init__.py                 re-exports the full public API
 │   ├── extract.py                  patches via F.unfold; Patchify wrapper (ADR 0002)
 │   ├── reconstruct.py              inverse via F.fold + count map
@@ -197,9 +197,7 @@ PatchKit/
 │   └── ADR/
 │       ├── 0001-patch-extraction-api.md   pure function `extract`
 │       └── 0002-patchify-transform.md     callable wrapper for Compose pipelines
-└── archive/                        reference-only; gitignored
-    ├── PatchHub/                   earlier standalone patch library (own .git)
-    └── QSVM_patchkit/              relevant subset of the QSVM legacy project
+└── archive/                        reference-only; gitignored (pruned 2026-05-17 — only HISTORY.md kept)
 ```
 
 ## Validation lab
@@ -207,20 +205,16 @@ PatchKit/
 The library is "one image in, one tensor out" by design — but you only know it works once you run it end-to-end on real images. That happens in two places, neither of which is part of the shipped package:
 
 - [`tests/`](tests/) — formal pytest suite that defines the contract from [`docs/THEORY.md`](docs/THEORY.md) §9.
-- [`lab/`](lab/) — ephemeral scripts and notebooks for fast hypothesis-checking. See [`lab/README.md`](lab/README.md) for the bench rules; outputs go to `Z:\outputs\patchkit\` (off-tree).
+- [`lab/`](lab/) — ephemeral scripts and notebooks for fast hypothesis-checking. See [`lab/README.md`](lab/README.md) for the bench rules; outputs go to `Z:\outputs\patchforge\` (off-tree).
 
 Datasets used by tests/lab are downloaded lazily into `Z:\caches\datasets\<name>\` on first use; they do not ship with the package and are never bundled into the wheel.
-
-## Archive policy
-
-The [`archive/`](archive/) folder contains prior implementations kept strictly as reading material to extract theory and design ideas. **Do not import code from archive at runtime.** When a pattern from the archive proves useful, reimplement cleanly in `src/patchkit/` with tests.
 
 ## Where to read next
 
 | If you want… | Open |
 |---|---|
 | A hands-on tour with real REPL outputs for every public API | [`docs/USAGE.md`](docs/USAGE.md) |
-| The line between "PatchKit's job" and "your pipeline's job", plus the parallelization story | [`docs/SCOPE.md`](docs/SCOPE.md) |
+| The line between "PatchForge's job" and "your pipeline's job", plus the parallelization story | [`docs/SCOPE.md`](docs/SCOPE.md) |
 | The auxiliary test fixtures and lab conventions (not shipped) | [`docs/AUXILIARY.md`](docs/AUXILIARY.md) |
 | Design decisions, math, the per-API contract | [`docs/THEORY.md`](docs/THEORY.md) |
 | Architecture Decision Records | [`docs/ADR/`](docs/ADR/) |

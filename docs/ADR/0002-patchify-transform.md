@@ -9,19 +9,19 @@
 
 [ADR 0001](0001-patch-extraction-api.md) established `extract(image, patch_size, stride, dilation)` as a pure function and explicitly rejected a class-based replacement to avoid state creep (LRU cache, fixed `image_size`, hidden disk cache — the drift visible in `archive/QSVM_patchkit/patchkit/patches.py::OptimizedPatchExtractor`).
 
-A new use case crystallized in conversation: PatchKit must be **acoplável** ("attachable") to other people's torch pipelines. Concretely, a downstream consumer wants:
+A new use case crystallized in conversation: PatchForge must be **acoplável** ("attachable") to other people's torch pipelines. Concretely, a downstream consumer wants:
 
 ```python
 transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.GaussianBlur(kernel_size=3),
-    patchkit_step,                              # ← here
+    patchforge_step,                              # ← here
 ])
 dataset = MNIST(..., transform=transform)
 loader = DataLoader(dataset, num_workers=4)     # parallelism for free
 ```
 
-The functional API forces `patchkit_step` to be a `lambda img: extract(img, 4, 2)` or `functools.partial(extract, patch_size=4, stride=2)`. Both work, but:
+The functional API forces `patchforge_step` to be a `lambda img: extract(img, 4, 2)` or `functools.partial(extract, patch_size=4, stride=2)`. Both work, but:
 
 - **Not introspectable.** `print(transform)` shows `<function <lambda> at 0x...>` — useless for debugging long pipelines.
 - **No eager validation.** `lambda img: extract(img, patch_size=-1, stride=-1)` only fails when the first batch hits the worker. With a class, `__init__` catches the config error at pipeline construction.
@@ -29,7 +29,7 @@ The functional API forces `patchkit_step` to be a `lambda img: extract(img, 4, 2
 
 ## Decision
 
-Add `Patchify` to `src/patchkit/extract.py` and export it from `patchkit`. It is a thin callable companion to `extract`:
+Add `Patchify` to `src/patchforge/extract.py` and export it from `patchforge`. It is a thin callable companion to `extract`:
 
 ```python
 class Patchify:
@@ -57,11 +57,11 @@ class Patchify:
 
 ### What is deliberately *not* in this class
 
-- **No caching.** Adding caching would re-invite the state creep ADR 0001 forbade. Caching is a `patchkit.Cache` concern, composed externally.
+- **No caching.** Adding caching would re-invite the state creep ADR 0001 forbade. Caching is a `patchforge.Cache` concern, composed externally.
 - **No fixed image size.** Same rejection as ADR 0001 alternative A.
-- **No `nn.Module` inheritance.** `Patchify` is not a layer: no parameters, no gradient hook, no `.to(device)`, no `.train()`/`.eval()`. Subclassing `nn.Module` would imply semantics PatchKit does not honor.
+- **No `nn.Module` inheritance.** `Patchify` is not a layer: no parameters, no gradient hook, no `.to(device)`, no `.train()`/`.eval()`. Subclassing `nn.Module` would imply semantics PatchForge does not honor.
 - **No batch axis.** The output stays `(L, C, ph, pw)` — same as `extract`. Per [`THEORY.md`](../THEORY.md) §0, multi-image batching is out of scope; the `transforms.Compose` pipeline applies one image at a time per worker, which fits.
-- **No `inverse` method.** Round-trip is `patchkit.reconstruct` (separate function). Bundling inverse here would tie two milestones (M2, M3) into one class — defeats decoupling.
+- **No `inverse` method.** Round-trip is `patchforge.reconstruct` (separate function). Bundling inverse here would tie two milestones (M2, M3) into one class — defeats decoupling.
 
 ## Consequences
 
@@ -90,7 +90,7 @@ class Patchify:
 
 ### C. Subclass `torch.nn.Module` so `Patchify` is a `nn.Module`-compatible transform
 
-**Rejected.** `nn.Module` carries semantics PatchKit does not implement (parameter registration, device migration via `.to`, training-mode switching, autograd hooks). Inheriting from it implies those features work; they would silently no-op or fail in surprising ways. The plain callable class is what `torchvision.transforms.v2` itself uses internally for stateless transforms.
+**Rejected.** `nn.Module` carries semantics PatchForge does not implement (parameter registration, device migration via `.to`, training-mode switching, autograd hooks). Inheriting from it implies those features work; they would silently no-op or fail in surprising ways. The plain callable class is what `torchvision.transforms.v2` itself uses internally for stateless transforms.
 
 ### D. Return a single random patch per call so `Patchify` becomes a per-sample augmentation
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from patchkit.extract import _as_pair
+from patchforge.extract import _as_pair
 
 __all__ = [
     "PairedTilingSpec",
@@ -204,7 +204,7 @@ def scale_factor(
     LR larger than HR).
 
     Pure shape math; no tensor, no allocation. Use it before calling
-    :func:`patchkit.pair` to discover the scale factor from data instead
+    :func:`patchforge.pair` to discover the scale factor from data instead
     of hard-coding it.
     """
     for name, shape in (("lr_shape", lr_shape), ("hr_shape", hr_shape)):
@@ -246,7 +246,7 @@ def paired_tilings(
     the scale factor. Both sides have identical ``total_patches`` and patch
     ``k`` covers the same image region on both sides.
 
-    Use the result to drive :func:`patchkit.pair` with confidence that the
+    Use the result to drive :func:`patchforge.pair` with confidence that the
     parameters produce sound, aligned LR/HR patch sets.
 
     Raises

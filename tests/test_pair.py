@@ -1,10 +1,10 @@
-"""Tests for `patchkit.pair` — contract from docs/THEORY.md §3 and §9.3."""
+"""Tests for `patchforge.pair` — contract from docs/THEORY.md §3 and §9.3."""
 from __future__ import annotations
 
 import pytest
 import torch
 
-from patchkit import PatchMeta, PatchPair, extract, pair
+from patchforge import PatchMeta, PatchPair, extract, pair
 
 
 def _ramp(c: int, h: int, w: int, dtype: torch.dtype = torch.float32) -> torch.Tensor:

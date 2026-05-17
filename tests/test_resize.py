@@ -1,4 +1,4 @@
-"""Tests for `patchkit.resize` — contract from docs/THEORY.md §9.4."""
+"""Tests for `patchforge.resize` — contract from docs/THEORY.md §9.4."""
 from __future__ import annotations
 
 import numpy as np
@@ -6,7 +6,7 @@ import pytest
 import torch
 from PIL import Image
 
-from patchkit import resize
+from patchforge import resize
 
 
 def _rgb_pil(h: int, w: int) -> Image.Image:
