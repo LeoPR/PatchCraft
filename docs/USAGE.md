@@ -169,6 +169,22 @@ window kernel (`uniform`, `hann`, `gaussian`) so each pixel "trusts"
 patches whose center is closer to it more than patches whose edge
 falls on it.
 
+Visual: the kernel shape applied to each patch for `patch_size=4`:
+
+```
+   weight="uniform"     weight="hann"        weight="gaussian"
+   (== reconstruct)     centers > edges      centers >> edges (never 0)
+
+   + + + +              . . . .              . o o .
+   + + + +              . X X .              o X X o
+   + + + +              . X X .              o X X o
+   + + + +              . . . .              . o o .
+```
+
+Hann zeros the patch edges (the `0.5 * (1 - cos(...))` is `0` at
+`i == 0` and `i == ph - 1`); Gaussian uses `sigma = max(1, min(ph,
+pw) / 4)` so the edge weight is small but never zero.
+
 ```python
 >>> from patchkit import stitch, reconstruct, extract
 >>> img_small = torch.full((1, 8, 8), 0.5)  # uniform gray

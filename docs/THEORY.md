@@ -99,6 +99,16 @@ Strict input checks: shape mismatch, dtype mismatch, and device mismatch all rai
 
 **Worked example (`ph = pw = 4, sh = sw = 2`).** Every interior pixel is covered by 4 patches (2 row overlaps × 2 col overlaps); edge pixels are covered by 2; corners by 1. The count map produced by `fold(ones_like(patches_flat), output_size=(H,W), kernel=(4,4), stride=2)` encodes exactly these weights. Dividing the summed pixel contributions by this map recovers the original image bit-exactly for fractional pixel values, and within one ULP for float32 noise.
 
+Visualizing the count map along one axis (image cols 0..7, `ph=4`, `sh=2`):
+
+```
+   col:     0  1  2  3  4  5  6  7
+   patch0:  x  x  x  x
+   patch1:        x  x  x  x
+   patch2:              x  x  x  x
+   count:   1  1  2  2  2  2  1  1   <-- 2-D fold = outer(this, this)
+```
+
 **Dilation.** `F.fold` does not support dilation in the same way as `F.unfold`: for `d > 1` the patch footprint skips pixels, and `fold` would deposit the sparse contributions into a canvas that is not the image. Rather than building a custom scatter, we refuse `dilation != 1` at reconstruction time with a clear `ValueError`. Callers who extracted with dilation are expected to consume patches directly (e.g., as features) and not round-trip.
 
 **Stride maior que patch (lacunas).** Quando `sh > ph` ou `sw > pw`, o grid pula pixels: a soma `fold(...)` tem zeros nessas posições, e qualquer divisão (incluindo pelo clamp `min=1e-6`) produz pixels com valor arbitrário — síntese de dado, exatamente o que §1 proíbe ao escolher truncamento como única política de borda. Recusamos a condição com `ValueError` logo na entrada de `reconstruct`. Consumidores que querem features esparsas (kernels, classificadores) usam apenas `extract`, onde `stride > patch_size` é aceito sem objeções, e não tentam round-trip.
@@ -126,6 +136,16 @@ For *unmodified* patches, every `patch_k(i_k, j_k)` equals `img(x, y)` (definiti
 - **`uniform`** — `w ≡ 1`. Numerator becomes the same as `reconstruct`'s fold; denominator becomes the count map. Mathematically equivalent to `reconstruct`. Provided so the API is one function with a parameter instead of two functions with a hidden choice.
 - **`hann`** — separable Hann (`outer(hann(ph), hann(pw))`). Center weight is 1, edge weight is 0. Strong seam suppression; cheapest to compute. **Caveat:** image-corner pixels covered only by patches whose `w` at that relative position is zero have numerator and denominator both ≈ 0 — the `clamp(min=1e-6)` divisor makes them zero in the output. This shows up most obviously at `stride == patch_size`, where the four image corners go black. With overlap (`stride < patch_size`) the artifact shrinks to the outermost pixel only on each side.
 - **`gaussian`** — separable Gaussian with `sigma = max(1, min(ph, pw) / 4)` centered at the patch midpoint. Weight is non-zero everywhere, so there is no corner artifact, at the cost of weaker seam suppression than Hann.
+
+Visualizing the three 2-D kernels at `patch_size=4` (`+` = full weight, `X` = high, `o` = medium, `.` = zero or near-zero):
+
+```
+   uniform        hann           gaussian
+   + + + +        . . . .        . o o .
+   + + + +        . X X .        o X X o
+   + + + +        . X X .        o X X o
+   + + + +        . . . .        . o o .
+```
 
 **Why a separate function and not a parameter on `reconstruct`?** Because the contracts are different. `reconstruct` is bit-exact for unmodified patches and rejects anything that would force interpolation; `stitch` accepts modified patches and explicitly does interpolated blending. Adding a `weight=` parameter to `reconstruct` would conflate "I want my image back" with "I have model output and need to blend." Two functions, one charter each, no surprise behavior when a kwarg is forgotten.
 
