@@ -17,6 +17,7 @@ long-form companion.
 |---|---|---|---|
 | Extract patches from **one** image | ✓ (`extract`, `Patchify`) | | |
 | Reconstruct an image from its patches | ✓ (`reconstruct`) | | |
+| Blend modified patches back into an image (uniform / Hann / Gaussian window) | ✓ (`stitch`) | | discussed in §4 below |
 | Pair LR ↔ HR patches | ✓ (`pair`, `PatchPair`, `PatchMeta`) | | |
 | Resize one image | ✓ (`resize`, PIL or torch) | | |
 | Compute patch geometry without allocating | ✓ (`num_patches`, `tilings`) | | |
@@ -212,7 +213,34 @@ multiple projects (e.g., per-region MAE histogram, structural
 ranking), build it in the consumer first, prove it useful, then
 revisit moving it down into PatchKit under a new ADR.
 
-### 4.4 `num_patches` and `tilings` — test helpers in disguise?
+### 4.4 `stitch` — why a separate function from `reconstruct`?
+
+`reconstruct` and `stitch` share the same `F.fold` geometry and the same
+rejection rules (no `dilation`, no `stride > patch_size`, ndim/grid checks).
+The temptation is to merge them: `reconstruct(..., weight="hann")` would
+deliver the same code on fewer symbols.
+
+We rejected that for two reasons.
+
+- **Contract divergence.** `reconstruct` is bit-exact for unmodified
+  patches; `stitch` is explicitly an interpolated blend that assumes
+  patches were modified. A user who calls `reconstruct(...)` expecting
+  an inverse and gets back something close-but-not-equal because they
+  forgot a kwarg has a confusing bug. Two functions, two charters,
+  no surprise behavior.
+- **Float-only on `stitch`.** Window kernels are float-valued. Multiplying
+  integer patches by a Hann window would either silently quantize or
+  implicitly promote — both are surprises a primitive should refuse.
+  `reconstruct` accepts integer patches (`stride == patch_size` is a
+  cheap copy and round-trips them exactly); `stitch` does not. That
+  asymmetry is cleaner as two function signatures than as one signature
+  with a hidden dtype guard.
+
+The runtime cost of the duplication is negligible (the second function
+is ~150 lines, validation and all). The cognitive cost of a kwarg that
+silently changes the contract is much higher.
+
+### 4.5 `num_patches` and `tilings` — test helpers in disguise?
 
 They were initially proposed because the test suite needed to
 parametrize over valid geometries. They survived as public API
@@ -228,7 +256,7 @@ They take no tensors, allocate nothing, and have no I/O. They
 fit the "one image at a time, no datasets" charter because they take
 shape ints, not images.
 
-### 4.5 `image_id` in `PatchMeta`
+### 4.6 `image_id` in `PatchMeta`
 
 A grey case in the opposite direction. PatchKit does not manage
 images, so it does not name them. `image_id` is a free-form opaque

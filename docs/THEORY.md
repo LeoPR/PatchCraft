@@ -105,6 +105,34 @@ Strict input checks: shape mismatch, dtype mismatch, and device mismatch all rai
 
 **Design decision.** `patchkit.reconstruct(patches, image_shape, stride, dilation=1) -> Tensor[C, H, W]` uses `F.fold` followed by division by the overlap-count map (computed once, same-geometry fold of ones). Raises `ValueError` when `dilation != 1` **ou quando `sh > ph` ou `sw > pw`** (cobertura parcial é proibida). `image_shape` is `(C, H, W)` and must match the geometry implied by the patch grid; inconsistent shapes raise `ValueError`. The count map clamp (`min=1e-6`) existe apenas para absorver ruído float em pixels totalmente cobertos — nunca para mascarar buracos de cobertura. Output dtype matches input.
 
+## 2.5 Stitching modified patches
+
+**Topic.** `reconstruct` answers "given the original patches, give me back the image." It is the inverse of `extract`, and it makes a strong implicit assumption: every patch covering a pixel agrees on that pixel's value (true for patches that came straight from `extract` on the same image). When patches have been *modified* — model output, denoised, super-resolved, hand-edited — that assumption fails, and uniform averaging shows the disagreement as visible seams along patch boundaries.
+
+The standard trick is to weight each patch's contribution by a 2-D window whose value is large at the patch center and small (or zero) at the patch edges, so that pixels closer to a patch's center "trust" that patch more than pixels far from it. PatchKit ships three window kernels: `uniform`, `hann`, `gaussian`.
+
+**Math.** Let `w(i, j)` be the window kernel of shape `(ph, pw)`. For each output pixel `(x, y)`, summing over every patch `k` covering `(x, y)`:
+
+  `numerator(x, y) = Σ_k  patch_k(i_k, j_k) · w(i_k, j_k)`
+  `denominator(x, y) = Σ_k  w(i_k, j_k)`
+  `output(x, y) = numerator(x, y) / denominator(x, y)`
+
+For *unmodified* patches, every `patch_k(i_k, j_k)` equals `img(x, y)` (definition of `extract`), so the numerator factors as `img(x, y) · denominator(x, y)`, and the output is `img(x, y)` exactly — round-trip is preserved for any kernel as long as the denominator at `(x, y)` is positive. For *modified* patches, contributions are weighted by how central `(x, y)` is to each contributing patch — seams are attenuated.
+
+**Implementation.** Two `F.fold` calls: one on the weighted patches (numerator), one on the kernel replicated across the `L` patch slots (denominator). Identical geometry to `reconstruct`'s count-map fold; same `clamp(min=1e-6)` on the denominator to absorb float noise.
+
+**Window kernels.**
+
+- **`uniform`** — `w ≡ 1`. Numerator becomes the same as `reconstruct`'s fold; denominator becomes the count map. Mathematically equivalent to `reconstruct`. Provided so the API is one function with a parameter instead of two functions with a hidden choice.
+- **`hann`** — separable Hann (`outer(hann(ph), hann(pw))`). Center weight is 1, edge weight is 0. Strong seam suppression; cheapest to compute. **Caveat:** image-corner pixels covered only by patches whose `w` at that relative position is zero have numerator and denominator both ≈ 0 — the `clamp(min=1e-6)` divisor makes them zero in the output. This shows up most obviously at `stride == patch_size`, where the four image corners go black. With overlap (`stride < patch_size`) the artifact shrinks to the outermost pixel only on each side.
+- **`gaussian`** — separable Gaussian with `sigma = max(1, min(ph, pw) / 4)` centered at the patch midpoint. Weight is non-zero everywhere, so there is no corner artifact, at the cost of weaker seam suppression than Hann.
+
+**Why a separate function and not a parameter on `reconstruct`?** Because the contracts are different. `reconstruct` is bit-exact for unmodified patches and rejects anything that would force interpolation; `stitch` accepts modified patches and explicitly does interpolated blending. Adding a `weight=` parameter to `reconstruct` would conflate "I want my image back" with "I have model output and need to blend." Two functions, one charter each, no surprise behavior when a kwarg is forgotten.
+
+**Why float-only?** Window kernels are float-valued by construction (`hann`, `gaussian` produce values in `[0, 1]`). Multiplying integer patches by a float kernel would either silently quantize the output or implicitly promote to float, neither of which is a contract a primitive should carry. Reject non-float input with a clear `ValueError` and let the caller convert.
+
+**Design decision.** `patchkit.stitch(patches, image_shape, stride, *, weight="uniform"|"hann"|"gaussian", dilation=1) -> Tensor[C, H, W]` in `src/patchkit/stitch.py`. Lives next to `reconstruct`; uses the same `F.fold` geometry; shares the same rejections (`dilation != 1`, `stride > patch_size`, ndim check, grid-consistency check). Adds: float-only patches, weight-kind validation. Output dtype and device preserved. The `weight="uniform"` path is mathematically equivalent to `reconstruct` (validated by bit-exact equality test on no-overlap and `allclose` on overlap).
+
 ## 3. LR ↔ HR pairing
 
 **Topic.** Given a scale factor `r` and LR/HR shapes related by `HR = r · LR`, define patch sizes and strides on both sides so that the *k*-th LR patch corresponds to the *k*-th HR patch (same `k`). Invariant:
@@ -369,3 +397,35 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 - Per-channel reduction variants. Caller slices the tensor and calls these directly.
 - Auto-detection of `max_value`. Caller knows the range of their data.
 - Normalized cross-correlation, cosine similarity. Out of charter (those compare *whole signals*, not pixel-wise reconstructions).
+
+### 9.9 `stitch(patches, image_shape, stride, *, weight="uniform", dilation=1)`
+
+The blending counterpart to `reconstruct`. Same fold geometry, same rejections; adds a window-kernel weighting so modified patches can be reassembled with attenuated seams.
+
+**Aceita:**
+- `patches` is a 4-D `(L, C, ph, pw)` floating-point tensor (`float16`, `bfloat16`, `float32`, `float64`).
+- `image_shape == (C, H, W)` consistent with the patch grid implied by `patches.shape[0]`, `stride`, and `(ph, pw)`.
+- `stride` as `int` or `(int, int)` with `1 ≤ stride ≤ patch_size` on every axis.
+- `weight` ∈ `{"uniform", "hann", "gaussian"}`. `"uniform"` is mathematically equivalent to `reconstruct`.
+- `dtype` and `device` preserved on output.
+
+**Sinaliza (não exceção):**
+- `weight="hann"` at corners covered only by edge-weight-zero positions → output pixel is 0 (documented artifact, §2.5). Surfaces most visibly at `stride == patch_size`.
+
+**Rejeita (`ValueError` / `TypeError`):**
+- `patches` not a tensor (`TypeError`).
+- `patches.ndim != 4` (`ValueError`).
+- `patches.dtype` not floating-point (`ValueError`, message instructs `patches.float()`).
+- `weight` not in the allowed set (`ValueError`).
+- `dilation != 1` (`ValueError`).
+- `stride > patch_size` on any axis (partial coverage forbidden; same as §9.2).
+- `image_shape` malformed (not 3-tuple, non-positive dim, non-int).
+- Channel mismatch between `image_shape[0]` and `patches.shape[1]`.
+- `patches.shape[0]` inconsistent with the grid implied by `image_shape`, `patch_size`, `stride`.
+
+**Fora de escopo v0.1:**
+- Caller-provided custom weight tensor (the three named kernels cover seam-blending; an arbitrary tensor adds surface area without a known use case).
+- Per-channel weights.
+- Auto-selection of kernel based on stride/patch-size.
+- Promotion of integer patches to float (caller normalizes).
+- Output in PIL.

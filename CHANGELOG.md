@@ -46,15 +46,42 @@ Explicitly **not** included: SSIM, MS-SSIM, LPIPS, FID, any windowed
 or learned metric. Use `pytorch-msssim`, `lpips`, `clean-fid` on the
 caller side ([SCOPE.md](docs/SCOPE.md) §4.3 explains the boundary).
 
+### Added — patch stitching for modified patches (THEORY §2.5, §9.9)
+
+`reconstruct` is the bit-exact inverse of `extract`. When patches have
+been modified (model output, denoised, super-resolved), averaging them
+back uniformly shows visible seams at patch boundaries. `stitch` is the
+seam-aware counterpart: it folds patches weighted by a 2-D window
+kernel so each pixel "trusts" patches closer to its center more.
+
+- **`stitch(patches, image_shape, stride, *, weight="uniform"|"hann"|"gaussian", dilation=1)`**
+  — same `F.fold` geometry and rejections as `reconstruct`; adds a
+  weighted-blend numerator over a weighted-sum denominator. With
+  `weight="uniform"` it is mathematically equivalent to `reconstruct`
+  (covered by a bit-exact equality test on no-overlap and `allclose`
+  on overlap). With `"hann"` it strongly suppresses seams at the
+  cost of zeroing image corners that fall on Hann's edge-weight-zero
+  region (documented artifact). With `"gaussian"`
+  (`sigma = max(1, min(ph, pw) / 4)`) it blends smoothly with no
+  corner artifact.
+
+Floating-point patches only — window kernels are float-valued and we
+refuse to silently quantize or implicitly promote. Caller converts to
+`float` first.
+
 ### Changed
 
-- Public API surface: 11 → 17 symbols.
-- [`docs/SCOPE.md`](docs/SCOPE.md) gains rows for paired tilings and
-  pixel metrics; §4.3 discusses why pixel metrics stayed core while
-  windowed/learned metrics did not.
+- Public API surface: 11 → 18 symbols.
+- [`docs/SCOPE.md`](docs/SCOPE.md) gains rows for paired tilings,
+  pixel metrics, and stitch; §4.3 discusses why pixel metrics stayed
+  core while windowed/learned metrics did not, §4.4 explains why
+  `stitch` is a separate function from `reconstruct` rather than a
+  kwarg.
 - [`docs/THEORY.md`](docs/THEORY.md) gains §1.5 expansion (cross-
-  resolution paragraphs), §1.6 (patch comparison metrics), §9.7
-  (paired tilings contract), §9.8 (metrics contract).
+  resolution paragraphs), §1.6 (patch comparison metrics), §2.5
+  (stitch — math, kernels, why it is separate), §9.7
+  (paired tilings contract), §9.8 (metrics contract), §9.9 (stitch
+  contract).
 
 ## [0.1.0] — 2026-05-16
 

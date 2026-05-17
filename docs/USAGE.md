@@ -21,12 +21,16 @@ The script is intentionally not part of the wheel — see
 >>> patchkit.__version__
 '0.1.0'
 >>> sorted(patchkit.__all__)
-['Cache', 'PatchMeta', 'PatchPair', 'Patchify', 'TilingSpec',
- 'extract', 'num_patches', 'pair', 'reconstruct', 'resize', 'tilings']
+['Cache', 'PairedTilingSpec', 'PatchMeta', 'PatchPair', 'Patchify',
+ 'TilingSpec', 'extract', 'num_patches', 'pair', 'paired_tilings',
+ 'patch_metrics', 'per_patch_mse', 'per_patch_psnr', 'reconstruct',
+ 'resize', 'scale_factor', 'stitch', 'tilings']
 ```
 
-Eleven public symbols. Functions are lowercase; classes / dataclasses /
-NamedTuples are PascalCase.
+Eighteen public symbols on the v0.2-track main branch (the wheel
+tagged `v0.1.0` shipped eleven; `__version__` will bump to `0.2.0`
+once the additions validate in real use). Functions are lowercase;
+classes / dataclasses / NamedTuples are PascalCase.
 
 ---
 
@@ -155,7 +159,54 @@ value; sum is `k * value`; division by the count map gives back
 
 ---
 
-## 6. `pair` — LR / HR correspondences
+## 6. `stitch` — blend modified patches back with a window kernel
+
+`reconstruct` is the bit-exact inverse of `extract`. When patches
+have been *modified* — model output, denoised, super-resolved —
+uniform averaging makes the disagreement between adjacent patches
+show up as visible seams. `stitch` weights each patch by a 2-D
+window kernel (`uniform`, `hann`, `gaussian`) so each pixel "trusts"
+patches whose center is closer to it more than patches whose edge
+falls on it.
+
+```python
+>>> from patchkit import stitch, reconstruct, extract
+>>> img_small = torch.full((1, 8, 8), 0.5)  # uniform gray
+>>> patches_small = extract(img_small, patch_size=4, stride=4)  # 4 patches
+
+>>> # weight="uniform" is mathematically equivalent to reconstruct.
+>>> torch.equal(
+...     stitch(patches_small, image_shape=img_small.shape, stride=4, weight="uniform"),
+...     reconstruct(patches_small, image_shape=img_small.shape, stride=4),
+... )
+True
+
+>>> # weight="hann" zeros image corners that fall on Hann's edge-weight-zero
+>>> # positions (documented artifact). Interior pixels are preserved.
+>>> out_hann = stitch(patches_small, image_shape=img_small.shape,
+...                    stride=4, weight="hann")
+>>> out_hann[0, 0, 0].item()   # corner: covered only at relative (0,0) where hann=0
+0.0
+>>> out_hann[0, 1, 1].item()   # interior of patch: hann>0 there, recovered
+0.5
+
+>>> # weight="gaussian" has no zero-weight edges, so no corner artifact.
+>>> out_gauss = stitch(patches_small, image_shape=img_small.shape,
+...                     stride=4, weight="gaussian")
+>>> out_gauss[0, 0, 0].item()
+0.5
+```
+
+Use `stitch` for "I have model output and want a single image";
+use `reconstruct` for "I have unmodified patches and want my
+original image back, exactly." `stitch` accepts only floating-point
+patches (window kernels are float-valued; integer patches would
+silently quantize). See [`THEORY.md`](THEORY.md) §2.5 for the math
+and §9.9 for the full contract.
+
+---
+
+## 7. `pair` — LR / HR correspondences
 
 ```python
 >>> from patchkit import pair
@@ -190,7 +241,7 @@ both spatial axes.
 
 ---
 
-## 7. `resize` — output type matches input
+## 8. `resize` — output type matches input
 
 ```python
 >>> from patchkit import resize
@@ -217,7 +268,7 @@ with `backend="torch"`.
 
 ---
 
-## 8. `Cache` — bytes in, bytes out, atomic, version-aware
+## 9. `Cache` — bytes in, bytes out, atomic, version-aware
 
 ```python
 >>> import tempfile
@@ -263,7 +314,7 @@ logic.
 
 ---
 
-## 9. `scale_factor` — integer scale between two image shapes
+## 10. `scale_factor` — integer scale between two image shapes
 
 ```python
 >>> from patchkit import scale_factor
@@ -283,7 +334,7 @@ integer `k` exists such that `hr == k * lr`. Accepts `(H, W)` or
 
 ---
 
-## 10. `paired_tilings` — aligned LR↔HR geometries
+## 11. `paired_tilings` — aligned LR↔HR geometries
 
 ```python
 >>> from patchkit import paired_tilings
@@ -311,7 +362,7 @@ your pick based on how big a patch you want vs how many examples.
 
 ---
 
-## 11. `patch_metrics` / `per_patch_psnr` — canonical comparisons
+## 12. `patch_metrics` / `per_patch_psnr` — canonical comparisons
 
 ```python
 >>> import torch
@@ -344,7 +395,7 @@ Both reject shape, dtype, and device mismatches.
 
 ---
 
-## 12. End-to-end QPatchSR-style pre-flight (synthesizing 9, 10, 11)
+## 13. End-to-end QPatchSR-style pre-flight (synthesizing 10, 11, 12)
 
 ```python
 >>> # Goal: train a model that maps 14x14 patches to corresponding 28x28 patches.
@@ -374,7 +425,7 @@ PatchKit covers steps 1, 2, and 4. Step 3 is the consumer's job.
 
 ---
 
-## 13. Composing in a `torch` pipeline
+## 14. Composing in a `torch` pipeline
 
 PatchKit is built to drop into someone else's pipeline. `Patchify`
 is the integration point.

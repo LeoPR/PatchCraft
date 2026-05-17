@@ -14,6 +14,7 @@ from patchkit.metrics import patch_metrics, per_patch_mse, per_patch_psnr
 from patchkit.pair import PatchMeta, PatchPair, pair
 from patchkit.reconstruct import reconstruct
 from patchkit.resize import resize
+from patchkit.stitch import stitch
 
 __version__ = "0.1.0"
 __all__ = [
@@ -33,5 +34,6 @@ __all__ = [
     "reconstruct",
     "resize",
     "scale_factor",
+    "stitch",
     "tilings",
 ]
