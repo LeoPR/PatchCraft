@@ -11,16 +11,19 @@ requires-python = ">=3.12"
 authors = [{ name = "Leonardo Marques de Souza" }]
 keywords = ["image", "patches", "super-resolution", "dataset", "torch"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Image Processing",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 dynamic = ["version"]
 dependencies = [
@@ -42,7 +45,10 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/LeoPR/PatchKit"
+Repository = "https://github.com/LeoPR/PatchKit"
 Issues = "https://github.com/LeoPR/PatchKit/issues"
+Changelog = "https://github.com/LeoPR/PatchKit/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/LeoPR/PatchKit/blob/main/docs/USAGE.md"
 
 [tool.hatch.version]
 path = "src/patchkit/__init__.py"

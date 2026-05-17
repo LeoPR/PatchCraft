@@ -1,0 +1,111 @@
+name: release
+
+# Triggered when a version tag is pushed (vX.Y.Z[.aN, .bN, .rcN]).
+# Steps:
+#   1. Re-run the test job that test.yml uses (sanity check on the
+#      exact ref being released).
+#   2. Build the wheel + sdist with `uv build`.
+#   3. Publish to PyPI via Trusted Publishing (OIDC) -- no token,
+#      no secret. The pypi.org side must have a configured publisher
+#      pointing at THIS repo + THIS workflow + the `pypi` environment.
+#   4. Create / update the GitHub Release page and attach the
+#      `dist/*.whl` and `dist/*.tar.gz` files.
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+.[ab][0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+.rc[0-9]+"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: re-run tests at tag ref
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install 3.13
+      - run: uv sync --extra cache --extra dev --python 3.13
+      - run: uv run ruff check src tests
+      - run: uv run mypy --strict src
+      - run: uv run pytest -m "not gpu"
+
+  build:
+    name: build wheel + sdist
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv build
+      - name: Inspect dist metadata
+        run: |
+          uv run --with twine twine check dist/*
+          ls -la dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    name: publish to PyPI (Trusted Publishing)
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: pypi
+      url: https://pypi.org/project/patchkit/
+    permissions:
+      id-token: write  # required for OIDC token exchange with PyPI
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish via Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # No `password` field -- OIDC handles authentication.
+        # The pypi.org "Pending publisher" config must match:
+        #   PyPI project name: patchkit
+        #   Owner:             LeoPR
+        #   Repository:        PatchKit
+        #   Workflow:          release.yml
+        #   Environment:       pypi
+
+  github-release:
+    name: create GitHub Release with assets
+    runs-on: ubuntu-latest
+    needs: publish-pypi
+    permissions:
+      contents: write  # required to create a Release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Extract version from tag
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Create Release + attach assets
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "PatchKit ${{ github.ref_name }}"
+          body: |
+            See [`CHANGELOG.md`](https://github.com/LeoPR/PatchKit/blob/main/CHANGELOG.md) for the full notes.
+
+            Install:
+            ```
+            pip install patchkit==${{ steps.ver.outputs.version }}
+            ```
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false

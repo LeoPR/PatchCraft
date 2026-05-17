@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-17
+
+Second public release. Adds three feature groups motivated by the QPatchSR
+super-resolution consumer plus internal ergonomics. No breaking changes vs
+v0.1.0 — all v0.1.0 imports keep working.
+
 ### Added — cross-resolution geometry (THEORY §1.5, §9.7)
 
 Motivated by the QPatchSR consumer's question: "given two image shapes
@@ -165,4 +171,5 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) — installation, the car-vs-track metaphor,
   validation lab.
 
+[0.2.0]: https://github.com/LeoPR/PatchKit/releases/tag/v0.2.0
 [0.1.0]: https://github.com/LeoPR/PatchKit/releases/tag/v0.1.0

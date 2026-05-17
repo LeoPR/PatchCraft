@@ -65,15 +65,30 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 
 Label-stratified subsetting was moved out of the core library per the binding scope in [`THEORY.md`](THEORY.md) §0 (PatchKit operates on one image at a time; no dataset abstractions). The function lives in [`tests/_datasets.py::label_subset`](../tests/_datasets.py) as part of the auxiliary framework (test fixtures + `lab/`). The roadmap renumbers no further — there is no M6 in v0.1.
 
-## M7 — First release
+## M7 — First release (v0.1.0 — 2026-05-16)
 
-- [ ] Version bump to `0.1.0`.
-- [ ] `CHANGELOG.md` created.
-- [ ] Build wheel: `uv build` produces `dist/patchkit-0.1.0-py3-none-any.whl`.
-- [ ] GitHub repo `LeoPR/patchkit` created and first tag pushed.
-- [ ] (Optional) PyPI publish.
+- [x] Version bump to `0.1.0`.
+- [x] `CHANGELOG.md` created (Keep-a-Changelog format).
+- [x] Build wheel: `uv build` produces `dist/patchkit-0.1.0-py3-none-any.whl` and `.tar.gz`.
+- [x] GitHub repo [`LeoPR/PatchKit`](https://github.com/LeoPR/PatchKit) created, tag `v0.1.0` pushed at `a612c16`.
+- [x] Post-release docs: [`USAGE.md`](USAGE.md), [`SCOPE.md`](SCOPE.md), [`AUXILIARY.md`](AUXILIARY.md).
+
+## M8 — v0.2.0 expansion (2026-05-17)
+
+Motivated by the QPatchSR consumer's needs surfaced after v0.1.0 shipped. Public API: 11 → 18 symbols. No breaking changes.
+
+- [x] Cross-resolution geometry: `scale_factor`, `paired_tilings`, `PairedTilingSpec` (THEORY §1.5 expansion, §9.7).
+- [x] Pixel metrics module: `patch_metrics`, `per_patch_mse`, `per_patch_psnr` (THEORY §1.6, §9.8; SCOPE §4.3 explains why SSIM/LPIPS stayed out).
+- [x] `stitch(..., weight="uniform"|"hann"|"gaussian")` — seam-aware reassembly for modified patches (THEORY §2.5, §9.9; SCOPE §4.4 explains why it is a separate function from `reconstruct`).
+- [x] README ASCII "Visual cheat sheet" covering extract / reconstruct / pair / stitch.
+- [x] `__version__` bump to `0.2.0`, CHANGELOG `[0.2.0]` section closed.
+- [x] CI scaffold: [`.github/workflows/test.yml`](../.github/workflows/test.yml) (PR validation) and [`.github/workflows/release.yml`](../.github/workflows/release.yml) (PyPI publish via Trusted Publishing on `vX.Y.Z` tag push).
+- [ ] Tag `v0.2.0` pushed.
+- [ ] PyPI account + Trusted Publisher setup (manual, one-time).
+- [ ] First PyPI release published (triggered by tag push).
 
 ## Post-release
 
-- Integration back into QPatchSR: `pip install patchkit` and implement kernels/regressors on top.
+- Integration back into QPatchSR: `pip install patchkit` and implement kernels/regressors on top of the validated v0.2 API.
 - Potential auxiliary #2 for quantum components (naming TBD).
+- Companion package `patchkit-quant` for quantization primitives (THEORY §6) if a second consumer surfaces the need.
