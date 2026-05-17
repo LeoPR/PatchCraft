@@ -598,7 +598,7 @@ wheels = [
 ]
 
 [[package]]
-name = "patchforge"
+name = "patchcraft"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },

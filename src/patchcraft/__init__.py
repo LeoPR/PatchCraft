@@ -1,8 +1,8 @@
-"""PatchForge — image patch extraction, pairing and reconstruction utilities."""
+"""PatchCraft — image patch extraction, pairing and reconstruction utilities."""
 
-from patchforge.cache import Cache
-from patchforge.extract import Patchify, extract
-from patchforge.geometry import (
+from patchcraft.cache import Cache
+from patchcraft.extract import Patchify, extract
+from patchcraft.geometry import (
     PairedTilingSpec,
     TilingSpec,
     num_patches,
@@ -10,11 +10,11 @@ from patchforge.geometry import (
     scale_factor,
     tilings,
 )
-from patchforge.metrics import patch_metrics, per_patch_mse, per_patch_psnr
-from patchforge.pair import PatchMeta, PatchPair, pair
-from patchforge.reconstruct import reconstruct
-from patchforge.resize import resize
-from patchforge.stitch import stitch
+from patchcraft.metrics import patch_metrics, per_patch_mse, per_patch_psnr
+from patchcraft.pair import PatchMeta, PatchPair, pair
+from patchcraft.reconstruct import reconstruct
+from patchcraft.resize import resize
+from patchcraft.stitch import stitch
 
 __version__ = "0.2.0"
 __all__ = [

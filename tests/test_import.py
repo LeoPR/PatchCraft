@@ -1,7 +1,7 @@
 """Sanity check: the package imports and exposes a version."""
-import patchforge
+import patchcraft
 
 
 def test_version_is_defined() -> None:
-    assert isinstance(patchforge.__version__, str)
-    assert patchforge.__version__ != ""
+    assert isinstance(patchcraft.__version__, str)
+    assert patchcraft.__version__ != ""

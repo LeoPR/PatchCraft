@@ -1,10 +1,10 @@
-"""Tests for `patchforge.stitch` — contract from docs/THEORY.md §9.9."""
+"""Tests for `patchcraft.stitch` — contract from docs/THEORY.md §9.9."""
 from __future__ import annotations
 
 import pytest
 import torch
 
-from patchforge import extract, reconstruct, stitch
+from patchcraft import extract, reconstruct, stitch
 
 
 def _ramp(c: int, h: int, w: int, dtype: torch.dtype = torch.float32) -> torch.Tensor:

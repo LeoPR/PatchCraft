@@ -1,10 +1,10 @@
-"""Tests for `patchforge.extract` — contract from docs/THEORY.md §10.1."""
+"""Tests for `patchcraft.extract` — contract from docs/THEORY.md §10.1."""
 from __future__ import annotations
 
 import pytest
 import torch
 
-from patchforge import Patchify, extract
+from patchcraft import Patchify, extract
 
 
 def _ramp(c: int, h: int, w: int, dtype: torch.dtype = torch.float32) -> torch.Tensor:

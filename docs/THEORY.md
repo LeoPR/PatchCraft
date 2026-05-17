@@ -1,16 +1,16 @@
-# PatchForge — Theory Notes
+# PatchCraft — Theory Notes
 
 Working document. The goal is to distill the useful theory from the reference implementations in [`../archive/`](../archive/) into a single place **before** writing new code. Keep this document as the source-of-truth for design decisions.
 
-> Every section should end with a paragraph titled **Design decision** stating what PatchForge will actually implement and why.
+> Every section should end with a paragraph titled **Design decision** stating what PatchCraft will actually implement and why.
 
 ## 0. Scope (binding)
 
-PatchForge operates on **one image at a time**: a `(C, H, W)` tensor in, a derived tensor out. No batching across images, no dataset abstractions, no dataloader integration.
+PatchCraft operates on **one image at a time**: a `(C, H, W)` tensor in, a derived tensor out. No batching across images, no dataset abstractions, no dataloader integration.
 
-The lib is the *car*; this repo also contains the *track and pit crew* (`tests/`, `lab/`, `tests/_datasets.py`) that prove the car works. Anything that needs a dataset, a labeled subset, a download, or batching belongs to the track, not the car. The wheel that ships via `pip install patchforge` contains only `src/patchforge/`.
+The lib is the *car*; this repo also contains the *track and pit crew* (`tests/`, `lab/`, `tests/_datasets.py`) that prove the car works. Anything that needs a dataset, a labeled subset, a download, or batching belongs to the track, not the car. The wheel that ships via `pip install patchcraft` contains only `src/patchcraft/`.
 
-The car must be **acoplável** to other people's torch pipelines: `Patchify` (see §1) is a `torchvision.transforms`-style callable so callers can drop PatchForge into `Compose([..., Patchify(...), ...])` and get `DataLoader` worker parallelism for free. The lib gives them the primitive; they own the pipeline.
+The car must be **acoplável** to other people's torch pipelines: `Patchify` (see §1) is a `torchvision.transforms`-style callable so callers can drop PatchCraft into `Compose([..., Patchify(...), ...])` and get `DataLoader` worker parallelism for free. The lib gives them the primitive; they own the pipeline.
 
 Multi-image batching is **out of scope**, not under-specified: callers use a Python loop, `torch.vmap`, or a `DataLoader`. The grey-area "maybe if trivially cheap" was resolved against batching — patch counts vary per image (different `H`, `W` give different `L`), so any batched API would need padding or list-of-tensor outputs, both of which leak complexity into a primitive that has no reason to carry it.
 
@@ -26,13 +26,13 @@ Multi-image batching is **out of scope**, not under-specified: callers use a Pyt
 - Row-major ordering: patch `k` is at `(row, col) = (k // num_patches_w, k % num_patches_w)`.
 - The top-left pixel of patch `k` is at `(row · sh, col · sw)` in the original image.
 
-**Boundary conditions.** Truncation, never padding. Pixels in the trailing rows/columns that do not fit a full patch are dropped. PatchForge does not synthesize data; callers who need full coverage should pad the image themselves before extracting.
+**Boundary conditions.** Truncation, never padding. Pixels in the trailing rows/columns that do not fit a full patch are dropped. PatchCraft does not synthesize data; callers who need full coverage should pad the image themselves before extracting.
 
 **Memory layout.** `F.unfold(x.unsqueeze(0), (ph,pw), dilation=d, stride=(sh,sw))` yields shape `(1, C·ph·pw, L)`. Reshape as `.view(C, ph, pw, L).permute(3, 0, 1, 2).contiguous()` to obtain `(L, C, ph, pw)`. Device and dtype are preserved from the input.
 
-**Design decision.** `patchforge.extract(image, patch_size, stride, dilation=1) -> Tensor[L, C, ph, pw]` is a pure function built on `F.unfold`. `image` must be `(C, H, W)`; batching is explicit (call in a loop or `vmap`) and is not part of the v0.1 signature. `patch_size` and `stride` accept `int` (square) or `(int, int)`. Truncation is the only boundary policy. When no patch fits, we return an empty tensor `Tensor[0, C, ph, pw]` rather than raising — callers decide. No caching inside the function; caching is a separate concern (see §4). Dilation is supported here even though reconstruction rejects it (see §2). See also [ADR 0001](ADR/0001-patch-extraction-api.md) for the API rationale.
+**Design decision.** `patchcraft.extract(image, patch_size, stride, dilation=1) -> Tensor[L, C, ph, pw]` is a pure function built on `F.unfold`. `image` must be `(C, H, W)`; batching is explicit (call in a loop or `vmap`) and is not part of the v0.1 signature. `patch_size` and `stride` accept `int` (square) or `(int, int)`. Truncation is the only boundary policy. When no patch fits, we return an empty tensor `Tensor[0, C, ph, pw]` rather than raising — callers decide. No caching inside the function; caching is a separate concern (see §4). Dilation is supported here even though reconstruction rejects it (see §2). See also [ADR 0001](ADR/0001-patch-extraction-api.md) for the API rationale.
 
-**Composability with torch transforms (Patchify).** ADR 0002 adds a thin callable companion: `patchforge.Patchify(patch_size, stride, dilation=1)` is a class with `__call__(image) -> Tensor[L, C, ph, pw]` that delegates to `extract`. It exists to slot into `torchvision.transforms.Compose([..., Patchify(4, 2), ...])` without forcing callers to write a lambda — lambdas are not repr-friendly and they skip eager validation. `Patchify` validates the geometry in `__init__` (so a bad `patch_size` fails when the pipeline is built, not when the first batch arrives), and carries **only** the geometry ints (`__slots__`, no `__dict__`, no cache, no buffer). The function is the contract; the class is a convenience. Same shape contract, same dtype/device preservation, same truncation policy.
+**Composability with torch transforms (Patchify).** ADR 0002 adds a thin callable companion: `patchcraft.Patchify(patch_size, stride, dilation=1)` is a class with `__call__(image) -> Tensor[L, C, ph, pw]` that delegates to `extract`. It exists to slot into `torchvision.transforms.Compose([..., Patchify(4, 2), ...])` without forcing callers to write a lambda — lambdas are not repr-friendly and they skip eager validation. `Patchify` validates the geometry in `__init__` (so a bad `patch_size` fails when the pipeline is built, not when the first batch arrives), and carries **only** the geometry ints (`__slots__`, no `__dict__`, no cache, no buffer). The function is the contract; the class is a convenience. Same shape contract, same dtype/device preservation, same truncation policy.
 
 ## 1.5 Pre-flight geometry helpers
 
@@ -57,7 +57,7 @@ Truncated geometries (where the last patch falls short of the edge) are delibera
 
 **Dilation.** `tilings` always emits `dilation=(1, 1)` in v0.1 — dilated full-coverage tilings are a non-trivial enumeration (the patch footprint has gaps; you can interleave multiple dilated patches per pixel) and no consumer has asked for them yet. `num_patches` does honor `dilation` because the formula already does.
 
-**Design decision.** Two pure functions and one `NamedTuple`: `num_patches`, `tilings`, `TilingSpec`. No tensors, no images, no dataset abstractions — only ints in, ints out. They live in `src/patchforge/geometry.py` and are re-exported from `patchforge`. The `TilingSpec` fields are `patch_size`, `stride`, `dilation`, `num_patches`, `total_patches`, `overlap` — destructurable for tests, sortable, hashable. Square-only enumeration in v0.1; rectangular comes when a real consumer asks (the function signature accommodates it by always returning `(int, int)` tuples).
+**Design decision.** Two pure functions and one `NamedTuple`: `num_patches`, `tilings`, `TilingSpec`. No tensors, no images, no dataset abstractions — only ints in, ints out. They live in `src/patchcraft/geometry.py` and are re-exported from `patchcraft`. The `TilingSpec` fields are `patch_size`, `stride`, `dilation`, `num_patches`, `total_patches`, `overlap` — destructurable for tests, sortable, hashable. Square-only enumeration in v0.1; rectangular comes when a real consumer asks (the function signature accommodates it by always returning `(int, int)` tuples).
 
 **Cross-resolution geometry (`scale_factor`, `paired_tilings`, `PairedTilingSpec`).** Super-resolution consumers (and any multi-resolution patch consumer) ask one more pre-flight question: "given two image shapes — the low-resolution input and the high-resolution target — what `(p, s)` on each side produces the same number of patches with corresponding image regions?". The same arithmetic as `tilings`, layered with the integer-scale invariant from §3:
 
@@ -76,15 +76,15 @@ These helpers live alongside `tilings` and are tensor-free; everything they do r
 - max-abs-diff — `(a - b).abs().max()`
 - PSNR (dB) — `10 * log10(max_value² / mse)`
 
-Every consumer either re-implements these or imports them from some scattered utility module. Different consumers often pick slightly different reductions (axis choice, dtype promotion, what to do when MSE is zero) — divergence breeds bugs. PatchForge ships the canonical reductions so that "did the model do better?" has one answer at the lib level.
+Every consumer either re-implements these or imports them from some scattered utility module. Different consumers often pick slightly different reductions (axis choice, dtype promotion, what to do when MSE is zero) — divergence breeds bugs. PatchCraft ships the canonical reductions so that "did the model do better?" has one answer at the lib level.
 
 **Per-patch vs over-the-stack.** Both are useful. A model trainer wants the scalar PSNR over an entire batch (early stopping, logging); a researcher wants per-patch PSNR (rank patches by reconstruction quality, identify failure modes). Two distinct shapes; two functions.
 
 **Dtype handling.** Internally `patch_metrics` promotes to `float64` for the scalar accumulation (one number per call, cost is irrelevant, precision matters). `per_patch_mse` and `per_patch_psnr` keep input dtype (per-patch values are themselves a tensor; consumer chooses precision via input). PSNR returns `+inf` when MSE is zero — mathematically correct; no clamp tricks that produce a finite "very large" value the user has to reverse-engineer.
 
-**What this section deliberately does not ship.** SSIM, MS-SSIM, LPIPS, FID, any windowed or learned metric. Each depends on parameters (window size, data range, pre-trained network) that PatchForge cannot pick on behalf of consumers, and mature standalone packages exist (`pytorch-msssim`, `lpips`). Adding them here would force PatchForge to pull bigger deps and to bless one parameterization over others.
+**What this section deliberately does not ship.** SSIM, MS-SSIM, LPIPS, FID, any windowed or learned metric. Each depends on parameters (window size, data range, pre-trained network) that PatchCraft cannot pick on behalf of consumers, and mature standalone packages exist (`pytorch-msssim`, `lpips`). Adding them here would force PatchCraft to pull bigger deps and to bless one parameterization over others.
 
-**Design decision.** Three pure functions in `src/patchforge/metrics.py`, re-exported from `patchforge`:
+**Design decision.** Three pure functions in `src/patchcraft/metrics.py`, re-exported from `patchcraft`:
 - `patch_metrics(a, b, *, max_value=1.0) -> dict[str, float]` — scalar reduction over the whole tensor, dtype-promoted internally, returns plain Python floats so the result is JSON-serializable.
 - `per_patch_mse(a, b) -> Tensor[L]` — strict `(L, C, h, w)` inputs, returns one value per leading-axis entry.
 - `per_patch_psnr(a, b, *, max_value=1.0) -> Tensor[L]` — same as MSE shape; identical patches yield `+inf` (`torch.where(mse == 0, inf, ...)`, not a clamp).
@@ -113,13 +113,13 @@ Visualizing the count map along one axis (image cols 0..7, `ph=4`, `sh=2`):
 
 **Stride maior que patch (lacunas).** Quando `sh > ph` ou `sw > pw`, o grid pula pixels: a soma `fold(...)` tem zeros nessas posições, e qualquer divisão (incluindo pelo clamp `min=1e-6`) produz pixels com valor arbitrário — síntese de dado, exatamente o que §1 proíbe ao escolher truncamento como única política de borda. Recusamos a condição com `ValueError` logo na entrada de `reconstruct`. Consumidores que querem features esparsas (kernels, classificadores) usam apenas `extract`, onde `stride > patch_size` é aceito sem objeções, e não tentam round-trip.
 
-**Design decision.** `patchforge.reconstruct(patches, image_shape, stride, dilation=1) -> Tensor[C, H, W]` uses `F.fold` followed by division by the overlap-count map (computed once, same-geometry fold of ones). Raises `ValueError` when `dilation != 1` **ou quando `sh > ph` ou `sw > pw`** (cobertura parcial é proibida). `image_shape` is `(C, H, W)` and must match the geometry implied by the patch grid; inconsistent shapes raise `ValueError`. The count map clamp (`min=1e-6`) existe apenas para absorver ruído float em pixels totalmente cobertos — nunca para mascarar buracos de cobertura. Output dtype matches input.
+**Design decision.** `patchcraft.reconstruct(patches, image_shape, stride, dilation=1) -> Tensor[C, H, W]` uses `F.fold` followed by division by the overlap-count map (computed once, same-geometry fold of ones). Raises `ValueError` when `dilation != 1` **ou quando `sh > ph` ou `sw > pw`** (cobertura parcial é proibida). `image_shape` is `(C, H, W)` and must match the geometry implied by the patch grid; inconsistent shapes raise `ValueError`. The count map clamp (`min=1e-6`) existe apenas para absorver ruído float em pixels totalmente cobertos — nunca para mascarar buracos de cobertura. Output dtype matches input.
 
 ## 2.5 Stitching modified patches
 
 **Topic.** `reconstruct` answers "given the original patches, give me back the image." It is the inverse of `extract`, and it makes a strong implicit assumption: every patch covering a pixel agrees on that pixel's value (true for patches that came straight from `extract` on the same image). When patches have been *modified* — model output, denoised, super-resolved, hand-edited — that assumption fails, and uniform averaging shows the disagreement as visible seams along patch boundaries.
 
-The standard trick is to weight each patch's contribution by a 2-D window whose value is large at the patch center and small (or zero) at the patch edges, so that pixels closer to a patch's center "trust" that patch more than pixels far from it. PatchForge ships three window kernels: `uniform`, `hann`, `gaussian`.
+The standard trick is to weight each patch's contribution by a 2-D window whose value is large at the patch center and small (or zero) at the patch edges, so that pixels closer to a patch's center "trust" that patch more than pixels far from it. PatchCraft ships three window kernels: `uniform`, `hann`, `gaussian`.
 
 **Math.** Let `w(i, j)` be the window kernel of shape `(ph, pw)`. For each output pixel `(x, y)`, summing over every patch `k` covering `(x, y)`:
 
@@ -151,7 +151,7 @@ Visualizing the three 2-D kernels at `patch_size=4` (`+` = full weight, `X` = hi
 
 **Why float-only?** Window kernels are float-valued by construction (`hann`, `gaussian` produce values in `[0, 1]`). Multiplying integer patches by a float kernel would either silently quantize the output or implicitly promote to float, neither of which is a contract a primitive should carry. Reject non-float input with a clear `ValueError` and let the caller convert.
 
-**Design decision.** `patchforge.stitch(patches, image_shape, stride, *, weight="uniform"|"hann"|"gaussian", dilation=1) -> Tensor[C, H, W]` in `src/patchforge/stitch.py`. Lives next to `reconstruct`; uses the same `F.fold` geometry; shares the same rejections (`dilation != 1`, `stride > patch_size`, ndim check, grid-consistency check). Adds: float-only patches, weight-kind validation. Output dtype and device preserved. The `weight="uniform"` path is mathematically equivalent to `reconstruct` (validated by bit-exact equality test on no-overlap and `allclose` on overlap).
+**Design decision.** `patchcraft.stitch(patches, image_shape, stride, *, weight="uniform"|"hann"|"gaussian", dilation=1) -> Tensor[C, H, W]` in `src/patchcraft/stitch.py`. Lives next to `reconstruct`; uses the same `F.fold` geometry; shares the same rejections (`dilation != 1`, `stride > patch_size`, ndim check, grid-consistency check). Adds: float-only patches, weight-kind validation. Output dtype and device preserved. The `weight="uniform"` path is mathematically equivalent to `reconstruct` (validated by bit-exact equality test on no-overlap and `allclose` on overlap).
 
 ## 3. LR ↔ HR pairing
 
@@ -166,11 +166,11 @@ Visualizing the three 2-D kernels at `patch_size=4` (`+` = full weight, `X` = hi
 
 So `num_h_lr == num_h_hr` (and analogously for width) exactly when the scale factor is an integer. The top-left of LR patch `k` is at `(row · sh_lr, col · sw_lr)`; multiply by `r` to get the HR patch origin — same image region, different resolution.
 
-**Truncation.** When `(H_lr − ph_lr) % sh_lr != 0`, the trailing LR rows that don't fit a full patch are dropped. Because of the integer scaling, the same trailing HR rows are also dropped — the two grids stay aligned. The user loses a strip on the right/bottom of both resolutions. If full coverage is required, pad the LR image *before* extracting (and the HR image correspondingly) — PatchForge does not pad implicitly.
+**Truncation.** When `(H_lr − ph_lr) % sh_lr != 0`, the trailing LR rows that don't fit a full patch are dropped. Because of the integer scaling, the same trailing HR rows are also dropped — the two grids stay aligned. The user loses a strip on the right/bottom of both resolutions. If full coverage is required, pad the LR image *before* extracting (and the HR image correspondingly) — PatchCraft does not pad implicitly.
 
 **Recommended defaults.** For tiling (no overlap): `stride_lr = ph_lr`, `stride_hr = ph_hr = r · ph_lr`. For 2× overlap training data: `stride_lr = ph_lr // 2`.
 
-**Design decision.** `patchforge.pair(lr_image, hr_image, lr_patch_size, scale_factor, stride, *, image_id=None) -> PatchPair`. `scale_factor` must be a positive `int` (non-integer scale is rejected — irrational alignment has no clean semantics). `lr_patch_size` and `stride` are `int` or `(int, int)`; HR `patch_size` and `stride` are derived as `scale_factor * lr_*`. `dilation=1` is fixed (not exposed) because dilation breaks the reconstruction story.
+**Design decision.** `patchcraft.pair(lr_image, hr_image, lr_patch_size, scale_factor, stride, *, image_id=None) -> PatchPair`. `scale_factor` must be a positive `int` (non-integer scale is rejected — irrational alignment has no clean semantics). `lr_patch_size` and `stride` are `int` or `(int, int)`; HR `patch_size` and `stride` are derived as `scale_factor * lr_*`. `dilation=1` is fixed (not exposed) because dilation breaks the reconstruction story.
 
 The return type is `PatchPair`, a frozen `@dataclass(slots=True)` with three fields: `lr_patches` (`Tensor[L, C, ph_lr, pw_lr]`), `hr_patches` (`Tensor[L, C, ph_hr, pw_hr]`), `metas` (`tuple[PatchMeta, ...]` of length `L`). This deviates from the earlier "iterator of tuples" sketch — tensors are what downstream code actually wants (a batch of LR patches and the corresponding batch of HR patches), iteration over the dataclass is one `zip(...)` away, and the materialized form is cheap because both `extract` calls are already eager. `PatchMeta` is `@dataclass(frozen=True, slots=True)` holding `patch_index`, `row`, `col` (in LR coords; multiply by `scale_factor` for HR), `lr_patch_size`, `hr_patch_size`, `image_id` — small, CPU-only, never gets pushed to GPU. See §7 for why a dataclass over a dict/tensor.
 
@@ -188,11 +188,11 @@ LR and HR must agree on dtype and device; mismatch is rejected (caller normalize
 
 **Serialization format.** `torch.save` to a `bytes` buffer, then zstd-compress when `zstandard` is installed (level 3), else write raw. File layout: one file per entry, filename = first 16 hex chars of the key, stored under `<cache_dir>/<prefix>/`. A tiny sidecar JSON per entry stores the full key, version, and content checksum — enough to detect truncated writes without scanning the whole payload.
 
-**Concurrency.** Single-writer, multi-reader. PatchForge does not implement locking. If two processes race on the same key, the second writer wins (atomic rename from a `*.tmp` file). No lockfiles — OneDrive-sync weirdness has already shown that filesystem locks are unreliable here.
+**Concurrency.** Single-writer, multi-reader. PatchCraft does not implement locking. If two processes race on the same key, the second writer wins (atomic rename from a `*.tmp` file). No lockfiles — OneDrive-sync weirdness has already shown that filesystem locks are unreliable here.
 
 **Robustez a write races (OneDrive, antivírus, indexador).** Em diretórios sincronizados com OneDrive — e por extensão qualquer pasta varrida por antivírus ou Windows Search — `os.rename`, `open(..., "wb")` e `os.replace` falham esporadicamente com `PermissionError` (errno 13, Windows error 5) enquanto um agente externo segura o handle por alguns ms. Já vimos esse comportamento em `uv lock` rodando contra `uv.lock` em pasta OneDrive. `Cache.put` envolve o rename atômico (e o `open` do `*.tmp`) num loop de retry com backoff exponencial: até 5 tentativas, esperas de `0.25, 0.5, 1.0, 2.0, 4.0` segundos. Depois disso, a exceção original sobe — falha persistente é problema legítimo (disco cheio, permissões reais, OneDrive offline). `Cache.get` aplica o mesmo wrap em `open(..., "rb")` com 2 tentativas apenas — leitura raramente é o lado bloqueado e falhar rápido aqui é melhor que esconder cache miss real.
 
-**Design decision.** One cache module with one public class: `patchforge.Cache(root, namespace, version=1)` (parâmetro renomeado de `dir` para evitar sombrear o builtin). Methods: `get(key) -> bytes | None`, `put(key, bytes)`, `key_for(*parts) -> str`. `root` inexistente é auto-criado (`mkdir(parents=True, exist_ok=True)`) — ergonomia. Writes envolvem o backoff descrito acima; reads usam variante curta. Higher-level helpers (`cached_resize`, etc.) compose `Cache` with a function — they are thin wrappers, not inheritance. No pluggable backends (PatchHub's `memory | shelve | diskcache | hybrid` matrix is overkill for our use cases). No mmap in v0.1 — deferred until a profile shows memory pressure. The `zstandard` dep is an `optional-extra` (`[cache]`), and the absence of it falls back to uncompressed writes transparently.
+**Design decision.** One cache module with one public class: `patchcraft.Cache(root, namespace, version=1)` (parâmetro renomeado de `dir` para evitar sombrear o builtin). Methods: `get(key) -> bytes | None`, `put(key, bytes)`, `key_for(*parts) -> str`. `root` inexistente é auto-criado (`mkdir(parents=True, exist_ok=True)`) — ergonomia. Writes envolvem o backoff descrito acima; reads usam variante curta. Higher-level helpers (`cached_resize`, etc.) compose `Cache` with a function — they are thin wrappers, not inheritance. No pluggable backends (PatchHub's `memory | shelve | diskcache | hybrid` matrix is overkill for our use cases). No mmap in v0.1 — deferred until a profile shows memory pressure. The `zstandard` dep is an `optional-extra` (`[cache]`), and the absence of it falls back to uncompressed writes transparently.
 
 ## 5. Resize backends
 
@@ -206,15 +206,15 @@ LR and HR must agree on dtype and device; mismatch is rejected (caller normalize
 - **PIL**: canonical dataset generation (reproducibility is paramount, result stays on CPU anyway).
 - **torch**: in-training augmentation where the tensor is already on GPU and the extra filter divergence does not matter.
 
-**Design decision.** One function: `patchforge.resize(image, target_size, backend="pil", resample=None)`. `target_size` is a `(H, W)` tuple — no size-spec DSL. `image` may be `PIL.Image` or `Tensor[C, H, W]`. Output type matches input (PIL in → PIL out, Tensor in → Tensor out), regardless of backend. `resample` defaults: `LANCZOS` for PIL, `bilinear` for torch (chosen because bicubic divergence is nastiest to debug; bilinear's difference from PIL's BILINEAR is small). Cross-backend conversions (PIL ↔ Tensor) go through a normalized float32 `[0, 1]` intermediate. No auto-selection: callers pick the backend explicitly and own the consequences.
+**Design decision.** One function: `patchcraft.resize(image, target_size, backend="pil", resample=None)`. `target_size` is a `(H, W)` tuple — no size-spec DSL. `image` may be `PIL.Image` or `Tensor[C, H, W]`. Output type matches input (PIL in → PIL out, Tensor in → Tensor out), regardless of backend. `resample` defaults: `LANCZOS` for PIL, `bilinear` for torch (chosen because bicubic divergence is nastiest to debug; bilinear's difference from PIL's BILINEAR is small). Cross-backend conversions (PIL ↔ Tensor) go through a normalized float32 `[0, 1]` intermediate. No auto-selection: callers pick the backend explicitly and own the consequences.
 
 ## 6. Quantization (optional)
 
 **Topic.** Reducing color depth (binary, k-level) before extraction. Reference: `archive/QSVM_patchkit/patchkit/quantize.py` — uniform, k-means, Otsu, Floyd–Steinberg dither.
 
-**Does it belong here?** PatchForge's charter (see README §Scope) is patch infrastructure. Quantization is a *consumer-specific preprocessing step*: QSVM needs it because small bit-depths stabilize kernel computations; other consumers may not want it, or may want a different family (e.g. vector quantization). Keeping it inside PatchForge means every consumer pays the cost of evaluating whether the in-package implementation matches their needs, and updates force coordinated releases.
+**Does it belong here?** PatchCraft's charter (see README §Scope) is patch infrastructure. Quantization is a *consumer-specific preprocessing step*: QSVM needs it because small bit-depths stabilize kernel computations; other consumers may not want it, or may want a different family (e.g. vector quantization). Keeping it inside PatchCraft means every consumer pays the cost of evaluating whether the in-package implementation matches their needs, and updates force coordinated releases.
 
-**Design decision.** **Out of scope for v0.1.** Quantization is deferred. When a pattern emerges across multiple consumers, revisit as either (a) a companion package (`patchforge-quant`), or (b) a plug-in hook point in the extraction pipeline. For now, callers that need quantization apply it *before* calling `patchforge.extract` — the `(C, H, W)` tensor they pass in is whatever they want patches of. The archive implementations stay in `archive/` as reference material for whoever builds the companion.
+**Design decision.** **Out of scope for v0.1.** Quantization is deferred. When a pattern emerges across multiple consumers, revisit as either (a) a companion package (`patchcraft-quant`), or (b) a plug-in hook point in the extraction pipeline. For now, callers that need quantization apply it *before* calling `patchcraft.extract` — the `(C, H, W)` tensor they pass in is whatever they want patches of. The archive implementations stay in `archive/` as reference material for whoever builds the companion.
 
 ## 7. Resolved questions
 

@@ -1,4 +1,4 @@
-"""Tests for `patchforge.num_patches` and `patchforge.tilings`.
+"""Tests for `patchcraft.num_patches` and `patchcraft.tilings`.
 
 Contract: docs/THEORY.md §1.5 and §9.6.
 """
@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from patchforge import (
+from patchcraft import (
     PairedTilingSpec,
     TilingSpec,
     extract,

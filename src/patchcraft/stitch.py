@@ -1,6 +1,6 @@
 """Stitch patches back into an image with configurable weighting kernels.
 
-Where :func:`patchforge.reconstruct` is a bit-exact inverse of ``extract``,
+Where :func:`patchcraft.reconstruct` is a bit-exact inverse of ``extract``,
 ``stitch`` is intended for *modified* patches — patches that have been
 denoised, super-resolved, or otherwise altered — where overlap seams are
 visible if patches are averaged uniformly. Weighting by a window kernel
@@ -19,7 +19,7 @@ from typing import Literal
 import torch
 import torch.nn.functional as F  # noqa: N812 (torch convention)
 
-from patchforge.extract import _as_pair
+from patchcraft.extract import _as_pair
 
 __all__ = ["stitch"]
 
@@ -80,7 +80,7 @@ def stitch(
     """Reassemble a ``(C, H, W)`` image from ``(L, C, ph, pw)`` with blendable weights.
 
     Use ``stitch`` when patches have been modified (model output, denoised,
-    super-resolved). Use :func:`patchforge.reconstruct` when patches came
+    super-resolved). Use :func:`patchcraft.reconstruct` when patches came
     straight from ``extract`` and you want a bit-exact inverse with no
     extra arithmetic.
 

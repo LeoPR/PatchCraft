@@ -1,7 +1,7 @@
 """Pixel-level metrics between patches (or between any same-shape tensors).
 
 Three pure functions, no state, no allocation beyond the diff itself. Lives
-in PatchForge because every consumer that uses ``extract`` + ``reconstruct``
+in PatchCraft because every consumer that uses ``extract`` + ``reconstruct``
 or ``pair`` ends up reinventing the same MSE/PSNR per patch — bundling them
 here saves consumers from inventing slightly-different reductions and gives
 the test suite a stable comparison surface.

@@ -1,15 +1,15 @@
-# PatchForge — Roadmap
+# PatchCraft — Roadmap
 
 Milestone-based plan. Each milestone is "done" only when its tests pass and the theory doc section it depends on is written.
 
 ## M0 — Scaffold (this commit)
 
 - [x] `pyproject.toml` (hatchling, Python >=3.12).
-- [x] `src/patchforge/__init__.py` with `__version__`.
+- [x] `src/patchcraft/__init__.py` with `__version__`.
 - [x] `tests/test_import.py` verifying the package imports.
 - [x] `docs/THEORY.md` and `docs/ROADMAP.md` skeletons.
 - [x] `archive/` populated with reference implementations.
-- [x] Venv on `Z:\venvs\patchkit` with torch+CUDA (**Stage 3** in the parent workflow; folder kept under the original name — rename to `Z:\venvs\patchforge` is a manual follow-up).
+- [x] Venv on `Z:\venvs\patchkit` with torch+CUDA (**Stage 3** in the parent workflow; folder kept under the original name — rename to `Z:\venvs\patchcraft` is a manual follow-up).
 - [x] `pytest` green with the single import test.
 
 ## M1 — Theory distilled
@@ -21,8 +21,8 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 
 ## M2 — Patch extraction
 
-- [x] `patchforge.extract(image, patch_size, stride, dilation) -> Tensor[L, C, ph, pw]`.
-- [x] `patchforge.Patchify(patch_size, stride, dilation)` — callable wrapper for `torchvision.transforms.Compose`, ADR 0002.
+- [x] `patchcraft.extract(image, patch_size, stride, dilation) -> Tensor[L, C, ph, pw]`.
+- [x] `patchcraft.Patchify(patch_size, stride, dilation)` — callable wrapper for `torchvision.transforms.Compose`, ADR 0002.
 - [x] Implementation via `torch.nn.functional.unfold`.
 - [x] Tests:
   - Shape invariants for several `(H, W, ph, pw, sh, sw, d)` combinations.
@@ -30,11 +30,11 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
   - [x] `torch.cuda` path when GPU available (marker `gpu`).
   - [x] Rejection tests for §9.1 negative conditions.
   - [x] `Patchify` delegation, eager validation, repr, statelessness.
-- [x] `patchforge.num_patches(image_shape, patch_size, stride, dilation=1)` and `patchforge.tilings(image_shape, allow_overlap=..., min_patch_size=..., max_patch_size=...)` — pre-flight geometry helpers (THEORY §1.5 / §9.6). 28 tests, incl. 28×28 divisor enumeration and exhaustive round-trip guarantee.
+- [x] `patchcraft.num_patches(image_shape, patch_size, stride, dilation=1)` and `patchcraft.tilings(image_shape, allow_overlap=..., min_patch_size=..., max_patch_size=...)` — pre-flight geometry helpers (THEORY §1.5 / §9.6). 28 tests, incl. 28×28 divisor enumeration and exhaustive round-trip guarantee.
 
 ## M3 — Reconstruction
 
-- [x] `patchforge.reconstruct(patches, image_shape, stride, dilation) -> Tensor[C, H, W]`.
+- [x] `patchcraft.reconstruct(patches, image_shape, stride, dilation) -> Tensor[C, H, W]`.
 - [x] Implementation via `torch.nn.functional.fold` plus overlap normalization.
 - [x] Tests:
   - Bit-exact round-trip for `stride == patch_size` (basic, rectangular, multichannel, single-patch, patch_size=1).
@@ -47,7 +47,7 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 
 ## M4 — LR ↔ HR pairing
 
-- [x] `patchforge.pair(lr_image, hr_image, lr_patch_size, scale_factor, stride, *, image_id=None) -> PatchPair`.
+- [x] `patchcraft.pair(lr_image, hr_image, lr_patch_size, scale_factor, stride, *, image_id=None) -> PatchPair`.
 - [x] `PatchPair` frozen dataclass: `lr_patches`, `hr_patches`, `metas`. `__len__` and `zip(...)` iteration sugar.
 - [x] `PatchMeta` frozen dataclass: `patch_index`, `row`, `col` (LR coords), `lr_patch_size`, `hr_patch_size`, `image_id`.
 - [x] Invariant test: same `k` yields LR and HR patches covering the same image region (validated via subview equality on both sides).
@@ -56,21 +56,21 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 
 ## M5 — Resize + cache
 
-- [x] `patchforge.resize(image, target_size, backend="pil"|"torch", resample=None) -> Image | Tensor`. Output type matches input; cross-backend conversions via float32 [0,1] / uint8 hop. CUDA tensors only with backend="torch".
-- [x] `patchforge.Cache(root, namespace, version=1)` — content-addressed disk cache with OneDrive-race retry (5 attempts with exponential backoff on put, 2 on get), optional `zstandard` compression (transparent fallback when not installed), sidecar JSON with checksum, atomic rename via `*.tmp`.
+- [x] `patchcraft.resize(image, target_size, backend="pil"|"torch", resample=None) -> Image | Tensor`. Output type matches input; cross-backend conversions via float32 [0,1] / uint8 hop. CUDA tensors only with backend="torch".
+- [x] `patchcraft.Cache(root, namespace, version=1)` — content-addressed disk cache with OneDrive-race retry (5 attempts with exponential backoff on put, 2 on get), optional `zstandard` compression (transparent fallback when not installed), sidecar JSON with checksum, atomic rename via `*.tmp`.
 - [x] Resize tests (38, 2 GPU skip).
 - [x] Cache tests (35): roundtrip with bytes/bytearray/memoryview, version invalidation, namespace isolation, checksum/zstd-decode corruption, retry-on-PermissionError simulation, non-ASCII paths, key determinism + namespace/version sensitivity.
 
 ## M6 — *(removed)*
 
-Label-stratified subsetting was moved out of the core library per the binding scope in [`THEORY.md`](THEORY.md) §0 (PatchForge operates on one image at a time; no dataset abstractions). The function lives in [`tests/_datasets.py::label_subset`](../tests/_datasets.py) as part of the auxiliary framework (test fixtures + `lab/`). The roadmap renumbers no further — there is no M6 in v0.1.
+Label-stratified subsetting was moved out of the core library per the binding scope in [`THEORY.md`](THEORY.md) §0 (PatchCraft operates on one image at a time; no dataset abstractions). The function lives in [`tests/_datasets.py::label_subset`](../tests/_datasets.py) as part of the auxiliary framework (test fixtures + `lab/`). The roadmap renumbers no further — there is no M6 in v0.1.
 
 ## M7 — First release (v0.1.0 — 2026-05-16)
 
 - [x] Version bump to `0.1.0`.
 - [x] `CHANGELOG.md` created (Keep-a-Changelog format).
-- [x] Build wheel: `uv build` produces `dist/patchforge-0.1.0-py3-none-any.whl` and `.tar.gz`.
-- [x] GitHub repo [`LeoPR/PatchForge`](https://github.com/LeoPR/PatchForge) created, tag `v0.1.0` pushed at `a612c16`.
+- [x] Build wheel: `uv build` produces `dist/patchcraft-0.1.0-py3-none-any.whl` and `.tar.gz`.
+- [x] GitHub repo [`LeoPR/PatchCraft`](https://github.com/LeoPR/PatchCraft) created, tag `v0.1.0` pushed at `a612c16`.
 - [x] Post-release docs: [`USAGE.md`](USAGE.md), [`SCOPE.md`](SCOPE.md), [`AUXILIARY.md`](AUXILIARY.md).
 
 ## M8 — v0.2.0 expansion (2026-05-17)
@@ -89,6 +89,6 @@ Motivated by the QPatchSR consumer's needs surfaced after v0.1.0 shipped. Public
 
 ## Post-release
 
-- Integration back into QPatchSR: `pip install patchforge` and implement kernels/regressors on top of the validated v0.2 API.
+- Integration back into QPatchSR: `pip install patchcraft` and implement kernels/regressors on top of the validated v0.2 API.
 - Potential auxiliary #2 for quantum components (naming TBD).
-- Companion package `patchforge-quant` for quantization primitives (THEORY §6) if a second consumer surfaces the need.
+- Companion package `patchcraft-quant` for quantization primitives (THEORY §6) if a second consumer surfaces the need.

@@ -1,4 +1,4 @@
-"""Tests for `patchforge.Cache` — contract from docs/THEORY.md §9.5."""
+"""Tests for `patchcraft.Cache` — contract from docs/THEORY.md §9.5."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from patchforge import Cache
+from patchcraft import Cache
 
 # ---------------------------------------------------------------- Roundtrip --
 
@@ -164,8 +164,8 @@ class TestRetry:
             real_replace(src, dst)
 
         with (
-            patch("patchforge.cache.os.replace", side_effect=flaky_replace),
-            patch("patchforge.cache.time.sleep", return_value=None),
+            patch("patchcraft.cache.os.replace", side_effect=flaky_replace),
+            patch("patchcraft.cache.time.sleep", return_value=None),
         ):
             c.put(key, b"resilient")
         assert c.get(key) == b"resilient"
@@ -179,8 +179,8 @@ class TestRetry:
             raise PermissionError(13, "Access denied (persistent)")
 
         with (
-            patch("patchforge.cache.os.replace", side_effect=always_fail),
-            patch("patchforge.cache.time.sleep", return_value=None),
+            patch("patchcraft.cache.os.replace", side_effect=always_fail),
+            patch("patchcraft.cache.time.sleep", return_value=None),
             pytest.raises(PermissionError),
         ):
             c.put(key, b"will fail")
@@ -191,7 +191,7 @@ class TestRetry:
 class TestNonASCIIPath:
     def test_works_under_path_with_accented_chars(self, tmp_path: Path) -> None:
         """OneDrive `Acadêmicos/` already triggers Unicode-on-Windows quirks."""
-        weird = tmp_path / "Acadêmicos" / "patchforge-cache"
+        weird = tmp_path / "Acadêmicos" / "patchcraft-cache"
         c = Cache(weird, namespace="ñámespace")
         key = c.key_for("héllo")
         c.put(key, b"unicode path payload")

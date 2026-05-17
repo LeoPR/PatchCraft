@@ -59,7 +59,7 @@ jobs:
     needs: build
     environment:
       name: pypi
-      url: https://pypi.org/project/patchforge/
+      url: https://pypi.org/project/patchcraft/
     permissions:
       id-token: write  # required for OIDC token exchange with PyPI
     steps:
@@ -71,9 +71,9 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         # No `password` field -- OIDC handles authentication.
         # The pypi.org "Pending publisher" config must match:
-        #   PyPI project name: patchforge
+        #   PyPI project name: patchcraft
         #   Owner:             LeoPR
-        #   Repository:        PatchForge
+        #   Repository:        PatchCraft
         #   Workflow:          release.yml
         #   Environment:       pypi
 
@@ -95,13 +95,13 @@ jobs:
       - name: Create Release + attach assets
         uses: softprops/action-gh-release@v2
         with:
-          name: "PatchForge ${{ github.ref_name }}"
+          name: "PatchCraft ${{ github.ref_name }}"
           body: |
-            See [`CHANGELOG.md`](https://github.com/LeoPR/PatchForge/blob/main/CHANGELOG.md) for the full notes.
+            See [`CHANGELOG.md`](https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md) for the full notes.
 
             Install:
             ```
-            pip install patchforge==${{ steps.ver.outputs.version }}
+            pip install patchcraft==${{ steps.ver.outputs.version }}
             ```
           files: |
             dist/*.whl

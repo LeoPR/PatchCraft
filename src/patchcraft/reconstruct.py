@@ -7,7 +7,7 @@ from __future__ import annotations
 import torch
 import torch.nn.functional as F  # noqa: N812 (torch convention)
 
-from patchforge.extract import _as_pair
+from patchcraft.extract import _as_pair
 
 __all__ = ["reconstruct"]
 
@@ -27,7 +27,7 @@ def reconstruct(
     ``extract`` unmodified.
 
     Rejects (per §9.2): ``dilation != 1``; ``stride > patch_size`` in any axis
-    (partial coverage would synthesize pixel values, which PatchForge refuses);
+    (partial coverage would synthesize pixel values, which PatchCraft refuses);
     ``image_shape`` inconsistent with the patch grid (channels mismatch or
     ``L`` does not match the geometry); ``patches.ndim != 4``.
 

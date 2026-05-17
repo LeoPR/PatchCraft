@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to PatchForge will be documented here. Format follows
+All notable changes to PatchCraft will be documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
@@ -17,7 +17,7 @@ v0.1.0 — all v0.1.0 imports keep working.
 Motivated by the QPatchSR consumer's question: "given two image shapes
 (LR and HR of the same source), what `(patch_size, stride)` on each
 side yields the same number of patches with corresponding regions?"
-Three new helpers in `patchforge.geometry`:
+Three new helpers in `patchcraft.geometry`:
 
 - **`scale_factor(lr_shape, hr_shape) -> int | None`** — returns the
   integer `k` such that `hr.shape[-2:] == (k * lr.shape[-2], k *
@@ -36,7 +36,7 @@ Three new helpers in `patchforge.geometry`:
 ### Added — patch-level pixel metrics (THEORY §1.6, §9.8)
 
 Canonical reductions so consumers don't reinvent slightly-divergent
-versions in every project. New module `patchforge.metrics`:
+versions in every project. New module `patchcraft.metrics`:
 
 - **`patch_metrics(a, b, *, max_value=1.0) -> dict[str, float]`** —
   scalar `mae`, `mse`, `max_abs`, `psnr_db` over the full tensor
@@ -107,7 +107,7 @@ First public release. Public API stable; signatures will only change in 1.x.
   of `extract` via `F.fold` plus a fold-of-ones count map. Bit-exact
   round-trip for `stride == patch_size`; weighted-exact for overlap.
   Rejects `dilation != 1` and `stride > patch_size` (partial coverage
-  is forbidden by design — synthesizing pixel values is not PatchForge's
+  is forbidden by design — synthesizing pixel values is not PatchCraft's
   job).
 - **`pair(lr_image, hr_image, lr_patch_size, scale_factor, stride, *, image_id=None)`**
   — LR/HR patch correspondences. Returns a frozen `PatchPair`
@@ -144,7 +144,7 @@ First public release. Public API stable; signatures will only change in 1.x.
 
 ### Added — packaging
 
-- `py.typed` marker (PEP 561): downstream `mypy` now honors PatchForge's
+- `py.typed` marker (PEP 561): downstream `mypy` now honors PatchCraft's
   type hints.
 - `[cache]` extra: pulls `zstandard>=0.22` for compressed cache
   entries. Core works without it.
@@ -171,5 +171,5 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) — installation, the car-vs-track metaphor,
   validation lab.
 
-[0.2.0]: https://github.com/LeoPR/PatchForge/releases/tag/v0.2.0
-[0.1.0]: https://github.com/LeoPR/PatchForge/releases/tag/v0.1.0
+[0.2.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.2.0
+[0.1.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.1.0

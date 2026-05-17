@@ -1,7 +1,7 @@
 """Test-only helpers for loading example images from public datasets.
 
 Lazy: data lives in ``Z:\\caches\\datasets\\<name>\\`` and is downloaded on
-first use. PatchForge core does NOT depend on torchvision or on dataset
+first use. PatchCraft core does NOT depend on torchvision or on dataset
 abstractions — only tests and ``lab/`` do. This module is NOT part of the
 public API (underscore prefix).
 """

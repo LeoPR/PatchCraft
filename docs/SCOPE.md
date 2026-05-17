@@ -1,9 +1,9 @@
-# PatchForge — scope and responsibilities
+# PatchCraft — scope and responsibilities
 
 This document maps every concern in the patch-extraction pipeline to
-**whose job it is**: the PatchForge core, the caller's pipeline, or a
+**whose job it is**: the PatchCraft core, the caller's pipeline, or a
 grey area that warrants discussion. It also explains where
-parallelism happens and where PatchForge explicitly *does not* try to
+parallelism happens and where PatchCraft explicitly *does not* try to
 help.
 
 The short version lives in [`THEORY.md`](THEORY.md) §0; this is the
@@ -13,7 +13,7 @@ long-form companion.
 
 ## 1. Responsibilities matrix
 
-| Concern | PatchForge core | Caller / pipeline | Grey area |
+| Concern | PatchCraft core | Caller / pipeline | Grey area |
 |---|---|---|---|
 | Extract patches from **one** image | ✓ (`extract`, `Patchify`) | | |
 | Reconstruct an image from its patches | ✓ (`reconstruct`) | | |
@@ -49,7 +49,7 @@ bytes, is the caller's job.
 
 ## 2. Parallelization: where it happens, who owns it
 
-PatchForge's primitives are one-image-at-a-time. That sounds slow
+PatchCraft's primitives are one-image-at-a-time. That sounds slow
 until you realize that **`F.unfold` and `F.fold` are already
 parallel** inside one call, and that the standard way to scale
 "many images" in PyTorch is parallelism at the pipeline level, not
@@ -65,13 +65,13 @@ call. There is no Python loop over patches. The work happens in:
 - **CUDA**: a single `im2col` kernel launch. Patches are produced in
   parallel across thousands of CUDA threads.
 
-You get the parallelism for free; PatchForge does not need to and does
+You get the parallelism for free; PatchCraft does not need to and does
 not try to.
 
 ### 2.2 Across many images — caller's pipeline
 
 For "I have N images and want patches from each", the standard
-torch idioms apply unchanged. PatchForge does not add a batch API
+torch idioms apply unchanged. PatchCraft does not add a batch API
 because none of the available options is unambiguously better:
 
 | Pattern | When to reach for it | Where parallelism comes from |
@@ -79,13 +79,13 @@ because none of the available options is unambiguously better:
 | `for img in images: extract(img, ...)` | Few images, ad hoc scripts | Sequential — fine if N is small |
 | `torch.vmap(extract_fn)(batch)` | Same-size images, same geometry, want a single kernel launch | Torch's vmap engine fuses the per-image calls; works on CPU and CUDA |
 | `Dataset` + `DataLoader(num_workers=K)` with `Patchify` in the transform | The general case for training pipelines | K worker processes, each calling `Patchify(image)` on one image at a time. Pipeline overlap (load + transform + train) handled by torch |
-| Manual `multiprocessing.Pool` / `concurrent.futures` | When `DataLoader` doesn't fit (e.g., offline preprocessing into a Cache) | OS process pool; each process imports patchforge independently |
+| Manual `multiprocessing.Pool` / `concurrent.futures` | When `DataLoader` doesn't fit (e.g., offline preprocessing into a Cache) | OS process pool; each process imports patchcraft independently |
 
-The pattern PatchForge cares about is the third one — `Patchify`
+The pattern PatchCraft cares about is the third one — `Patchify`
 exists *exactly* to slot into that pipeline ([ADR
 0002](ADR/0002-patchify-transform.md)).
 
-### 2.3 What PatchForge will *not* do
+### 2.3 What PatchCraft will *not* do
 
 - **No internal threading or multiprocessing.** Threads inside a
   primitive surprise callers who already use a `DataLoader` or
@@ -117,7 +117,7 @@ is:
    `DataLoader(num_workers=...)` pipeline with `Patchify`.
 4. Is `unfold` itself the bottleneck?
    → that is a torch-level concern; profile the call and report
-   upstream if necessary. PatchForge cannot beat the kernel it
+   upstream if necessary. PatchCraft cannot beat the kernel it
    delegates to.
 
 ---
@@ -149,15 +149,15 @@ opens a `Dataset`. If a downstream consumer wants a
 handles bytes, and any user could plug `joblib.Memory` or `shelve`
 or a custom `dict + pickle.dump` instead.
 
-**Argument it is:** the cache solves a problem the rest of PatchForge
+**Argument it is:** the cache solves a problem the rest of PatchCraft
 creates (re-running the same `resize` or `extract` over an immutable
 image is wasted work), it is < 250 lines, it ships with
 content-addressing semantics designed around the lib's other
 primitives (key includes the version, parts can be image
 fingerprints), and it handles the OneDrive / antivirus write-race
-that PatchForge's own development surfaced.
+that PatchCraft's own development surfaced.
 
-**Decision:** core, but explicitly bytes-only. PatchForge does not
+**Decision:** core, but explicitly bytes-only. PatchCraft does not
 provide `cached_resize` or `cached_extract` helpers — those would
 re-introduce orchestration concerns. If you want cached resize, two
 lines:
@@ -211,7 +211,7 @@ bloat the install and bless one parameterization over others.
 If you find yourself reaching for the same auxiliary metric in
 multiple projects (e.g., per-region MAE histogram, structural
 ranking), build it in the consumer first, prove it useful, then
-revisit moving it down into PatchForge under a new ADR.
+revisit moving it down into PatchCraft under a new ADR.
 
 ### 4.4 `stitch` — why a separate function from `reconstruct`?
 
@@ -258,11 +258,11 @@ shape ints, not images.
 
 ### 4.6 `image_id` in `PatchMeta`
 
-A grey case in the opposite direction. PatchForge does not manage
+A grey case in the opposite direction. PatchCraft does not manage
 images, so it does not name them. `image_id` is a free-form opaque
 string the caller passes in and gets back in every `PatchMeta`. It
 crosses the lib's boundary only to make round-tripping debugging
-information convenient. PatchForge treats it as metadata and never
+information convenient. PatchCraft treats it as metadata and never
 parses, validates, or persists it.
 
 ---

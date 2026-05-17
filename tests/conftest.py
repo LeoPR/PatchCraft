@@ -1,1 +1,1 @@
-"""Shared pytest fixtures for PatchForge."""
+"""Shared pytest fixtures for PatchCraft."""
