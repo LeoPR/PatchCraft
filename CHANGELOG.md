@@ -4,6 +4,58 @@ All notable changes to PatchKit will be documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added — cross-resolution geometry (THEORY §1.5, §9.7)
+
+Motivated by the QPatchSR consumer's question: "given two image shapes
+(LR and HR of the same source), what `(patch_size, stride)` on each
+side yields the same number of patches with corresponding regions?"
+Three new helpers in `patchkit.geometry`:
+
+- **`scale_factor(lr_shape, hr_shape) -> int | None`** — returns the
+  integer `k` such that `hr.shape[-2:] == (k * lr.shape[-2], k *
+  lr.shape[-1])`, or `None`. Accepts `(H, W)` or `(C, H, W)`. Pre-
+  flight check for `pair`.
+- **`paired_tilings(lr_shape, hr_shape, *, allow_overlap=False, ...)`**
+  — enumerates every `(lr_spec, hr_spec)` pair where both fully cover
+  their respective image and produce identical patch counts. Patch
+  `k` on each side covers the same image region.
+  Example: `paired_tilings((14, 14), (28, 28))` returns three pairs:
+  `(p_lr=2, p_hr=4, total=49)`, `(p_lr=7, p_hr=14, total=4)`,
+  `(p_lr=14, p_hr=28, total=1)`.
+- **`PairedTilingSpec(lr, hr, scale_factor)`** — `NamedTuple` carrying
+  both sides and the discovered scale factor.
+
+### Added — patch-level pixel metrics (THEORY §1.6, §9.8)
+
+Canonical reductions so consumers don't reinvent slightly-divergent
+versions in every project. New module `patchkit.metrics`:
+
+- **`patch_metrics(a, b, *, max_value=1.0) -> dict[str, float]`** —
+  scalar `mae`, `mse`, `max_abs`, `psnr_db` over the full tensor
+  (any matching shape works). Internal accumulation in `float64`
+  for stability; PSNR returns `+inf` for identical inputs.
+- **`per_patch_mse(a, b) -> Tensor[L]`** — one MSE per patch in a
+  `(L, C, h, w)` stack.
+- **`per_patch_psnr(a, b, *, max_value=1.0) -> Tensor[L]`** — one
+  PSNR per patch. Identical patches yield `+inf` via `torch.where`
+  (no clamp tricks).
+
+Explicitly **not** included: SSIM, MS-SSIM, LPIPS, FID, any windowed
+or learned metric. Use `pytorch-msssim`, `lpips`, `clean-fid` on the
+caller side ([SCOPE.md](docs/SCOPE.md) §4.3 explains the boundary).
+
+### Changed
+
+- Public API surface: 11 → 17 symbols.
+- [`docs/SCOPE.md`](docs/SCOPE.md) gains rows for paired tilings and
+  pixel metrics; §4.3 discusses why pixel metrics stayed core while
+  windowed/learned metrics did not.
+- [`docs/THEORY.md`](docs/THEORY.md) gains §1.5 expansion (cross-
+  resolution paragraphs), §1.6 (patch comparison metrics), §9.7
+  (paired tilings contract), §9.8 (metrics contract).
+
 ## [0.1.0] — 2026-05-16
 
 First public release. Public API stable; signatures will only change in 1.x.

@@ -2,7 +2,15 @@
 
 from patchkit.cache import Cache
 from patchkit.extract import Patchify, extract
-from patchkit.geometry import TilingSpec, num_patches, tilings
+from patchkit.geometry import (
+    PairedTilingSpec,
+    TilingSpec,
+    num_patches,
+    paired_tilings,
+    scale_factor,
+    tilings,
+)
+from patchkit.metrics import patch_metrics, per_patch_mse, per_patch_psnr
 from patchkit.pair import PatchMeta, PatchPair, pair
 from patchkit.reconstruct import reconstruct
 from patchkit.resize import resize
@@ -10,6 +18,7 @@ from patchkit.resize import resize
 __version__ = "0.1.0"
 __all__ = [
     "Cache",
+    "PairedTilingSpec",
     "PatchMeta",
     "PatchPair",
     "Patchify",
@@ -17,7 +26,12 @@ __all__ = [
     "extract",
     "num_patches",
     "pair",
+    "paired_tilings",
+    "patch_metrics",
+    "per_patch_mse",
+    "per_patch_psnr",
     "reconstruct",
     "resize",
+    "scale_factor",
     "tilings",
 ]

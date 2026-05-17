@@ -59,6 +59,38 @@ Truncated geometries (where the last patch falls short of the edge) are delibera
 
 **Design decision.** Two pure functions and one `NamedTuple`: `num_patches`, `tilings`, `TilingSpec`. No tensors, no images, no dataset abstractions — only ints in, ints out. They live in `src/patchkit/geometry.py` and are re-exported from `patchkit`. The `TilingSpec` fields are `patch_size`, `stride`, `dilation`, `num_patches`, `total_patches`, `overlap` — destructurable for tests, sortable, hashable. Square-only enumeration in v0.1; rectangular comes when a real consumer asks (the function signature accommodates it by always returning `(int, int)` tuples).
 
+**Cross-resolution geometry (`scale_factor`, `paired_tilings`, `PairedTilingSpec`).** Super-resolution consumers (and any multi-resolution patch consumer) ask one more pre-flight question: "given two image shapes — the low-resolution input and the high-resolution target — what `(p, s)` on each side produces the same number of patches with corresponding image regions?". The same arithmetic as `tilings`, layered with the integer-scale invariant from §3:
+
+- `scale_factor(lr_shape, hr_shape) -> int | None`: returns `k` such that `hr.shape[-2:] == (k * lr.shape[-2], k * lr.shape[-1])`, or `None` when no such positive integer exists. Lets a consumer discover the scale factor from data instead of hard-coding it before calling `pair`.
+- `paired_tilings(lr_shape, hr_shape, *, allow_overlap=False, ...)`: for each LR tiling that `tilings(lr_shape)` would emit, derives the matching HR tiling by multiplying patch size and stride by the scale factor. Returns a list of `PairedTilingSpec(lr, hr, scale_factor)`. By construction every entry has identical `total_patches` on both sides and aligned per-`k` regions — feed straight into `pair` with confidence.
+- Worked example: `paired_tilings((14, 14), (28, 28))` returns three pairs corresponding to LR patch sizes `{2, 7, 14}` (the divisors of 14 with `min_patch_size=2`), each paired with HR patches twice the size, all preserving patch count: `(p_lr=2, p_hr=4, total=49)`, `(p_lr=7, p_hr=14, total=4)`, `(p_lr=14, p_hr=28, total=1)`.
+
+These helpers live alongside `tilings` and are tensor-free; everything they do reduces to shape arithmetic.
+
+## 1.6 Patch comparison metrics
+
+**Topic.** Once `extract` + `reconstruct` round-trips or `pair` produces aligned LR/HR tensors, consumers need to *measure* how close two patch tensors are. The set of useful pixel-level metrics for this is tiny and stable:
+
+- MAE — `(a - b).abs().mean()`
+- MSE — `((a - b) ** 2).mean()`
+- max-abs-diff — `(a - b).abs().max()`
+- PSNR (dB) — `10 * log10(max_value² / mse)`
+
+Every consumer either re-implements these or imports them from some scattered utility module. Different consumers often pick slightly different reductions (axis choice, dtype promotion, what to do when MSE is zero) — divergence breeds bugs. PatchKit ships the canonical reductions so that "did the model do better?" has one answer at the lib level.
+
+**Per-patch vs over-the-stack.** Both are useful. A model trainer wants the scalar PSNR over an entire batch (early stopping, logging); a researcher wants per-patch PSNR (rank patches by reconstruction quality, identify failure modes). Two distinct shapes; two functions.
+
+**Dtype handling.** Internally `patch_metrics` promotes to `float64` for the scalar accumulation (one number per call, cost is irrelevant, precision matters). `per_patch_mse` and `per_patch_psnr` keep input dtype (per-patch values are themselves a tensor; consumer chooses precision via input). PSNR returns `+inf` when MSE is zero — mathematically correct; no clamp tricks that produce a finite "very large" value the user has to reverse-engineer.
+
+**What this section deliberately does not ship.** SSIM, MS-SSIM, LPIPS, FID, any windowed or learned metric. Each depends on parameters (window size, data range, pre-trained network) that PatchKit cannot pick on behalf of consumers, and mature standalone packages exist (`pytorch-msssim`, `lpips`). Adding them here would force PatchKit to pull bigger deps and to bless one parameterization over others.
+
+**Design decision.** Three pure functions in `src/patchkit/metrics.py`, re-exported from `patchkit`:
+- `patch_metrics(a, b, *, max_value=1.0) -> dict[str, float]` — scalar reduction over the whole tensor, dtype-promoted internally, returns plain Python floats so the result is JSON-serializable.
+- `per_patch_mse(a, b) -> Tensor[L]` — strict `(L, C, h, w)` inputs, returns one value per leading-axis entry.
+- `per_patch_psnr(a, b, *, max_value=1.0) -> Tensor[L]` — same as MSE shape; identical patches yield `+inf` (`torch.where(mse == 0, inf, ...)`, not a clamp).
+
+Strict input checks: shape mismatch, dtype mismatch, and device mismatch all raise `ValueError`. The lib does not coerce — caller normalizes upstream. The functions take patches, but the math doesn't care whether the inputs are patches or full images; the type hint mentions patches because that is the canonical use case.
+
 ## 2. Reconstruction
 
 **Topic.** Inverse of extraction via `torch.nn.functional.fold`. Two regimes:
@@ -290,3 +322,50 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 - Dilated `tilings` (`dilation > 1` enumeration is non-trivial; defer until requested).
 - Truncated-coverage enumeration (the contract is full-coverage only).
 - Multi-image planning (e.g. "max patch that tiles every image in this list"); compose externally.
+
+### 9.7 `scale_factor(lr_shape, hr_shape)` and `paired_tilings(lr_shape, hr_shape, *, allow_overlap, min_patch_size, max_patch_size)`
+
+**Aceita (`scale_factor`):**
+- `lr_shape`, `hr_shape` each a 2-tuple `(H, W)` or 3-tuple `(C, H, W)`.
+- Returns `int >= 1` when `hr.shape[-2:] == (k * lr.shape[-2], k * lr.shape[-1])`; returns `None` otherwise (non-divisible, anisotropic, or LR larger than HR).
+
+**Aceita (`paired_tilings`):**
+- Same shape inputs as `scale_factor`.
+- Same enumeration knobs as `tilings` (`allow_overlap`, `min_patch_size`, `max_patch_size`).
+- Returns `list[PairedTilingSpec(lr, hr, scale_factor)]` where every entry has identical `total_patches` on both sides and patch `k` covers the same image region (HR coords are LR coords times `scale_factor`).
+- `scale_factor=1` (LR == HR) is accepted; each LR tiling is paired with itself.
+
+**Rejeita (`ValueError`):**
+- `scale_factor`: malformed shape input or non-positive dimensions.
+- `paired_tilings`: same as `scale_factor` plus `tilings`'s own validation (negative `min_patch_size`, `min > max`, etc.).
+- `paired_tilings`: shapes not related by an integer scale factor (delegates to `scale_factor`'s `None` return; surfaces as an explicit `ValueError` because there's nothing useful to enumerate).
+
+**Fora de escopo v0.1:**
+- Non-integer (fractional) scale factors — `pair` rejects them too; the math has no clean alignment.
+- N:1 enumeration (multiple LR shapes against one HR) — compose externally.
+- Rectangular paired tilings — square-only inherited from `tilings`.
+
+### 9.8 `patch_metrics(a, b, *, max_value=1.0)`, `per_patch_mse(a, b)`, `per_patch_psnr(a, b, *, max_value=1.0)`
+
+**Aceita (`patch_metrics`):**
+- `a, b` are `torch.Tensor` with **identical shape, dtype, and device**. Any shape works (single patch, patch stack, full image, batch).
+- `max_value`: positive finite `float` (or `int`). Used only for PSNR (`10 * log10(max_value² / mse)`).
+- Returns `dict[str, float]` with keys `mae`, `mse`, `max_abs`, `psnr_db`. Identical inputs yield `psnr_db == +inf`.
+- Internal accumulation in `float64` regardless of input dtype (precision for the scalar reduction).
+
+**Aceita (`per_patch_mse`, `per_patch_psnr`):**
+- `a, b` are 4-D `(L, C, h, w)` tensors with identical shape, dtype, device.
+- Returns `Tensor[L]` with the metric per patch. Reduction is over `(C, h, w)`; the leading axis is preserved.
+- Output dtype matches input. PSNR returns `+inf` element-wise when the per-patch MSE is exactly zero (`torch.where`, not clamp).
+
+**Rejeita (`ValueError` / `TypeError`):**
+- Non-tensor input (`TypeError`).
+- Shape mismatch, dtype mismatch, or device mismatch (`ValueError`).
+- Non-positive, non-finite, or non-numeric `max_value` (`ValueError`).
+- `per_patch_*`: input `ndim != 4` (`ValueError`).
+
+**Fora de escopo v0.1:**
+- SSIM / MS-SSIM / LPIPS / FID / any windowed or learned metric. Use `pytorch-msssim`, `lpips`, etc. on the caller's side.
+- Per-channel reduction variants. Caller slices the tensor and calls these directly.
+- Auto-detection of `max_value`. Caller knows the range of their data.
+- Normalized cross-correlation, cosine similarity. Out of charter (those compare *whole signals*, not pixel-wise reconstructions).

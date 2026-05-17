@@ -13,7 +13,14 @@ from typing import NamedTuple
 
 from patchkit.extract import _as_pair
 
-__all__ = ["TilingSpec", "num_patches", "tilings"]
+__all__ = [
+    "PairedTilingSpec",
+    "TilingSpec",
+    "num_patches",
+    "paired_tilings",
+    "scale_factor",
+    "tilings",
+]
 
 
 class TilingSpec(NamedTuple):
@@ -31,6 +38,20 @@ class TilingSpec(NamedTuple):
     num_patches: tuple[int, int]
     total_patches: int
     overlap: bool
+
+
+class PairedTilingSpec(NamedTuple):
+    """A pair of tilings that align across two resolutions of the same image.
+
+    ``hr.patch_size == scale_factor * lr.patch_size`` and same for stride;
+    ``lr.total_patches == hr.total_patches`` by construction. Patch ``k`` on
+    the LR side and patch ``k`` on the HR side cover the same image region
+    at different resolutions.
+    """
+
+    lr: TilingSpec
+    hr: TilingSpec
+    scale_factor: int
 
 
 def num_patches(
@@ -168,3 +189,102 @@ def tilings(
                         overlap=True,
                     ))
     return results
+
+
+def scale_factor(
+    lr_shape: tuple[int, int] | tuple[int, int, int],
+    hr_shape: tuple[int, int] | tuple[int, int, int],
+) -> int | None:
+    """Return the integer scale factor between two image shapes, or ``None``.
+
+    Accepts ``(H, W)`` or ``(C, H, W)`` for either argument (channels are
+    ignored). Returns ``k`` such that
+    ``hr_shape[-2:] == (k * lr_shape[-2], k * lr_shape[-1])``, or ``None``
+    when no such integer ``k >= 1`` exists (non-divisible, anisotropic, or
+    LR larger than HR).
+
+    Pure shape math; no tensor, no allocation. Use it before calling
+    :func:`patchkit.pair` to discover the scale factor from data instead
+    of hard-coding it.
+    """
+    for name, shape in (("lr_shape", lr_shape), ("hr_shape", hr_shape)):
+        if not (isinstance(shape, tuple) and len(shape) in (2, 3)):
+            raise ValueError(
+                f"{name} must be (H, W) or (C, H, W), got {shape!r}"
+            )
+        h, w = shape[-2], shape[-1]
+        for axis, val in (("H", h), ("W", w)):
+            if not isinstance(val, int) or isinstance(val, bool) or val <= 0:
+                raise ValueError(
+                    f"{name}[{axis}] must be a positive int, got {val!r}"
+                )
+
+    h_lr, w_lr = lr_shape[-2], lr_shape[-1]
+    h_hr, w_hr = hr_shape[-2], hr_shape[-1]
+    if h_hr % h_lr != 0 or w_hr % w_lr != 0:
+        return None
+    sf_h = h_hr // h_lr
+    sf_w = w_hr // w_lr
+    if sf_h != sf_w or sf_h < 1:
+        return None
+    return sf_h
+
+
+def paired_tilings(
+    lr_shape: tuple[int, int] | tuple[int, int, int],
+    hr_shape: tuple[int, int] | tuple[int, int, int],
+    *,
+    allow_overlap: bool = False,
+    min_patch_size: int = 2,
+    max_patch_size: int | None = None,
+) -> list[PairedTilingSpec]:
+    """Enumerate aligned tiling pairs between two resolutions of the same image.
+
+    Requires ``hr_shape`` to be an integer multiple of ``lr_shape`` (see
+    :func:`scale_factor`). For each LR tiling emitted by :func:`tilings`,
+    derives the matching HR tiling by multiplying patch size and stride by
+    the scale factor. Both sides have identical ``total_patches`` and patch
+    ``k`` covers the same image region on both sides.
+
+    Use the result to drive :func:`patchkit.pair` with confidence that the
+    parameters produce sound, aligned LR/HR patch sets.
+
+    Raises
+    ------
+    ValueError
+        If ``lr_shape`` and ``hr_shape`` are not related by an integer
+        scale factor, or on the same input validation cases as
+        :func:`tilings`.
+    """
+    sf = scale_factor(lr_shape, hr_shape)
+    if sf is None:
+        raise ValueError(
+            f"lr_shape={lr_shape} and hr_shape={hr_shape} are not related "
+            "by a positive integer scale factor on both spatial axes"
+        )
+    h_hr, w_hr = hr_shape[-2], hr_shape[-1]
+    lr_specs = tilings(
+        lr_shape,
+        allow_overlap=allow_overlap,
+        min_patch_size=min_patch_size,
+        max_patch_size=max_patch_size,
+    )
+
+    pairs: list[PairedTilingSpec] = []
+    for lr in lr_specs:
+        ph_hr = lr.patch_size[0] * sf
+        pw_hr = lr.patch_size[1] * sf
+        sh_hr = lr.stride[0] * sf
+        sw_hr = lr.stride[1] * sf
+        nh_hr = (h_hr - ph_hr) // sh_hr + 1
+        nw_hr = (w_hr - pw_hr) // sw_hr + 1
+        hr = TilingSpec(
+            patch_size=(ph_hr, pw_hr),
+            stride=(sh_hr, sw_hr),
+            dilation=(1, 1),
+            num_patches=(nh_hr, nw_hr),
+            total_patches=nh_hr * nw_hr,
+            overlap=lr.overlap,
+        )
+        pairs.append(PairedTilingSpec(lr=lr, hr=hr, scale_factor=sf))
+    return pairs

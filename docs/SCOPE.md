@@ -20,6 +20,9 @@ long-form companion.
 | Pair LR ↔ HR patches | ✓ (`pair`, `PatchPair`, `PatchMeta`) | | |
 | Resize one image | ✓ (`resize`, PIL or torch) | | |
 | Compute patch geometry without allocating | ✓ (`num_patches`, `tilings`) | | |
+| Plan LR↔HR aligned tilings from two shapes | ✓ (`scale_factor`, `paired_tilings`, `PairedTilingSpec`) | | |
+| Pixel-level metrics between patches (MAE/MSE/max\|·\|/PSNR) | ✓ (`patch_metrics`, `per_patch_mse`, `per_patch_psnr`) | | discussed in §4 below |
+| Windowed / learned image metrics (SSIM, MS-SSIM, LPIPS, FID) | ✗ — see §4 | ✓ (`pytorch-msssim`, `lpips`, etc.) | |
 | Cache derived bytes on disk | ✓ (`Cache`) | | discussed in §4 below |
 | Drop-in to `transforms.Compose([...])` | ✓ (`Patchify`) | | |
 | **Loop over many images** | ✗ — caller writes the loop | ✓ (`for`, `vmap`, `DataLoader`) | |
@@ -179,7 +182,37 @@ pipelines — is a real surface area cost. We accepted it because the
 class-in-a-pipeline pattern is the dominant integration mode for any
 real consumer ([ADR 0002](ADR/0002-patchify-transform.md)).
 
-### 4.3 `num_patches` and `tilings` — test helpers in disguise?
+### 4.3 Pixel-level metrics — core or scope creep?
+
+`patch_metrics`, `per_patch_mse`, and `per_patch_psnr` (added post-v0.1.0)
+sit right at the edge of the charter. They take *tensors*, not patches
+specifically — strictly, the math works on any same-shape pair. We kept
+them in core for three reasons:
+
+- They are the canonical "did the round-trip / model output work?"
+  reductions. Every consumer that uses `extract` + `reconstruct` or
+  `pair` will compute these. Centralizing them prevents subtle
+  divergences (axis choice, dtype promotion, zero-MSE handling).
+- The implementation is tiny (~80 lines total). Smaller than the
+  README would be without them.
+- They do **not** depend on any new third-party library and they do
+  **not** allocate beyond the diff tensor. The "cache of cache /
+  buffer of buffer" risk you might worry about is zero — these are
+  pure arithmetic.
+
+What we explicitly **excluded**: SSIM, MS-SSIM, LPIPS, FID, any
+windowed or learned metric. Each depends on hyperparameters (window
+size, data range, pre-trained network) we cannot pick for the
+consumer, and each has a mature standalone package
+(`pytorch-msssim`, `lpips`, `clean-fid`). Adding them here would
+bloat the install and bless one parameterization over others.
+
+If you find yourself reaching for the same auxiliary metric in
+multiple projects (e.g., per-region MAE histogram, structural
+ranking), build it in the consumer first, prove it useful, then
+revisit moving it down into PatchKit under a new ADR.
+
+### 4.4 `num_patches` and `tilings` — test helpers in disguise?
 
 They were initially proposed because the test suite needed to
 parametrize over valid geometries. They survived as public API
@@ -195,7 +228,7 @@ They take no tensors, allocate nothing, and have no I/O. They
 fit the "one image at a time, no datasets" charter because they take
 shape ints, not images.
 
-### 4.4 `image_id` in `PatchMeta`
+### 4.5 `image_id` in `PatchMeta`
 
 A grey case in the opposite direction. PatchKit does not manage
 images, so it does not name them. `image_id` is a free-form opaque

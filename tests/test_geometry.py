@@ -8,10 +8,13 @@ import pytest
 import torch
 
 from patchkit import (
+    PairedTilingSpec,
     TilingSpec,
     extract,
     num_patches,
+    paired_tilings,
     reconstruct,
+    scale_factor,
     tilings,
 )
 
@@ -187,3 +190,144 @@ class TestTilingSpecShape:
         assert n == spec.num_patches
         assert total == spec.total_patches
         assert overlap == spec.overlap
+
+
+# -------------------------------------------------------------- scale_factor --
+
+class TestScaleFactor:
+    def test_integer_multiple(self) -> None:
+        assert scale_factor((14, 14), (28, 28)) == 2
+        assert scale_factor((10, 10), (40, 40)) == 4
+
+    def test_identity_returns_1(self) -> None:
+        assert scale_factor((28, 28), (28, 28)) == 1
+
+    def test_accepts_chw_shape(self) -> None:
+        assert scale_factor((3, 14, 14), (3, 28, 28)) == 2
+        assert scale_factor((14, 14), (5, 28, 28)) == 2  # C ignored
+
+    def test_non_integer_returns_none(self) -> None:
+        assert scale_factor((14, 14), (27, 27)) is None
+        assert scale_factor((10, 10), (15, 15)) is None
+
+    def test_anisotropic_returns_none(self) -> None:
+        # different ratio on H vs W
+        assert scale_factor((10, 10), (20, 30)) is None
+
+    def test_lr_larger_returns_none(self) -> None:
+        # k must be >= 1 — LR cannot exceed HR
+        assert scale_factor((28, 28), (14, 14)) is None
+
+    @pytest.mark.parametrize("bad", [(28,), (1, 28, 28, 28), 28, [28, 28]])
+    def test_bad_shape(self, bad: object) -> None:
+        with pytest.raises(ValueError, match="must be"):
+            scale_factor(bad, (28, 28))  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="must be"):
+            scale_factor((14, 14), bad)  # type: ignore[arg-type]
+
+    def test_nonpositive_dim(self) -> None:
+        with pytest.raises(ValueError, match="positive int"):
+            scale_factor((0, 14), (28, 28))
+
+
+# ------------------------------------------------------------ paired_tilings --
+
+class TestPairedTilingsAccepts:
+    def test_mnist_14_to_28(self) -> None:
+        """The user's canonical example: 14x14 -> 28x28."""
+        pairs = paired_tilings((14, 14), (28, 28))
+        # LR tilings with min_patch_size=2: divisors >= 2 of 14 are {2, 7, 14}
+        # -> three pairs
+        assert len(pairs) == 3
+        sizes = [(p.lr.patch_size[0], p.hr.patch_size[0]) for p in pairs]
+        assert sizes == [(2, 4), (7, 14), (14, 28)]
+        # Every pair must have matching totals
+        for p in pairs:
+            assert p.lr.total_patches == p.hr.total_patches
+            assert p.scale_factor == 2
+
+    def test_user_intuition_p_2_to_4_gives_49(self) -> None:
+        """User stated: 14x14 with p=2 ~ 28x28 with p=4 ~ 49 patches."""
+        pairs = paired_tilings((14, 14), (28, 28))
+        small = next(p for p in pairs if p.lr.patch_size == (2, 2))
+        assert small.hr.patch_size == (4, 4)
+        assert small.lr.total_patches == small.hr.total_patches == 49
+
+    def test_identity_scale(self) -> None:
+        """scale_factor=1 (lr == hr) returns each tiling paired with itself."""
+        pairs = paired_tilings((28, 28), (28, 28))
+        for p in pairs:
+            assert p.lr == p.hr
+            assert p.scale_factor == 1
+
+    def test_chw_accepted(self) -> None:
+        a = paired_tilings((14, 14), (28, 28))
+        b = paired_tilings((3, 14, 14), (3, 28, 28))
+        assert [p.lr.patch_size for p in a] == [p.lr.patch_size for p in b]
+
+    def test_allow_overlap_grows_set(self) -> None:
+        without = paired_tilings((14, 14), (28, 28), allow_overlap=False)
+        with_ov = paired_tilings((14, 14), (28, 28), allow_overlap=True)
+        assert len(with_ov) > len(without)
+        # the non-overlap subset is preserved
+        without_keys = {(p.lr.patch_size, p.lr.stride) for p in without}
+        with_keys = {(p.lr.patch_size, p.lr.stride) for p in with_ov}
+        assert without_keys.issubset(with_keys)
+
+
+class TestPairedTilingsAlignment:
+    """Patch k on LR and patch k on HR must cover the same image region."""
+
+    def test_regions_align_for_all_pairs(self) -> None:
+        import torch as _torch
+        lr = _torch.arange(14 * 14, dtype=_torch.float64).reshape(1, 14, 14)
+        hr = _torch.arange(28 * 28, dtype=_torch.float64).reshape(1, 28, 28)
+        for p in paired_tilings((14, 14), (28, 28)):
+            lr_patches = extract(lr, patch_size=p.lr.patch_size,
+                                 stride=p.lr.stride)
+            hr_patches = extract(hr, patch_size=p.hr.patch_size,
+                                 stride=p.hr.stride)
+            # Same total per construction
+            assert lr_patches.shape[0] == hr_patches.shape[0] == p.lr.total_patches
+            # Each LR patch is a sub-tensor of LR at a known position;
+            # the corresponding HR patch is at scale_factor * that position.
+            sh_lr, sw_lr = p.lr.stride
+            _, nw_lr = p.lr.num_patches
+            ph_lr, pw_lr = p.lr.patch_size
+            ph_hr, pw_hr = p.hr.patch_size
+            for k in range(p.lr.total_patches):
+                row_lr = (k // nw_lr) * sh_lr
+                col_lr = (k % nw_lr) * sw_lr
+                row_hr = row_lr * p.scale_factor
+                col_hr = col_lr * p.scale_factor
+                lr_view = lr[:, row_lr:row_lr + ph_lr, col_lr:col_lr + pw_lr]
+                hr_view = hr[:, row_hr:row_hr + ph_hr, col_hr:col_hr + pw_hr]
+                assert torch.equal(lr_patches[k], lr_view)
+                assert torch.equal(hr_patches[k], hr_view)
+
+
+class TestPairedTilingsRejects:
+    def test_non_integer_scale_raises(self) -> None:
+        with pytest.raises(ValueError, match="integer scale factor"):
+            paired_tilings((10, 10), (15, 15))
+
+    def test_anisotropic_raises(self) -> None:
+        with pytest.raises(ValueError, match="integer scale factor"):
+            paired_tilings((10, 10), (20, 30))
+
+    def test_lr_larger_than_hr_raises(self) -> None:
+        with pytest.raises(ValueError, match="integer scale factor"):
+            paired_tilings((28, 28), (14, 14))
+
+    def test_passes_through_tilings_validation(self) -> None:
+        # tilings() error surfaces (e.g., min > max)
+        with pytest.raises(ValueError, match="min_patch_size"):
+            paired_tilings((14, 14), (28, 28),
+                           min_patch_size=20, max_patch_size=5)
+
+
+class TestPairedTilingSpecShape:
+    def test_namedtuple_fields(self) -> None:
+        p = paired_tilings((14, 14), (28, 28))[0]
+        assert isinstance(p, PairedTilingSpec)
+        assert p._fields == ("lr", "hr", "scale_factor")

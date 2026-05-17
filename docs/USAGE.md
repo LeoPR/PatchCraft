@@ -263,7 +263,118 @@ logic.
 
 ---
 
-## 9. Composing in a `torch` pipeline
+## 9. `scale_factor` — integer scale between two image shapes
+
+```python
+>>> from patchkit import scale_factor
+>>> scale_factor((14, 14), (28, 28))
+2
+>>> scale_factor((28, 28), (28, 28))      # identity
+1
+>>> scale_factor((14, 14), (27, 27))      # non-integer ratio
+>>> # (None)
+>>> scale_factor((10, 10), (20, 30))      # anisotropic
+>>> # (None)
+```
+
+Pre-flight check before calling `pair`. Returns `None` when no positive
+integer `k` exists such that `hr == k * lr`. Accepts `(H, W)` or
+`(C, H, W)` (channels ignored).
+
+---
+
+## 10. `paired_tilings` — aligned LR↔HR geometries
+
+```python
+>>> from patchkit import paired_tilings
+>>> for p in paired_tilings((14, 14), (28, 28)):
+...     print(f"lr={p.lr.patch_size} stride={p.lr.stride} | "
+...           f"hr={p.hr.patch_size} stride={p.hr.stride} | "
+...           f"total={p.lr.total_patches} | sf={p.scale_factor}")
+lr=(2, 2)   stride=(2, 2)   | hr=(4, 4)   stride=(4, 4)   | total=49 | sf=2
+lr=(7, 7)   stride=(7, 7)   | hr=(14, 14) stride=(14, 14) | total=4  | sf=2
+lr=(14, 14) stride=(14, 14) | hr=(28, 28) stride=(28, 28) | total=1  | sf=2
+```
+
+Every entry is guaranteed by construction to:
+
+- have identical `total_patches` on both sides (no off-by-one),
+- have patch `k` cover the same image region on LR and HR
+  (HR coords = LR coords × `scale_factor`),
+- be safe to feed straight into `pair(lr_image, hr_image,
+  lr_patch_size=p.lr.patch_size[0], scale_factor=p.scale_factor,
+  stride=p.lr.stride[0])`.
+
+This is the answer to the question "for MNIST 14×14 ↔ 28×28, what
+patch geometries align with the same `k`?" — three options, take
+your pick based on how big a patch you want vs how many examples.
+
+---
+
+## 11. `patch_metrics` / `per_patch_psnr` — canonical comparisons
+
+```python
+>>> import torch
+>>> from patchkit import extract, patch_metrics, per_patch_psnr
+>>> img = torch.arange(28 * 28, dtype=torch.float32).reshape(1, 28, 28) / 784.0
+>>> patches_a = extract(img, patch_size=7, stride=7)
+>>> patches_b = patches_a + 0.01  # uniform +0.01 noise
+
+>>> patch_metrics(patches_a, patches_a)        # identical
+{'mae': 0.0, 'mse': 0.0, 'max_abs': 0.0, 'psnr_db': inf}
+
+>>> patch_metrics(patches_a, patches_b)        # +0.01 across the board
+{'mae': 0.009999...,
+ 'mse': 9.9999e-05,
+ 'max_abs': 0.01000...,
+ 'psnr_db': 40.0000...}    # 10 * log10(1 / 0.0001) = 40 dB
+
+>>> per_patch_psnr(patches_a, patches_b)
+tensor([40.0000, 40.0000, 40.0000, ..., 40.0000])  # one per patch (16 total)
+```
+
+- `patch_metrics` reduces over the whole tensor and returns a dict
+  of Python floats. Internal accumulation is `float64`; identical
+  inputs give `psnr_db == +inf`.
+- `per_patch_psnr(a, b)` and `per_patch_mse(a, b)` keep the leading
+  axis, returning one value per patch. Useful for "which patches
+  did my model handle worst?".
+
+Both reject shape, dtype, and device mismatches.
+
+---
+
+## 12. End-to-end QPatchSR-style pre-flight (synthesizing 9, 10, 11)
+
+```python
+>>> # Goal: train a model that maps 14x14 patches to corresponding 28x28 patches.
+>>> # Step 1: enumerate viable LR/HR geometries with same patch count.
+>>> for p in paired_tilings((14, 14), (28, 28)):
+...     print(p.lr.patch_size, '<-->', p.hr.patch_size,
+...           f'({p.lr.total_patches} patches each)')
+(2, 2)   <--> (4, 4)   (49 patches each)
+(7, 7)   <--> (14, 14) (4 patches each)
+(14, 14) <--> (28, 28) (1 patches each)
+
+>>> # Step 2: pick a spec and call pair() with the LR/HR pixel data:
+>>> # from patchkit import pair
+>>> # result = pair(lr_img, hr_img,
+>>> #               lr_patch_size=2, scale_factor=2, stride=2,
+>>> #               image_id='mnist-0')
+
+>>> # Step 3: train.
+
+>>> # Step 4: measure per-patch error so you know which patches the
+>>> #         model handles worst.
+>>> # err = per_patch_psnr(model(result.lr_patches), result.hr_patches)
+```
+
+This is the loop QPatchSR (and any similar consumer) will run.
+PatchKit covers steps 1, 2, and 4. Step 3 is the consumer's job.
+
+---
+
+## 13. Composing in a `torch` pipeline
 
 PatchKit is built to drop into someone else's pipeline. `Patchify`
 is the integration point.
