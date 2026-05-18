@@ -9,7 +9,7 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 - [x] `tests/test_import.py` verifying the package imports.
 - [x] `docs/THEORY.md` and `docs/ROADMAP.md` skeletons.
 - [x] `archive/` populated with reference implementations.
-- [x] Venv on `Z:\venvs\patchkit` with torch+CUDA (**Stage 3** in the parent workflow; folder kept under the original name — rename to `Z:\venvs\patchcraft` is a manual follow-up).
+- [x] Venv on `Z:\venvs\patchcraft` with torch+CUDA (**Stage 3** in the parent workflow). Originally created as `Z:\venvs\patchkit`; renamed in step with the package rename to `patchcraft`.
 - [x] `pytest` green with the single import test.
 
 ## M1 — Theory distilled
