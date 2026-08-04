@@ -33,7 +33,16 @@ jobs:
         with:
           enable-cache: true
       - run: uv python install
-      - run: uv sync --extra cache --extra dev
+      - run: uv sync --locked --extra cache --extra dev
+      - name: Tag must match __version__
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(uv run python -c 'import patchcraft; print(patchcraft.__version__)')"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} implies version '${tag}' but patchcraft.__version__ is '${pkg}'"
+            exit 1
+          fi
+          echo "tag ${GITHUB_REF_NAME} matches __version__ ${pkg}"
       - run: uv run ruff check src tests
       - run: uv run mypy --strict src
       - run: uv run pytest -m "not gpu"
@@ -71,6 +80,12 @@ jobs:
           path: dist/
       - name: Publish via Trusted Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # A version already on PyPI is a no-op instead of a hard failure.
+          # Without this, re-running the pipeline (or tagging a version that
+          # was uploaded by hand) fails here, and `github-release` never runs
+          # because it is `needs: publish-pypi`.
+          skip-existing: true
         # No `password` field -- OIDC handles authentication.
         # The pypi.org "Pending publisher" config must match:
         #   PyPI project name: patchcraft

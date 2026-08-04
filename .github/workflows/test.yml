@@ -37,7 +37,9 @@ jobs:
         run: uv python install
 
       - name: Install project with dev + cache extras
-        run: uv sync --extra cache --extra dev
+        # --locked: fail if uv.lock is stale or absent rather than silently
+        # re-resolving, so the committed lock is what CI actually validates.
+        run: uv sync --locked --extra cache --extra dev
 
       - name: Ruff
         run: uv run ruff check src tests

@@ -59,6 +59,17 @@ packages = ["src/patchcraft"]
 [tool.hatch.build.targets.wheel.force-include]
 "src/patchcraft/py.typed" = "patchcraft/py.typed"
 
+# The sdist is the reproducible source snapshot: product (`src/`) plus the
+# track that proves it works (`tests/`, `docs/`). It must NOT carry `lab/`,
+# whose contents are gitignored scratch work (`lab/.gitignore` is `*`) and so
+# cannot be reproduced from any commit -- patchcraft-0.2.0.tar.gz shipped three
+# such files to PyPI. `.vscode/` is machine-local editor config.
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "lab/",
+    "**/.vscode/**",
+]
+
 [tool.pytest.ini_options]
 cache_dir = "Z:\\caches\\pytest"
 testpaths = ["tests"]
