@@ -78,6 +78,14 @@ jobs:
         with:
           name: dist
           path: dist/
+      # DIAGNOSTIC (temporary): print the OIDC claims sent on a tag run and
+      # the exact PyPI rejection, to settle why Trusted Publishing fails.
+      - name: Decode OIDC token claims
+        run: |
+          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=pypi" | jq -r .value)
+          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+')
+          echo "$PAYLOAD" | python3 -c "import sys,base64,json; s=sys.stdin.read(); s+='='*(-len(s)%4); print(json.dumps(json.loads(base64.b64decode(s)),indent=2))"
       - name: Publish via Trusted Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -86,6 +94,8 @@ jobs:
           # was uploaded by hand) fails here, and `github-release` never runs
           # because it is `needs: publish-pypi`.
           skip-existing: true
+          # DIAGNOSTIC (temporary): log the full PyPI/OIDC exchange.
+          verbose: true
         # No `password` field -- OIDC handles authentication.
         # The pypi.org "Pending publisher" config must match:
         #   PyPI project name: patchcraft
