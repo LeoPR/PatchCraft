@@ -83,7 +83,8 @@ Motivated by the QPatchSR consumer's needs surfaced after v0.1.0 shipped. Public
 - [x] README ASCII "Visual cheat sheet" covering extract / reconstruct / pair / stitch.
 - [x] `__version__` bump to `0.2.0`, CHANGELOG `[0.2.0]` section closed.
 - [x] CI scaffold: [`.github/workflows/test.yml`](../.github/workflows/test.yml) (PR validation) and [`.github/workflows/release.yml`](../.github/workflows/release.yml) (PyPI publish via Trusted Publishing on `vX.Y.Z` tag push).
-- [x] PyPI account + Trusted Publisher setup (manual, one-time).
+- [x] PyPI account created; the project exists and is published.
+- [ ] Trusted Publisher **verified working**. Status unknown, not "not configured": a pending publisher was configured on PyPI before the project existed, but the project was then created by a manual token upload rather than by the pipeline, so nothing has ever exercised the OIDC path successfully. The one run that tried (tag `v0.2.0`, 2026-08-03) failed in `publish-pypi`; the log was not readable without repo admin, so the cause was never established. Read that run's log before changing anything here.
 - [x] First PyPI release published: [`patchcraft` 0.2.0](https://pypi.org/project/patchcraft/0.2.0/), uploaded 2026-05-17. Note it was uploaded manually with an account-scoped API token, *not* by the tag-triggered pipeline, because the tag was never pushed at the time.
 - [x] Tag `v0.2.0` pushed (2026-08-03, retroactively). The tag sits on the docs/CI housekeeping pass that follows the release, not on the commit the wheel was built from, because the tag never existed at upload time. This is sound: `git diff 627a9c8..v0.2.0 -- src/` is empty, so the tagged tree still builds byte-identical library code. Everything between the two commits is documentation, CI configuration and the lockfile.
 
