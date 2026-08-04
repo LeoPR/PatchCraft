@@ -1,4 +1,4 @@
-# ADR 0002 — `Patchify`: callable wrapper for transform pipelines
+# ADR 0002: `Patchify`, a callable wrapper for transform pipelines
 
 - **Status:** Accepted
 - **Date:** 2026-05-16
@@ -7,7 +7,7 @@
 
 ## Context
 
-[ADR 0001](0001-patch-extraction-api.md) established `extract(image, patch_size, stride, dilation)` as a pure function and explicitly rejected a class-based replacement to avoid state creep (LRU cache, fixed `image_size`, hidden disk cache — the drift visible in `archive/QSVM_patchkit/patchkit/patches.py::OptimizedPatchExtractor`).
+[ADR 0001](0001-patch-extraction-api.md) established `extract(image, patch_size, stride, dilation)` as a pure function and explicitly rejected a class-based replacement to avoid state creep (LRU cache, fixed `image_size`, hidden disk cache, the drift visible in `archive/QSVM_patchkit/patchkit/patches.py::OptimizedPatchExtractor`).
 
 A new use case crystallized in conversation: PatchCraft must be **acoplável** ("attachable") to other people's torch pipelines. Concretely, a downstream consumer wants:
 
@@ -23,9 +23,9 @@ loader = DataLoader(dataset, num_workers=4)     # parallelism for free
 
 The functional API forces `patchcraft_step` to be a `lambda img: extract(img, 4, 2)` or `functools.partial(extract, patch_size=4, stride=2)`. Both work, but:
 
-- **Not introspectable.** `print(transform)` shows `<function <lambda> at 0x...>` — useless for debugging long pipelines.
+- **Not introspectable.** `print(transform)` shows `<function <lambda> at 0x...>`, which is useless for debugging long pipelines.
 - **No eager validation.** `lambda img: extract(img, patch_size=-1, stride=-1)` only fails when the first batch hits the worker. With a class, `__init__` catches the config error at pipeline construction.
-- **Awkward to mix with the rest of the lib's idiom.** Callers reading the code see `extract` documented as a function and `partial(extract, ...)` ad-hoc-glued in — the lib appears to lack a first-class hook for this very common integration.
+- **Awkward to mix with the rest of the lib's idiom.** Callers reading the code see `extract` documented as a function and `partial(extract, ...)` ad-hoc-glued in, so the lib appears to lack a first-class hook for this very common integration.
 
 ## Decision
 
@@ -52,7 +52,7 @@ class Patchify:
 - **Single delegation.** `__call__` does nothing except forward to `extract`. Same shape contract, same dtype/device preservation, same truncation policy, same `(L, C, ph, pw)` output, same exceptions.
 - **Eager validation.** `__init__` calls `_as_pair` on each axis. A bad `patch_size`, `stride`, or `dilation` raises `ValueError` at pipeline construction, not at first inference.
 - **No state beyond geometry.** `__slots__` lists exactly six ints. No `__dict__`, no buffer, no cache, no `image_size`, no device, no last-image reference.
-- **Reusable across image sizes.** A single instance handles every `(C, H, W)` the user feeds it — same property as the function form.
+- **Reusable across image sizes.** A single instance handles every `(C, H, W)` the user feeds it, the same property as the function form.
 - **Repr-friendly.** `repr(Patchify(4, 2))` returns `"Patchify(patch_size=(4, 4), stride=(2, 2), dilation=(1, 1))"`, suitable for printing transform pipelines.
 
 ### What is deliberately *not* in this class
@@ -60,15 +60,15 @@ class Patchify:
 - **No caching.** Adding caching would re-invite the state creep ADR 0001 forbade. Caching is a `patchcraft.Cache` concern, composed externally.
 - **No fixed image size.** Same rejection as ADR 0001 alternative A.
 - **No `nn.Module` inheritance.** `Patchify` is not a layer: no parameters, no gradient hook, no `.to(device)`, no `.train()`/`.eval()`. Subclassing `nn.Module` would imply semantics PatchCraft does not honor.
-- **No batch axis.** The output stays `(L, C, ph, pw)` — same as `extract`. Per [`THEORY.md`](../THEORY.md) §0, multi-image batching is out of scope; the `transforms.Compose` pipeline applies one image at a time per worker, which fits.
-- **No `inverse` method.** Round-trip is `patchcraft.reconstruct` (separate function). Bundling inverse here would tie two milestones (M2, M3) into one class — defeats decoupling.
+- **No batch axis.** The output stays `(L, C, ph, pw)`, the same as `extract`. Per [`THEORY.md`](../THEORY.md) §0, multi-image batching is out of scope; the `transforms.Compose` pipeline applies one image at a time per worker, which fits.
+- **No `inverse` method.** Round-trip is `patchcraft.reconstruct` (separate function). Bundling inverse here would tie two milestones (M2, M3) into one class, which defeats decoupling.
 
 ## Consequences
 
 **Positive.**
 - Slots into `torchvision.transforms.Compose([..., Patchify(4, 2), ...])` without callers writing lambdas.
 - Config errors fail at construction time (where the stack trace points to user code), not at first batch (where the stack trace points to a DataLoader worker).
-- Provides a first-class integration point for the most common use case — patch extraction inside a torch pipeline — without changing the function or moving toward orchestration.
+- Provides a first-class integration point for the most common use case, patch extraction inside a torch pipeline, without changing the function or moving toward orchestration.
 - Tests are trivial: confirm delegation to `extract` and confirm `__init__` rejects bad geometries.
 
 **Negative.**
@@ -94,7 +94,7 @@ class Patchify:
 
 ### D. Return a single random patch per call so `Patchify` becomes a per-sample augmentation
 
-**Rejected.** That would make `Patchify` non-deterministic and would mismatch the function's shape contract. Per-sample patch augmentation is a higher-level concern that belongs to consumer pipelines or to a future `tests/_datasets.py` helper — not to the core primitive.
+**Rejected.** That would make `Patchify` non-deterministic and would mismatch the function's shape contract. Per-sample patch augmentation is a higher-level concern that belongs to consumer pipelines or to a future `tests/_datasets.py` helper, not to the core primitive.
 
 ## Status after M2
 

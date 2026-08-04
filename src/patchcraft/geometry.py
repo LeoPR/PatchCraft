@@ -1,6 +1,6 @@
 """Pre-flight geometry helpers: enumerate valid patch tilings, count patches.
 
-Pure number-only API — does not touch tensors or images. Useful for:
+Pure number-only API. Does not touch tensors or images. Useful for:
 - asking the lib "what patch sizes fit my image cleanly?" before extracting;
 - precomputing patch counts for memory planning;
 - driving parametrized tests over the full space of valid geometries.
@@ -29,7 +29,7 @@ class TilingSpec(NamedTuple):
     ``overlap=False`` means an *exact tile*: ``patch_size == stride`` and the
     image is divided into a clean grid with no overlap and no waste.
     ``overlap=True`` means ``stride < patch_size`` and full coverage is still
-    achieved — adjacent patches share pixels.
+    achieved, so adjacent patches share pixels.
     """
 
     patch_size: tuple[int, int]
@@ -60,7 +60,7 @@ def num_patches(
     stride: int | tuple[int, int],
     dilation: int | tuple[int, int] = 1,
 ) -> tuple[int, int]:
-    """Return ``(num_h, num_w)`` — how many patches `extract` would produce.
+    """Return ``(num_h, num_w)``, how many patches `extract` would produce.
 
     Accepts ``(H, W)`` or ``(C, H, W)`` for ``image_shape``. Returns ``(0, 0)``
     in either axis when the effective patch does not fit (mirroring `extract`'s
@@ -108,7 +108,7 @@ def tilings(
         If False (default), emit only exact tilings (``stride == patch_size``
         and ``H % p == 0`` and ``W % p == 0``). If True, also emit
         ``stride < patch_size`` geometries with ``(H - p) % s == 0`` and
-        ``(W - p) % s == 0`` — overlap-with-clean-edges.
+        ``(W - p) % s == 0``, overlap-with-clean-edges.
     min_patch_size
         Smallest patch to consider. Defaults to 2 (skips the trivial pixel-wise
         tiling at ``p == 1``).

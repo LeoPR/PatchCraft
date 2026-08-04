@@ -1,4 +1,4 @@
-"""Tests for `patchcraft.reconstruct` — contract from docs/THEORY.md §9.2."""
+"""Tests for `patchcraft.reconstruct`, contract from docs/THEORY.md §9.2."""
 from __future__ import annotations
 
 import pytest
@@ -8,7 +8,7 @@ from patchcraft import extract, reconstruct
 
 
 def _ramp(c: int, h: int, w: int, dtype: torch.dtype = torch.float32) -> torch.Tensor:
-    """Image with every pixel unique — distinguishes pixels positionally."""
+    """Image with every pixel unique, which distinguishes pixels positionally."""
     return torch.arange(c * h * w, dtype=dtype).reshape(c, h, w)
 
 
@@ -150,7 +150,7 @@ class TestRejects:
             reconstruct(patches, image_shape=(1, 16, 16), stride=4, dilation=2)
 
     def test_stride_greater_than_patch_rejected(self) -> None:
-        """§9.2: sh > ph or sw > pw forbidden — partial coverage."""
+        """§9.2: sh > ph or sw > pw forbidden, partial coverage."""
         patches = torch.zeros(9, 1, 4, 4)
         with pytest.raises(ValueError, match="stride > patch_size"):
             reconstruct(patches, image_shape=(1, 20, 20), stride=6)

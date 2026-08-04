@@ -1,4 +1,4 @@
-# ADR 0001 — Patch extraction API
+# ADR 0001: Patch extraction API
 
 - **Status:** Accepted
 - **Date:** 2026-04-21
@@ -9,8 +9,8 @@
 
 PatchCraft's central primitive is patch extraction: given an image, produce a tensor of rectangular sub-regions. Every downstream piece (reconstruction, LR↔HR pairing, dataset caching) depends on the shape of this API. Two reference implementations exist in the archive:
 
-1. `archive/QSVM_patchkit/patchkit/patches.py` — class-based `OptimizedPatchExtractor`. State includes: patch size, stride, dilation, image size (fixed at construction), an in-memory LRU cache, a disk cache path, and config-hashed cache filenames. `process(image, index)` does extraction and caching in one call. Supports reconstruction via `reconstruct_image(patches)`.
-2. `archive/PatchHub/src/patchhub/` — no extraction primitive. PatchHub is post-processing only (cache, quantize, resize, subset). Shows the project's preference for small, composable, stateless utilities.
+1. `archive/QSVM_patchkit/patchkit/patches.py` uses a class-based `OptimizedPatchExtractor`. State includes: patch size, stride, dilation, image size (fixed at construction), an in-memory LRU cache, a disk cache path, and config-hashed cache filenames. `process(image, index)` does extraction and caching in one call. Supports reconstruction via `reconstruct_image(patches)`.
+2. `archive/PatchHub/src/patchhub/` has no extraction primitive. PatchHub is post-processing only (cache, quantize, resize, subset). Shows the project's preference for small, composable, stateless utilities.
 
 These implementations disagree on the fundamentals:
 - **Shape of state**: QSVM_patchkit bundles extraction + caching + reconstruction into one stateful object. PatchHub prefers free functions with a separate `Cache`.
@@ -46,7 +46,7 @@ def extract(
 
 - No class. No constructor that fixes `image_size` ahead of time. Reusing an extractor across different image sizes is a valid request, and stateless functions handle it for free.
 - No `image_id` / `index` argument. That is metadata the caller owns; it is passed to `pair()` (see §3 of THEORY.md) when pairing, not to `extract()`.
-- No cache. Caching a patch tensor is rarely worth it — the unfold call is cheap, the storage cost is the full image expansion (up to `ph · pw / (sh · sw)` × the pixel count). When caching *is* wanted, callers wrap `extract` with `patchcraft.Cache` explicitly.
+- No cache. Caching a patch tensor is rarely worth it, because the unfold call is cheap, the storage cost is the full image expansion (up to `ph · pw / (sh · sw)` × the pixel count). When caching *is* wanted, callers wrap `extract` with `patchcraft.Cache` explicitly.
 - No batched input (`(B, C, H, W)`). v0.1 is single-image. Looping in Python is acceptable for the initial consumer; a batched variant or a `vmap` recipe will be added when benchmarks justify it.
 - No PIL input. Callers convert via `torch.from_numpy(np.asarray(pil_img))` or `torchvision.transforms.functional.to_tensor`. Accepting PIL internally would hide the conversion cost and the dtype/range ambiguity.
 - No padding modes. Truncation is the only policy. Callers needing full coverage pad the image before calling `extract`.
@@ -61,8 +61,8 @@ def extract(
 
 **Negative.**
 - Callers that process many same-size images pay a small per-call overhead for argument validation and the reshape. Expected to be noise next to `unfold` itself; will revisit if a benchmark disagrees.
-- No amortization of the reshape logic across calls — the per-call work is constant but non-zero. Again, measure first.
-- Users migrating from `OptimizedPatchExtractor` need to rewrite: `extractor.process(img)` becomes `patchcraft.extract(img, patch_size=..., stride=...)`. Caching moves from implicit to explicit. This is intentional — the migration makes the prior hidden state visible.
+- No amortization of the reshape logic across calls, so the per-call work is constant but non-zero. Again, measure first.
+- Users migrating from `OptimizedPatchExtractor` need to rewrite: `extractor.process(img)` becomes `patchcraft.extract(img, patch_size=..., stride=...)`. Caching moves from implicit to explicit. This is intentional, because the migration makes the prior hidden state visible.
 
 **Neutral.**
 - The metadata contract (`image_id`, `patch_index`, coordinates) lives in `pair()` and in the `PatchMeta` dataclass, not in `extract()`. Extraction produces pixels; pairing produces correspondences.

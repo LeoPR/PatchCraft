@@ -1,4 +1,4 @@
-"""Tests for `patchcraft.stitch` — contract from docs/THEORY.md §9.9."""
+"""Tests for `patchcraft.stitch`, contract from docs/THEORY.md §9.9."""
 from __future__ import annotations
 
 import pytest
@@ -65,7 +65,7 @@ class TestHann:
 
     def test_corner_artifact_with_exact_tiling(self) -> None:
         """At stride==patch_size, image corners are covered by patches whose
-        Hann edge-weight is 0 — the documented artifact makes them zero."""
+        Hann edge-weight is 0, so the documented artifact makes them zero."""
         img = torch.full((1, 8, 8), 0.5)
         patches = extract(img, patch_size=4, stride=4)
         out = stitch(patches, image_shape=img.shape, stride=4, weight="hann")
@@ -104,7 +104,7 @@ class TestGaussian:
         assert torch.allclose(out, img, rtol=1e-9, atol=1e-9)
 
     def test_no_corner_artifact_at_exact_tiling(self) -> None:
-        """Unlike Hann, Gaussian does not zero the corners — weight is
+        """Unlike Hann, Gaussian does not zero the corners, because weight is
         ``exp(-((edge - center)^2) / (2 * sigma^2)) > 0``."""
         img = torch.full((1, 8, 8), 0.5)
         patches = extract(img, patch_size=4, stride=4)

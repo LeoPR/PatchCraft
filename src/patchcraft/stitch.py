@@ -1,8 +1,8 @@
 """Stitch patches back into an image with configurable weighting kernels.
 
 Where :func:`patchcraft.reconstruct` is a bit-exact inverse of ``extract``,
-``stitch`` is intended for *modified* patches — patches that have been
-denoised, super-resolved, or otherwise altered — where overlap seams are
+``stitch`` is intended for *modified* patches, meaning patches that have been
+denoised, super-resolved, or otherwise altered, where overlap seams are
 visible if patches are averaged uniformly. Weighting by a window kernel
 (Hann, Gaussian) emphasizes patch centers and reduces those seams.
 
@@ -86,13 +86,13 @@ def stitch(
 
     ``weight`` controls how overlapping patches are blended:
 
-    - ``"uniform"`` — each covering patch contributes equally. Mathematically
+    - ``"uniform"``: each covering patch contributes equally. Mathematically
       equivalent to ``reconstruct`` (no seam attenuation).
-    - ``"hann"`` — Hann window: full weight at patch center, zero at patch
+    - ``"hann"``: Hann window with full weight at patch center, zero at patch
       edges. Strong seam suppression. **Caveat:** image-corner pixels that
       are covered only by patches whose edge-weight at that location is zero
       will be zero in the output. Document this for callers.
-    - ``"gaussian"`` — Gaussian centered on the patch with
+    - ``"gaussian"``: Gaussian centered on the patch with
       ``sigma = max(1.0, min(ph, pw) / 4)``. Smooth seam suppression without
       the strict zero at the edge (no corner-zero artifact).
 
@@ -105,7 +105,7 @@ def stitch(
 
     Rejects (per §9.9): ``dilation != 1``; ``stride > patch_size`` in any
     axis; ``patches.ndim != 4``; non-floating-point patches (kernel
-    multiplication breaks integer semantics for non-uniform weights —
+    multiplication breaks integer semantics for non-uniform weights,
     callers convert to ``float`` first); ``image_shape`` inconsistent with
     the patch grid; unknown ``weight``.
 
@@ -122,7 +122,7 @@ def stitch(
     if not patches.is_floating_point():
         raise ValueError(
             f"stitch requires floating-point patches, got dtype={patches.dtype}. "
-            "Convert with patches.float() — weight kernels are float-valued and "
+            "Convert with patches.float(); weight kernels are float-valued and "
             "integer semantics would silently quantize the result."
         )
 
@@ -154,7 +154,7 @@ def stitch(
     if dh != 1 or dw != 1:
         raise ValueError(
             f"stitch requires dilation==1, got dilation=({dh}, {dw}). "
-            "Patches extracted with dilation > 1 cannot round-trip — consume them as features."
+            "Patches extracted with dilation > 1 cannot round-trip; consume them as features."
         )
     if sh > ph or sw > pw:
         raise ValueError(
@@ -210,6 +210,6 @@ def stitch(
 
     # clamp(min=1e-6): for "uniform" this matches reconstruct's count-map
     # clamp. For "hann", corner pixels covered only by edge-weight-zero
-    # positions have ~0 numerator AND ~0 denominator — output is dominated
+    # positions have ~0 numerator AND ~0 denominator, so output is dominated
     # by the clamp (i.e., zero). Documented artifact (§9.9).
     return (folded_num / folded_den.clamp(min=1e-6))[0]

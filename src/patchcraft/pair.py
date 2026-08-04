@@ -23,7 +23,7 @@ class PatchMeta:
     """Metadata for a single LR/HR patch correspondence.
 
     Lives on CPU (never moves to GPU regardless of where the patches live).
-    Identifies *which* patch in the grid — coordinates are in LR pixel space;
+    Identifies *which* patch in the grid; coordinates are in LR pixel space;
     multiply ``row`` and ``col`` by ``scale_factor`` to get HR coordinates.
     """
 
@@ -139,7 +139,7 @@ def pair(
 
     # Geometry is identical by construction (integer scale), so counts match.
     n_patches = int(lr_patches.shape[0])
-    if hr_patches.shape[0] != n_patches:  # defensive — shouldn't happen
+    if hr_patches.shape[0] != n_patches:  # defensive; should not happen
         raise RuntimeError(
             f"internal: lr and hr patch counts diverged "
             f"({n_patches} vs {hr_patches.shape[0]}); please file a bug"

@@ -1,4 +1,4 @@
-"""Tests for `patchcraft.resize` — contract from docs/THEORY.md §9.4."""
+"""Tests for `patchcraft.resize`, contract from docs/THEORY.md §9.4."""
 from __future__ import annotations
 
 import numpy as np

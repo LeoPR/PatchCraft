@@ -1,4 +1,4 @@
-# PatchCraft — Theory Notes
+# PatchCraft: Theory Notes
 
 Working document. The goal is to distill the useful theory from the reference implementations in [`../archive/`](../archive/) into a single place **before** writing new code. Keep this document as the source-of-truth for design decisions.
 
@@ -12,7 +12,7 @@ The lib is the *car*; this repo also contains the *track and pit crew* (`tests/`
 
 The car must be **acoplável** to other people's torch pipelines: `Patchify` (see §1) is a `torchvision.transforms`-style callable so callers can drop PatchCraft into `Compose([..., Patchify(...), ...])` and get `DataLoader` worker parallelism for free. The lib gives them the primitive; they own the pipeline.
 
-Multi-image batching is **out of scope**, not under-specified: callers use a Python loop, `torch.vmap`, or a `DataLoader`. The grey-area "maybe if trivially cheap" was resolved against batching — patch counts vary per image (different `H`, `W` give different `L`), so any batched API would need padding or list-of-tensor outputs, both of which leak complexity into a primitive that has no reason to carry it.
+Multi-image batching is **out of scope**, not under-specified: callers use a Python loop, `torch.vmap`, or a `DataLoader`. The grey-area "maybe if trivially cheap" was resolved against batching, because patch counts vary per image (different `H`, `W` give different `L`), so any batched API would need padding or list-of-tensor outputs, both of which leak complexity into a primitive that has no reason to carry it.
 
 ## 1. Patch extraction
 
@@ -30,39 +30,39 @@ Multi-image batching is **out of scope**, not under-specified: callers use a Pyt
 
 **Memory layout.** `F.unfold(x.unsqueeze(0), (ph,pw), dilation=d, stride=(sh,sw))` yields shape `(1, C·ph·pw, L)`. Reshape as `.view(C, ph, pw, L).permute(3, 0, 1, 2).contiguous()` to obtain `(L, C, ph, pw)`. Device and dtype are preserved from the input.
 
-**Design decision.** `patchcraft.extract(image, patch_size, stride, dilation=1) -> Tensor[L, C, ph, pw]` is a pure function built on `F.unfold`. `image` must be `(C, H, W)`; batching is explicit (call in a loop or `vmap`) and is not part of the v0.1 signature. `patch_size` and `stride` accept `int` (square) or `(int, int)`. Truncation is the only boundary policy. When no patch fits, we return an empty tensor `Tensor[0, C, ph, pw]` rather than raising — callers decide. No caching inside the function; caching is a separate concern (see §4). Dilation is supported here even though reconstruction rejects it (see §2). See also [ADR 0001](ADR/0001-patch-extraction-api.md) for the API rationale.
+**Design decision.** `patchcraft.extract(image, patch_size, stride, dilation=1) -> Tensor[L, C, ph, pw]` is a pure function built on `F.unfold`. `image` must be `(C, H, W)`; batching is explicit (call in a loop or `vmap`) and is not part of the v0.1 signature. `patch_size` and `stride` accept `int` (square) or `(int, int)`. Truncation is the only boundary policy. When no patch fits, we return an empty tensor `Tensor[0, C, ph, pw]` rather than raising, so callers decide. No caching inside the function; caching is a separate concern (see §4). Dilation is supported here even though reconstruction rejects it (see §2). See also [ADR 0001](ADR/0001-patch-extraction-api.md) for the API rationale.
 
-**Composability with torch transforms (Patchify).** ADR 0002 adds a thin callable companion: `patchcraft.Patchify(patch_size, stride, dilation=1)` is a class with `__call__(image) -> Tensor[L, C, ph, pw]` that delegates to `extract`. It exists to slot into `torchvision.transforms.Compose([..., Patchify(4, 2), ...])` without forcing callers to write a lambda — lambdas are not repr-friendly and they skip eager validation. `Patchify` validates the geometry in `__init__` (so a bad `patch_size` fails when the pipeline is built, not when the first batch arrives), and carries **only** the geometry ints (`__slots__`, no `__dict__`, no cache, no buffer). The function is the contract; the class is a convenience. Same shape contract, same dtype/device preservation, same truncation policy.
+**Composability with torch transforms (Patchify).** ADR 0002 adds a thin callable companion: `patchcraft.Patchify(patch_size, stride, dilation=1)` is a class with `__call__(image) -> Tensor[L, C, ph, pw]` that delegates to `extract`. It exists to slot into `torchvision.transforms.Compose([..., Patchify(4, 2), ...])` without forcing callers to write a lambda, because lambdas are not repr-friendly and they skip eager validation. `Patchify` validates the geometry in `__init__` (so a bad `patch_size` fails when the pipeline is built, not when the first batch arrives), and carries **only** the geometry ints (`__slots__`, no `__dict__`, no cache, no buffer). The function is the contract; the class is a convenience. Same shape contract, same dtype/device preservation, same truncation policy.
 
 ## 1.5 Pre-flight geometry helpers
 
 **Topic.** Before extracting patches, callers often need to answer questions that depend only on the *shape* of the image, never on its pixels:
 
-- "How many patches will I get for this `(H, W, ph, pw, sh, sw, d)`?" — for memory planning, for shape assertions, for filling a progress bar before allocating.
-- "What patch sizes tile my image cleanly, with no overlap and no truncation?" — for picking a geometry whose round-trip is bit-exact by construction (§2 exact regime).
-- "Which `(p, s)` pairs cover my image without truncation but with overlap?" — for picking a geometry whose round-trip is weighted-exact (§2 overlap regime).
+- "How many patches will I get for this `(H, W, ph, pw, sh, sw, d)`?", for memory planning, for shape assertions, for filling a progress bar before allocating.
+- "What patch sizes tile my image cleanly, with no overlap and no truncation?", for picking a geometry whose round-trip is bit-exact by construction (§2 exact regime).
+- "Which `(p, s)` pairs cover my image without truncation but with overlap?", for picking a geometry whose round-trip is weighted-exact (§2 overlap regime).
 
 The naïve way is to materialize patches with `extract` and check `.shape[0]`, or to try every plausible geometry by brute force. Both waste cycles on operations whose answers are arithmetic.
 
-**Counts.** `num_patches(image_shape, patch_size, stride, dilation=1) -> (num_h, num_w)` is the formula from §1, exposed as a function. Accepts `(H, W)` or `(C, H, W)` (channels are not used). Returns `(0, *)` or `(*, 0)` when the effective patch does not fit on that axis — same boundary behavior as `extract` returning `Tensor[0, C, ph, pw]`.
+**Counts.** `num_patches(image_shape, patch_size, stride, dilation=1) -> (num_h, num_w)` is the formula from §1, exposed as a function. Accepts `(H, W)` or `(C, H, W)` (channels are not used). Returns `(0, *)` or `(*, 0)` when the effective patch does not fit on that axis, the same boundary behavior as `extract` returning `Tensor[0, C, ph, pw]`.
 
 **Enumeration.** `tilings(image_shape, *, allow_overlap=False, min_patch_size=2, max_patch_size=None) -> list[TilingSpec]` walks the square patch sizes from `min_patch_size` to `max_patch_size` and emits every geometry that **fully covers** the image:
 
 - *Exact tiling* (always emitted): `patch_size == stride` and `H % p == 0` and `W % p == 0`. The clean grid case, bit-exact round-trip.
 - *Overlap with clean edges* (emitted when `allow_overlap=True`): `stride < patch_size` with `(H - p) % s == 0` and `(W - p) % s == 0`. The last patch's last pixel lands on the image edge; full coverage with shared pixels in the middle.
 
-Truncated geometries (where the last patch falls short of the edge) are deliberately not emitted — the function answers "which geometries are sound by construction?", not "which geometries `extract` will accept" (`extract` accepts any positive `(p, s, d)`).
+Truncated geometries (where the last patch falls short of the edge) are deliberately not emitted, because the function answers "which geometries are sound by construction?", not "which geometries `extract` will accept" (`extract` accepts any positive `(p, s, d)`).
 
 **Worked example (28×28 MNIST).** Divisors of 28 ≥ 2 are `{2, 4, 7, 14, 28}`, so `tilings((28, 28))` returns exactly 5 specs: `(p=2, total=196)`, `(p=4, total=49)`, `(p=7, total=16)`, `(p=14, total=4)`, `(p=28, total=1)`. With `allow_overlap=True` the set grows to 100 specs.
 
-**Dilation.** `tilings` always emits `dilation=(1, 1)` in v0.1 — dilated full-coverage tilings are a non-trivial enumeration (the patch footprint has gaps; you can interleave multiple dilated patches per pixel) and no consumer has asked for them yet. `num_patches` does honor `dilation` because the formula already does.
+**Dilation.** `tilings` always emits `dilation=(1, 1)` in v0.1, because dilated full-coverage tilings are a non-trivial enumeration (the patch footprint has gaps; you can interleave multiple dilated patches per pixel) and no consumer has asked for them yet. `num_patches` does honor `dilation` because the formula already does.
 
-**Design decision.** Two pure functions and one `NamedTuple`: `num_patches`, `tilings`, `TilingSpec`. No tensors, no images, no dataset abstractions — only ints in, ints out. They live in `src/patchcraft/geometry.py` and are re-exported from `patchcraft`. The `TilingSpec` fields are `patch_size`, `stride`, `dilation`, `num_patches`, `total_patches`, `overlap` — destructurable for tests, sortable, hashable. Square-only enumeration in v0.1; rectangular comes when a real consumer asks (the function signature accommodates it by always returning `(int, int)` tuples).
+**Design decision.** Two pure functions and one `NamedTuple`: `num_patches`, `tilings`, `TilingSpec`. No tensors, no images, no dataset abstractions, only ints in and ints out. They live in `src/patchcraft/geometry.py` and are re-exported from `patchcraft`. The `TilingSpec` fields are `patch_size`, `stride`, `dilation`, `num_patches`, `total_patches`, `overlap`, destructurable for tests, sortable, hashable. Square-only enumeration in v0.1; rectangular comes when a real consumer asks (the function signature accommodates it by always returning `(int, int)` tuples).
 
-**Cross-resolution geometry (`scale_factor`, `paired_tilings`, `PairedTilingSpec`).** Super-resolution consumers (and any multi-resolution patch consumer) ask one more pre-flight question: "given two image shapes — the low-resolution input and the high-resolution target — what `(p, s)` on each side produces the same number of patches with corresponding image regions?". The same arithmetic as `tilings`, layered with the integer-scale invariant from §3:
+**Cross-resolution geometry (`scale_factor`, `paired_tilings`, `PairedTilingSpec`).** Super-resolution consumers (and any multi-resolution patch consumer) ask one more pre-flight question: "given two image shapes (the low-resolution input and the high-resolution target), what `(p, s)` on each side produces the same number of patches with corresponding image regions?". The same arithmetic as `tilings`, layered with the integer-scale invariant from §3:
 
 - `scale_factor(lr_shape, hr_shape) -> int | None`: returns `k` such that `hr.shape[-2:] == (k * lr.shape[-2], k * lr.shape[-1])`, or `None` when no such positive integer exists. Lets a consumer discover the scale factor from data instead of hard-coding it before calling `pair`.
-- `paired_tilings(lr_shape, hr_shape, *, allow_overlap=False, ...)`: for each LR tiling that `tilings(lr_shape)` would emit, derives the matching HR tiling by multiplying patch size and stride by the scale factor. Returns a list of `PairedTilingSpec(lr, hr, scale_factor)`. By construction every entry has identical `total_patches` on both sides and aligned per-`k` regions — feed straight into `pair` with confidence.
+- `paired_tilings(lr_shape, hr_shape, *, allow_overlap=False, ...)`: for each LR tiling that `tilings(lr_shape)` would emit, derives the matching HR tiling by multiplying patch size and stride by the scale factor. Returns a list of `PairedTilingSpec(lr, hr, scale_factor)`. By construction every entry has identical `total_patches` on both sides and aligned per-`k` regions, so they feed straight into `pair` with confidence.
 - Worked example: `paired_tilings((14, 14), (28, 28))` returns three pairs corresponding to LR patch sizes `{2, 7, 14}` (the divisors of 14 with `min_patch_size=2`), each paired with HR patches twice the size, all preserving patch count: `(p_lr=2, p_hr=4, total=49)`, `(p_lr=7, p_hr=14, total=4)`, `(p_lr=14, p_hr=28, total=1)`.
 
 These helpers live alongside `tilings` and are tensor-free; everything they do reduces to shape arithmetic.
@@ -71,31 +71,31 @@ These helpers live alongside `tilings` and are tensor-free; everything they do r
 
 **Topic.** Once `extract` + `reconstruct` round-trips or `pair` produces aligned LR/HR tensors, consumers need to *measure* how close two patch tensors are. The set of useful pixel-level metrics for this is tiny and stable:
 
-- MAE — `(a - b).abs().mean()`
-- MSE — `((a - b) ** 2).mean()`
-- max-abs-diff — `(a - b).abs().max()`
-- PSNR (dB) — `10 * log10(max_value² / mse)`
+- MAE: `(a - b).abs().mean()`
+- MSE: `((a - b) ** 2).mean()`
+- max-abs-diff: `(a - b).abs().max()`
+- PSNR (dB): `10 * log10(max_value² / mse)`
 
-Every consumer either re-implements these or imports them from some scattered utility module. Different consumers often pick slightly different reductions (axis choice, dtype promotion, what to do when MSE is zero) — divergence breeds bugs. PatchCraft ships the canonical reductions so that "did the model do better?" has one answer at the lib level.
+Every consumer either re-implements these or imports them from some scattered utility module. Different consumers often pick slightly different reductions (axis choice, dtype promotion, what to do when MSE is zero), and divergence breeds bugs. PatchCraft ships the canonical reductions so that "did the model do better?" has one answer at the lib level.
 
 **Per-patch vs over-the-stack.** Both are useful. A model trainer wants the scalar PSNR over an entire batch (early stopping, logging); a researcher wants per-patch PSNR (rank patches by reconstruction quality, identify failure modes). Two distinct shapes; two functions.
 
-**Dtype handling.** Internally `patch_metrics` promotes to `float64` for the scalar accumulation (one number per call, cost is irrelevant, precision matters). `per_patch_mse` and `per_patch_psnr` keep input dtype (per-patch values are themselves a tensor; consumer chooses precision via input). PSNR returns `+inf` when MSE is zero — mathematically correct; no clamp tricks that produce a finite "very large" value the user has to reverse-engineer.
+**Dtype handling.** Internally `patch_metrics` promotes to `float64` for the scalar accumulation (one number per call, cost is irrelevant, precision matters). `per_patch_mse` and `per_patch_psnr` keep input dtype (per-patch values are themselves a tensor; consumer chooses precision via input). PSNR returns `+inf` when MSE is zero, which is mathematically correct; no clamp tricks that produce a finite "very large" value the user has to reverse-engineer.
 
 **What this section deliberately does not ship.** SSIM, MS-SSIM, LPIPS, FID, any windowed or learned metric. Each depends on parameters (window size, data range, pre-trained network) that PatchCraft cannot pick on behalf of consumers, and mature standalone packages exist (`pytorch-msssim`, `lpips`). Adding them here would force PatchCraft to pull bigger deps and to bless one parameterization over others.
 
 **Design decision.** Three pure functions in `src/patchcraft/metrics.py`, re-exported from `patchcraft`:
-- `patch_metrics(a, b, *, max_value=1.0) -> dict[str, float]` — scalar reduction over the whole tensor, dtype-promoted internally, returns plain Python floats so the result is JSON-serializable.
-- `per_patch_mse(a, b) -> Tensor[L]` — strict `(L, C, h, w)` inputs, returns one value per leading-axis entry.
-- `per_patch_psnr(a, b, *, max_value=1.0) -> Tensor[L]` — same as MSE shape; identical patches yield `+inf` (`torch.where(mse == 0, inf, ...)`, not a clamp).
+- `patch_metrics(a, b, *, max_value=1.0) -> dict[str, float]` is the scalar reduction over the whole tensor, dtype-promoted internally, returns plain Python floats so the result is JSON-serializable.
+- `per_patch_mse(a, b) -> Tensor[L]` takes strict `(L, C, h, w)` inputs, returns one value per leading-axis entry.
+- `per_patch_psnr(a, b, *, max_value=1.0) -> Tensor[L]` has the same shape rule as MSE; identical patches yield `+inf` (`torch.where(mse == 0, inf, ...)`, not a clamp).
 
-Strict input checks: shape mismatch, dtype mismatch, and device mismatch all raise `ValueError`. The lib does not coerce — caller normalizes upstream. The functions take patches, but the math doesn't care whether the inputs are patches or full images; the type hint mentions patches because that is the canonical use case.
+Strict input checks: shape mismatch, dtype mismatch, and device mismatch all raise `ValueError`. The lib does not coerce, so the caller normalizes upstream. The functions take patches, but the math doesn't care whether the inputs are patches or full images; the type hint mentions patches because that is the canonical use case.
 
 ## 2. Reconstruction
 
 **Topic.** Inverse of extraction via `torch.nn.functional.fold`. Two regimes:
-- **Exact** — when `sh == ph` and `sw == pw` and `d == 1`: patches tile the image; reconstruction is a cheap copy (weights are all ones).
-- **Weighted overlap** — when `sh < ph` or `sw < pw`: patches overlap; reconstruction must divide by the overlap count map (from `fold` of an all-ones tensor with the same geometry).
+- **Exact**: when `sh == ph` and `sw == pw` and `d == 1`: patches tile the image; reconstruction is a cheap copy (weights are all ones).
+- **Weighted overlap**: when `sh < ph` or `sw < pw`: patches overlap; reconstruction must divide by the overlap count map (from `fold` of an all-ones tensor with the same geometry).
 
 **Worked example (`ph = pw = 4, sh = sw = 2`).** Every interior pixel is covered by 4 patches (2 row overlaps × 2 col overlaps); edge pixels are covered by 2; corners by 1. The count map produced by `fold(ones_like(patches_flat), output_size=(H,W), kernel=(4,4), stride=2)` encodes exactly these weights. Dividing the summed pixel contributions by this map recovers the original image bit-exactly for fractional pixel values, and within one ULP for float32 noise.
 
@@ -111,13 +111,13 @@ Visualizing the count map along one axis (image cols 0..7, `ph=4`, `sh=2`):
 
 **Dilation.** `F.fold` does not support dilation in the same way as `F.unfold`: for `d > 1` the patch footprint skips pixels, and `fold` would deposit the sparse contributions into a canvas that is not the image. Rather than building a custom scatter, we refuse `dilation != 1` at reconstruction time with a clear `ValueError`. Callers who extracted with dilation are expected to consume patches directly (e.g., as features) and not round-trip.
 
-**Stride maior que patch (lacunas).** Quando `sh > ph` ou `sw > pw`, o grid pula pixels: a soma `fold(...)` tem zeros nessas posições, e qualquer divisão (incluindo pelo clamp `min=1e-6`) produz pixels com valor arbitrário — síntese de dado, exatamente o que §1 proíbe ao escolher truncamento como única política de borda. Recusamos a condição com `ValueError` logo na entrada de `reconstruct`. Consumidores que querem features esparsas (kernels, classificadores) usam apenas `extract`, onde `stride > patch_size` é aceito sem objeções, e não tentam round-trip.
+**Stride maior que patch (lacunas).** Quando `sh > ph` ou `sw > pw`, o grid pula pixels: a soma `fold(...)` tem zeros nessas posições, e qualquer divisão (incluindo pelo clamp `min=1e-6`) produz pixels com valor arbitrário, ou seja, síntese de dado, exatamente o que §1 proíbe ao escolher truncamento como única política de borda. Recusamos a condição com `ValueError` logo na entrada de `reconstruct`. Consumidores que querem features esparsas (kernels, classificadores) usam apenas `extract`, onde `stride > patch_size` é aceito sem objeções, e não tentam round-trip.
 
-**Design decision.** `patchcraft.reconstruct(patches, image_shape, stride, dilation=1) -> Tensor[C, H, W]` uses `F.fold` followed by division by the overlap-count map (computed once, same-geometry fold of ones). Raises `ValueError` when `dilation != 1` **ou quando `sh > ph` ou `sw > pw`** (cobertura parcial é proibida). `image_shape` is `(C, H, W)` and must match the geometry implied by the patch grid; inconsistent shapes raise `ValueError`. The count map clamp (`min=1e-6`) existe apenas para absorver ruído float em pixels totalmente cobertos — nunca para mascarar buracos de cobertura. Output dtype matches input.
+**Design decision.** `patchcraft.reconstruct(patches, image_shape, stride, dilation=1) -> Tensor[C, H, W]` uses `F.fold` followed by division by the overlap-count map (computed once, same-geometry fold of ones). Raises `ValueError` when `dilation != 1` **ou quando `sh > ph` ou `sw > pw`** (cobertura parcial é proibida). `image_shape` is `(C, H, W)` and must match the geometry implied by the patch grid; inconsistent shapes raise `ValueError`. The count map clamp (`min=1e-6`) existe apenas para absorver ruído float em pixels totalmente cobertos, nunca para mascarar buracos de cobertura. Output dtype matches input.
 
 ## 2.5 Stitching modified patches
 
-**Topic.** `reconstruct` answers "given the original patches, give me back the image." It is the inverse of `extract`, and it makes a strong implicit assumption: every patch covering a pixel agrees on that pixel's value (true for patches that came straight from `extract` on the same image). When patches have been *modified* — model output, denoised, super-resolved, hand-edited — that assumption fails, and uniform averaging shows the disagreement as visible seams along patch boundaries.
+**Topic.** `reconstruct` answers "given the original patches, give me back the image." It is the inverse of `extract`, and it makes a strong implicit assumption: every patch covering a pixel agrees on that pixel's value (true for patches that came straight from `extract` on the same image). When patches have been *modified* (model output, denoised, super-resolved, hand-edited), that assumption fails, and uniform averaging shows the disagreement as visible seams along patch boundaries.
 
 The standard trick is to weight each patch's contribution by a 2-D window whose value is large at the patch center and small (or zero) at the patch edges, so that pixels closer to a patch's center "trust" that patch more than pixels far from it. PatchCraft ships three window kernels: `uniform`, `hann`, `gaussian`.
 
@@ -127,18 +127,18 @@ The standard trick is to weight each patch's contribution by a 2-D window whose 
   `denominator(x, y) = Σ_k  w(i_k, j_k)`
   `output(x, y) = numerator(x, y) / denominator(x, y)`
 
-For *unmodified* patches, every `patch_k(i_k, j_k)` equals `img(x, y)` (definition of `extract`), so the numerator factors as `img(x, y) · denominator(x, y)`, and the output is `img(x, y)` exactly — round-trip is preserved for any kernel as long as the denominator at `(x, y)` is positive. For *modified* patches, contributions are weighted by how central `(x, y)` is to each contributing patch — seams are attenuated.
+For *unmodified* patches, every `patch_k(i_k, j_k)` equals `img(x, y)` (definition of `extract`), so the numerator factors as `img(x, y) · denominator(x, y)`, and the output is `img(x, y)` exactly, so round-trip is preserved for any kernel as long as the denominator at `(x, y)` is positive. For *modified* patches, contributions are weighted by how central `(x, y)` is to each contributing patch, so seams are attenuated.
 
 **Implementation.** Two `F.fold` calls: one on the weighted patches (numerator), one on the kernel replicated across the `L` patch slots (denominator). Identical geometry to `reconstruct`'s count-map fold; same `clamp(min=1e-6)` on the denominator to absorb float noise.
 
 **Window kernels.**
 
-- **`uniform`** — `w ≡ 1`. Numerator becomes the same as `reconstruct`'s fold; denominator becomes the count map. Mathematically equivalent to `reconstruct`. Provided so the API is one function with a parameter instead of two functions with a hidden choice.
-- **`hann`** — separable Hann (`outer(hann(ph), hann(pw))`). Center weight is 1, edge weight is 0. Strong seam suppression; cheapest to compute.
+- **`uniform`**: `w ≡ 1`. Numerator becomes the same as `reconstruct`'s fold; denominator becomes the count map. Mathematically equivalent to `reconstruct`. Provided so the API is one function with a parameter instead of two functions with a hidden choice.
+- **`hann`**: separable Hann (`outer(hann(ph), hann(pw))`). Center weight is 1, edge weight is 0. Strong seam suppression; cheapest to compute.
 
-  > **Known defect (measured 2026-08-03, fix pending — see `CHANGELOG.md` under Unreleased).** The current `_hann_1d(n)` is the symmetric window `0.5·(1 − cos(2πi/(n−1)))`, which is **exactly zero at both `i = 0` and `i = n−1`**. Every pixel whose only covering patches place it on a patch edge therefore has numerator and denominator both ≈ 0, and the `clamp(min=1e-6)` divisor sends it to zero. This is **not** limited to the four image corners, which is what an earlier version of this section claimed. Measured: at `12×12, ph=pw=4, stride=4`, **108 of 144 pixels** come back zero; at `13×13, ph=pw=4, stride=3`, **105 of 169**, including black bands in the image interior. Degenerate case: `patch_size=2` makes the window identically `[0, 0]`, so `stitch(..., weight="hann")` returns an **all-zero image with no error at all**. The fix is to use the interior of a longer window, `hann_window(n+2, periodic=False)[1:-1]`, which is strictly positive on every sample; until then, prefer `gaussian` for any real blending work.
+  > **Known defect (measured 2026-08-03, fix pending, see `CHANGELOG.md` under Unreleased).** The current `_hann_1d(n)` is the symmetric window `0.5·(1 − cos(2πi/(n−1)))`, which is **exactly zero at both `i = 0` and `i = n−1`**. Every pixel whose only covering patches place it on a patch edge therefore has numerator and denominator both ≈ 0, and the `clamp(min=1e-6)` divisor sends it to zero. This is **not** limited to the four image corners, which is what an earlier version of this section claimed. Measured: at `12×12, ph=pw=4, stride=4`, **108 of 144 pixels** come back zero; at `13×13, ph=pw=4, stride=3`, **105 of 169**, including black bands in the image interior. Degenerate case: `patch_size=2` makes the window identically `[0, 0]`, so `stitch(..., weight="hann")` returns an **all-zero image with no error at all**. The fix is to use the interior of a longer window, `hann_window(n+2, periodic=False)[1:-1]`, which is strictly positive on every sample; until then, prefer `gaussian` for any real blending work.
 
-- **`gaussian`** — separable Gaussian centered at the patch midpoint, with **per-axis** `sigma`: `sigma_h = max(1, ph/4)` and `sigma_w = max(1, pw/4)`, independently. (An earlier version of this section and the `stitch` docstring both say `sigma = max(1, min(ph, pw)/4)`, i.e. one shared sigma; that is wrong. For a `4×16` patch the real kernel uses `sigma_h = 1.0` and `sigma_w = 4.0`. The docstring in `src/patchcraft/stitch.py` still carries the old wording and is corrected separately, since it ships inside the wheel.) Weight is non-zero everywhere, so there is no zeroing artifact, at the cost of weaker seam suppression than Hann.
+- **`gaussian`**: separable Gaussian centered at the patch midpoint, with **per-axis** `sigma`: `sigma_h = max(1, ph/4)` and `sigma_w = max(1, pw/4)`, independently. (An earlier version of this section and the `stitch` docstring both say `sigma = max(1, min(ph, pw)/4)`, i.e. one shared sigma; that is wrong. For a `4×16` patch the real kernel uses `sigma_h = 1.0` and `sigma_w = 4.0`. The docstring in `src/patchcraft/stitch.py` still carries the old wording and is corrected separately, since it ships inside the wheel.) Weight is non-zero everywhere, so there is no zeroing artifact, at the cost of weaker seam suppression than Hann.
 
 Visualizing the three 2-D kernels at `patch_size=4` (`+` = full weight, `X` = high, `o` = medium, `.` = zero or near-zero):
 
@@ -167,41 +167,41 @@ Visualizing the three 2-D kernels at `patch_size=4` (`+` = full weight, `X` = hi
   `num_h_lr = floor((H_lr - ph_lr) / sh_lr) + 1`
   `num_h_hr = floor((H_hr - ph_hr) / sh_hr) + 1 = floor((r·H_lr - r·ph_lr) / (r·sh_lr)) + 1 = floor((H_lr - ph_lr) / sh_lr) + 1`
 
-So `num_h_lr == num_h_hr` (and analogously for width) exactly when the scale factor is an integer. The top-left of LR patch `k` is at `(row · sh_lr, col · sw_lr)`; multiply by `r` to get the HR patch origin — same image region, different resolution.
+So `num_h_lr == num_h_hr` (and analogously for width) exactly when the scale factor is an integer. The top-left of LR patch `k` is at `(row · sh_lr, col · sw_lr)`; multiply by `r` to get the HR patch origin, the same image region at a different resolution.
 
-**Truncation.** When `(H_lr − ph_lr) % sh_lr != 0`, the trailing LR rows that don't fit a full patch are dropped. Because of the integer scaling, the same trailing HR rows are also dropped — the two grids stay aligned. The user loses a strip on the right/bottom of both resolutions. If full coverage is required, pad the LR image *before* extracting (and the HR image correspondingly) — PatchCraft does not pad implicitly.
+**Truncation.** When `(H_lr − ph_lr) % sh_lr != 0`, the trailing LR rows that don't fit a full patch are dropped. Because of the integer scaling, the same trailing HR rows are also dropped, so the two grids stay aligned. The user loses a strip on the right/bottom of both resolutions. If full coverage is required, pad the LR image *before* extracting (and the HR image correspondingly), because PatchCraft does not pad implicitly.
 
 **Recommended defaults.** For tiling (no overlap): `stride_lr = ph_lr`, `stride_hr = ph_hr = r · ph_lr`. For 2× overlap training data: `stride_lr = ph_lr // 2`.
 
-**Design decision.** `patchcraft.pair(lr_image, hr_image, lr_patch_size, scale_factor, stride, *, image_id=None) -> PatchPair`. `scale_factor` must be a positive `int` (non-integer scale is rejected — irrational alignment has no clean semantics). `lr_patch_size` and `stride` are `int` or `(int, int)`; HR `patch_size` and `stride` are derived as `scale_factor * lr_*`. `dilation=1` is fixed (not exposed) because dilation breaks the reconstruction story.
+**Design decision.** `patchcraft.pair(lr_image, hr_image, lr_patch_size, scale_factor, stride, *, image_id=None) -> PatchPair`. `scale_factor` must be a positive `int` (non-integer scale is rejected, because irrational alignment has no clean semantics). `lr_patch_size` and `stride` are `int` or `(int, int)`; HR `patch_size` and `stride` are derived as `scale_factor * lr_*`. `dilation=1` is fixed (not exposed) because dilation breaks the reconstruction story.
 
-The return type is `PatchPair`, a frozen `@dataclass(slots=True)` with three fields: `lr_patches` (`Tensor[L, C, ph_lr, pw_lr]`), `hr_patches` (`Tensor[L, C, ph_hr, pw_hr]`), `metas` (`tuple[PatchMeta, ...]` of length `L`). This deviates from the earlier "iterator of tuples" sketch — tensors are what downstream code actually wants (a batch of LR patches and the corresponding batch of HR patches), iteration over the dataclass is one `zip(...)` away, and the materialized form is cheap because both `extract` calls are already eager. `PatchMeta` is `@dataclass(frozen=True, slots=True)` holding `patch_index`, `row`, `col` (in LR coords; multiply by `scale_factor` for HR), `lr_patch_size`, `hr_patch_size`, `image_id` — small, CPU-only, never gets pushed to GPU. See §7 for why a dataclass over a dict/tensor.
+The return type is `PatchPair`, a frozen `@dataclass(slots=True)` with three fields: `lr_patches` (`Tensor[L, C, ph_lr, pw_lr]`), `hr_patches` (`Tensor[L, C, ph_hr, pw_hr]`), `metas` (`tuple[PatchMeta, ...]` of length `L`). This deviates from the earlier "iterator of tuples" sketch, because tensors are what downstream code actually wants (a batch of LR patches and the corresponding batch of HR patches), iteration over the dataclass is one `zip(...)` away, and the materialized form is cheap because both `extract` calls are already eager. `PatchMeta` is `@dataclass(frozen=True, slots=True)` holding `patch_index`, `row`, `col` (in LR coords; multiply by `scale_factor` for HR), `lr_patch_size`, `hr_patch_size`, `image_id`, all small and CPU-only, never gets pushed to GPU. See §7 for why a dataclass over a dict/tensor.
 
-LR and HR must agree on dtype and device; mismatch is rejected (caller normalizes upstream — implicit conversion would surprise people training mixed-precision pipelines).
+LR and HR must agree on dtype and device; mismatch is rejected (caller normalizes upstream, because implicit conversion would surprise people training mixed-precision pipelines).
 
 ## 4. Cache semantics
 
 **Topic.** Processed datasets (resized / quantized / paired) are expensive to build; cache them on disk keyed by a hash of the configuration. Reference implementations:
-- `archive/PatchHub/src/patchhub/cache.py` — mmap-friendly on-disk cache with zstd.
-- `archive/QSVM_patchkit/patchkit/processed.py` — cache bundle with labels.
+- `archive/PatchHub/src/patchhub/cache.py` is an mmap-friendly on-disk cache with zstd.
+- `archive/QSVM_patchkit/patchkit/processed.py` is a cache bundle with labels.
 
 **Cache key.** The key is a SHA-256 over a canonical JSON serialization of every input that affects the output. For a resized tensor that is: the image fingerprint (SHA-256 of raw bytes), target size, backend name, resample filter, and a `version` integer owned by the function. The `version` field is the invalidation lever: when the algorithm changes, bump it and the old cache becomes inaccessible by construction (no delete needed).
 
-**Invalidation.** No TTL, no mtime check. Cache entries are immutable; a changed configuration produces a different key and a fresh entry. Stale entries accumulate on disk — cleanup is a manual maintenance task, not a runtime concern. This is safe only because inputs are content-addressed: the same config and the same image bytes always yield the same result.
+**Invalidation.** No TTL, no mtime check. Cache entries are immutable; a changed configuration produces a different key and a fresh entry. Stale entries accumulate on disk, so cleanup is a manual maintenance task, not a runtime concern. This is safe only because inputs are content-addressed: the same config and the same image bytes always yield the same result.
 
-**Serialization format.** `torch.save` to a `bytes` buffer, then zstd-compress when `zstandard` is installed (level 3), else write raw. File layout: one file per entry, filename = first 16 hex chars of the key, stored under `<cache_dir>/<prefix>/`. A tiny sidecar JSON per entry stores the full key, version, and content checksum — enough to detect truncated writes without scanning the whole payload.
+**Serialization format.** `torch.save` to a `bytes` buffer, then zstd-compress when `zstandard` is installed (level 3), else write raw. File layout: one file per entry, filename = first 16 hex chars of the key, stored under `<cache_dir>/<prefix>/`. A tiny sidecar JSON per entry stores the full key, version, and content checksum, enough to detect truncated writes without scanning the whole payload.
 
-**Concurrency.** Single-writer, multi-reader. PatchCraft does not implement locking. If two processes race on the same key, the second writer wins (atomic rename from a `*.tmp` file). No lockfiles — OneDrive-sync weirdness has already shown that filesystem locks are unreliable here.
+**Concurrency.** Single-writer, multi-reader. PatchCraft does not implement locking. If two processes race on the same key, the second writer wins (atomic rename from a `*.tmp` file). No lockfiles, because OneDrive-sync weirdness has already shown that filesystem locks are unreliable here.
 
-**Robustez a write races (OneDrive, antivírus, indexador).** Em diretórios sincronizados com OneDrive — e por extensão qualquer pasta varrida por antivírus ou Windows Search — `os.rename`, `open(..., "wb")` e `os.replace` falham esporadicamente com `PermissionError` (errno 13, Windows error 5) enquanto um agente externo segura o handle por alguns ms. Já vimos esse comportamento em `uv lock` rodando contra `uv.lock` em pasta OneDrive. `Cache.put` envolve o rename atômico (e o `open` do `*.tmp`) num loop de retry com backoff exponencial: até 5 tentativas, esperas de `0.25, 0.5, 1.0, 2.0, 4.0` segundos. Depois disso, a exceção original sobe — falha persistente é problema legítimo (disco cheio, permissões reais, OneDrive offline). `Cache.get` aplica o mesmo wrap em `open(..., "rb")` com 2 tentativas apenas — leitura raramente é o lado bloqueado e falhar rápido aqui é melhor que esconder cache miss real.
+**Robustez a write races (OneDrive, antivírus, indexador).** Em diretórios sincronizados com OneDrive (e por extensão qualquer pasta varrida por antivírus ou Windows Search), `os.rename`, `open(..., "wb")` e `os.replace` falham esporadicamente com `PermissionError` (errno 13, Windows error 5) enquanto um agente externo segura o handle por alguns ms. Já vimos esse comportamento em `uv lock` rodando contra `uv.lock` em pasta OneDrive. `Cache.put` envolve o rename atômico (e o `open` do `*.tmp`) num loop de retry com backoff exponencial: até 5 tentativas, esperas de `0.25, 0.5, 1.0, 2.0, 4.0` segundos. Depois disso, a exceção original sobe, porque falha persistente é problema legítimo (disco cheio, permissões reais, OneDrive offline). `Cache.get` aplica o mesmo wrap em `open(..., "rb")` com 2 tentativas apenas, já que leitura raramente é o lado bloqueado e falhar rápido aqui é melhor que esconder cache miss real.
 
-**Design decision.** One cache module with one public class: `patchcraft.Cache(root, namespace, version=1)` (parâmetro renomeado de `dir` para evitar sombrear o builtin). Methods: `get(key) -> bytes | None`, `put(key, bytes)`, `key_for(*parts) -> str`. `root` inexistente é auto-criado (`mkdir(parents=True, exist_ok=True)`) — ergonomia. Writes envolvem o backoff descrito acima; reads usam variante curta. Higher-level helpers (`cached_resize`, etc.) compose `Cache` with a function — they are thin wrappers, not inheritance. No pluggable backends (PatchHub's `memory | shelve | diskcache | hybrid` matrix is overkill for our use cases). No mmap in v0.1 — deferred until a profile shows memory pressure. The `zstandard` dep is an `optional-extra` (`[cache]`), and the absence of it falls back to uncompressed writes transparently.
+**Design decision.** One cache module with one public class: `patchcraft.Cache(root, namespace, version=1)` (parâmetro renomeado de `dir` para evitar sombrear o builtin). Methods: `get(key) -> bytes | None`, `put(key, bytes)`, `key_for(*parts) -> str`. `root` inexistente é auto-criado (`mkdir(parents=True, exist_ok=True)`), por ergonomia. Writes envolvem o backoff descrito acima; reads usam variante curta. Higher-level helpers (`cached_resize`, etc.) compose `Cache` with a function, so they are thin wrappers, not inheritance. No pluggable backends (PatchHub's `memory | shelve | diskcache | hybrid` matrix is overkill for our use cases). No mmap in v0.1, deferred until a profile shows memory pressure. The `zstandard` dep is an `optional-extra` (`[cache]`), and the absence of it falls back to uncompressed writes transparently.
 
 ## 5. Resize backends
 
 **Topic.** Image resize is surprisingly opinionated:
-- **PIL** — battle-tested, supports BICUBIC/LANCZOS/etc., CPU-only, convenient.
-- **torch** — `F.interpolate`, runs on GPU, different bicubic filter than PIL.
+- **PIL**: battle-tested, supports BICUBIC/LANCZOS/etc., CPU-only, convenient.
+- **torch**: `F.interpolate`, runs on GPU, different bicubic filter than PIL.
 
 **Non-identity.** PIL's BICUBIC and torch's `F.interpolate(mode='bicubic')` use different kernel parameters (PIL uses `a = -0.5`, torch uses `a = -0.75` with `align_corners=False`) and produce measurably different output. For a 28×28 MNIST image resized to 14×14 the per-pixel difference is typically within ±3 / 255 but can exceed that at edges. **This matters for reproducibility.** A dataset pre-processed with PIL cannot be compared head-to-head against one pre-processed with torch even when the "same" algorithm name is used.
 
@@ -209,36 +209,36 @@ LR and HR must agree on dtype and device; mismatch is rejected (caller normalize
 - **PIL**: canonical dataset generation (reproducibility is paramount, result stays on CPU anyway).
 - **torch**: in-training augmentation where the tensor is already on GPU and the extra filter divergence does not matter.
 
-**Design decision.** One function: `patchcraft.resize(image, target_size, backend="pil", resample=None)`. `target_size` is a `(H, W)` tuple — no size-spec DSL. `image` may be `PIL.Image` or `Tensor[C, H, W]`. Output type matches input (PIL in → PIL out, Tensor in → Tensor out), regardless of backend. `resample` defaults: `LANCZOS` for PIL, `bilinear` for torch (chosen because bicubic divergence is nastiest to debug; bilinear's difference from PIL's BILINEAR is small). Cross-backend conversions (PIL ↔ Tensor) go through a normalized float32 `[0, 1]` intermediate. No auto-selection: callers pick the backend explicitly and own the consequences.
+**Design decision.** One function: `patchcraft.resize(image, target_size, backend="pil", resample=None)`. `target_size` is a `(H, W)` tuple, with no size-spec DSL. `image` may be `PIL.Image` or `Tensor[C, H, W]`. Output type matches input (PIL in → PIL out, Tensor in → Tensor out), regardless of backend. `resample` defaults: `LANCZOS` for PIL, `bilinear` for torch (chosen because bicubic divergence is nastiest to debug; bilinear's difference from PIL's BILINEAR is small). Cross-backend conversions (PIL ↔ Tensor) go through a normalized float32 `[0, 1]` intermediate. No auto-selection: callers pick the backend explicitly and own the consequences.
 
 ## 6. Quantization (optional)
 
-**Topic.** Reducing color depth (binary, k-level) before extraction. Reference: `archive/QSVM_patchkit/patchkit/quantize.py` — uniform, k-means, Otsu, Floyd–Steinberg dither.
+**Topic.** Reducing color depth (binary, k-level) before extraction. Reference: `archive/QSVM_patchkit/patchkit/quantize.py` covers uniform, k-means, Otsu, Floyd–Steinberg dither.
 
 **Does it belong here?** PatchCraft's charter (see README §Scope) is patch infrastructure. Quantization is a *consumer-specific preprocessing step*: QSVM needs it because small bit-depths stabilize kernel computations; other consumers may not want it, or may want a different family (e.g. vector quantization). Keeping it inside PatchCraft means every consumer pays the cost of evaluating whether the in-package implementation matches their needs, and updates force coordinated releases.
 
-**Design decision.** **Out of scope for v0.1.** Quantization is deferred. When a pattern emerges across multiple consumers, revisit as either (a) a companion package (`patchcraft-quant`), or (b) a plug-in hook point in the extraction pipeline. For now, callers that need quantization apply it *before* calling `patchcraft.extract` — the `(C, H, W)` tensor they pass in is whatever they want patches of. The archive implementations stay in `archive/` as reference material for whoever builds the companion.
+**Design decision.** **Out of scope for v0.1.** Quantization is deferred. When a pattern emerges across multiple consumers, revisit as either (a) a companion package (`patchcraft-quant`), or (b) a plug-in hook point in the extraction pipeline. For now, callers that need quantization apply it *before* calling `patchcraft.extract`, so the `(C, H, W)` tensor they pass in is whatever they want patches of. The archive implementations stay in `archive/` as reference material for whoever builds the companion.
 
 ## 7. Resolved questions
 
 - **`PatchPairDataset` vs decoupled primitives?** Decoupled. v0.1 ships `extract`, `Patchify`, `reconstruct`, `pair`, `resize`, `Cache` as independent pieces. Consumers that want a `torch.utils.data.Dataset` compose them themselves. This mirrors the M2–M5 ordering in the roadmap and avoids the QSVM_patchkit problem where `SuperResPatchDataset` baked in assumptions (ProcessedDataset, specific caching, specific labels) that the next consumer does not share.
-- **`meta` shape — dict, structured tensor, or dataclass?** Dataclass (`PatchMeta`). Dicts lose type info; structured tensors force CPU→GPU transfers for fields that are never used on device (image id, patch index). Metadata stays on CPU; the pixel payload is the only thing that should move to GPU. `@dataclass(frozen=True, slots=True)` keeps it cheap.
+- **`meta` shape: dict, structured tensor, or dataclass?** Dataclass (`PatchMeta`). Dicts lose type info; structured tensors force CPU→GPU transfers for fields that are never used on device (image id, patch index). Metadata stays on CPU; the pixel payload is the only thing that should move to GPU. `@dataclass(frozen=True, slots=True)` keeps it cheap.
 - **Minimum torch?** `>=2.6` as per `pyproject.toml`. Sticking with this until a feature we want (e.g., `vmap` improvements) forces a bump.
 - **Label-stratified subsets** (was §7). Moved to `tests/_datasets.py::label_subset(labels, n_per_label, seed)` as a pure function over a labels sequence. Not part of the public API: it operates on dataset-level concerns (which §0 declares out of scope for the core), and is used only by tests and `lab/` scripts.
 
 ## 8. Remaining open questions
 
 - **Channels-first only, or also channels-last?** Currently every API assumes `(C, H, W)`. A `channels_last=True` flag may be desirable for interop with CV libraries that default to HWC. Defer to a real consumer request.
-- **Tensor-vs-PIL in `extract`/`reconstruct`.** Extraction is tensor-only. Should we allow PIL input with an internal conversion? Current lean: no — converting before `extract` is one line, and mixed-type APIs hide cost.
+- **Tensor-vs-PIL in `extract`/`reconstruct`.** Extraction is tensor-only. Should we allow PIL input with an internal conversion? Current lean: no, because converting before `extract` is one line, and mixed-type APIs hide cost.
 - **Batched extraction.** Resolved against by §0 (one image at a time). Reopen only if a benchmark shows the per-call overhead of `extract` is the bottleneck in a real consumer's loop *and* `torch.vmap` doesn't already solve it.
 
 ## 9. Contrato de condições suportadas
 
-Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rejeitar** (com `ValueError` e mensagem explícita) e tratar como **fora de escopo** (não implementado, documentar como tal). Serve de fonte do plano de testes: cada item "Aceita" vira teste positivo; cada "Rejeita", teste negativo (`pytest.raises(ValueError)`). Onde esta seção diverge dos parágrafos "Design decision" de §1–§6, §9 é a verdade — ajuste os outros parágrafos no marco que implementar a API correspondente.
+Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rejeitar** (com `ValueError` e mensagem explícita) e tratar como **fora de escopo** (não implementado, documentar como tal). Serve de fonte do plano de testes: cada item "Aceita" vira teste positivo; cada "Rejeita", teste negativo (`pytest.raises(ValueError)`). Onde esta seção diverge dos parágrafos "Design decision" de §1–§6, §9 é a verdade, então ajuste os outros parágrafos no marco que implementar a API correspondente.
 
 ### 9.1 `extract(image, patch_size, stride, dilation=1)` and `Patchify(patch_size, stride, dilation=1)`
 
-`Patchify(...)(image)` is the callable form and delegates to `extract` — same contract, plus eager geometry validation at `__init__`.
+`Patchify(...)(image)` is the callable form and delegates to `extract` with the same contract, plus eager geometry validation at `__init__`.
 
 **Aceita:**
 - `image` é `Tensor` 3D `(C, H, W)` com `C ≥ 1` arbitrário; dtype suportado por `torch.nn.functional.unfold` (todos os float: `float16/float32/float64/bfloat16`); CPU ou CUDA (preservados na saída).
@@ -246,7 +246,7 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
   Em CPU, **nenhum** dtype inteiro funciona: `im2col_out_cpu` não é implementado para `Byte`, `Int` nem `Long` (verificado em torch 2.13.0+cpu). Uma versão anterior desta seção dizia que só `uint8` era o problema; está errado. O caller converte pra float antes. `extract` não intercepta isso, então o erro que sobe é um `NotImplementedError` cru do torch, não um `ValueError` do PatchCraft.
 - `patch_size`, `stride`, `dilation` como `int` (quadrado) ou `(int, int)` com valores positivos.
 - Patch maior que imagem → retorna `Tensor[0, C, ph, pw]` (não levanta).
-- `stride > patch_size` (grid esparso com lacunas — válido para features que não fazem round-trip; ver §9.2 para a contrapartida em `reconstruct`).
+- `stride > patch_size` (grid esparso com lacunas, válido para features que não fazem round-trip; ver §9.2 para a contrapartida em `reconstruct`).
 - `dilation ≥ 1`.
 - Tensor não-contíguo (paga `.contiguous()` interno no reshape).
 
@@ -255,10 +255,10 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 - Qualquer dimensão de `patch_size`, `stride`, `dilation` ≤ 0.
 
 **Fora de escopo v0.1:**
-- Batched input `(B, C, H, W)` — caller faz loop ou usa `torch.vmap`.
-- `PIL.Image` ou `numpy.ndarray` — converter antes (uma linha).
-- Layout channels-last `(H, W, C)` — converter antes.
-- Devices não-CUDA acelerados (MPS, XPU) — provavelmente funcionam via torch, mas não testados.
+- Batched input `(B, C, H, W)`: caller faz loop ou usa `torch.vmap`.
+- `PIL.Image` ou `numpy.ndarray`: converter antes (uma linha).
+- Layout channels-last `(H, W, C)`: converter antes.
+- Devices não-CUDA acelerados (MPS, XPU): provavelmente funcionam via torch, mas não testados.
 
 ### 9.2 `reconstruct(patches, image_shape, stride, dilation=1)`
 
@@ -270,7 +270,7 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 
 **Rejeita (`ValueError`):**
 - `dilation != 1`.
-- `sh > ph` ou `sw > pw` (cobertura parcial — síntese de dado proibida).
+- `sh > ph` ou `sw > pw` (cobertura parcial, ou seja, síntese de dado proibida).
 - `image_shape` inconsistente com `patches.shape[0]` / `stride`.
 - `patches.ndim != 4`.
 
@@ -287,7 +287,7 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 - `scale_factor ∈ ℤ⁺` (`int`, ≥ 1). `scale_factor=1` é válido (LR == HR; útil em testes).
 - `hr_image.shape == (C, scale_factor * H_lr, scale_factor * W_lr)`.
 - `lr_patch_size`, `stride` como `int` ou `(int, int)` positivos.
-- `image_id: str | None = None` — metadado CPU-only, propagado a todos os `PatchMeta`.
+- `image_id: str | None = None`: metadado CPU-only, propagado a todos os `PatchMeta`.
 - Patch maior que a imagem LR → ambos os lados retornam `(0, C, …)` e `metas == ()`.
 
 **Rejeita (`ValueError` / `TypeError`):**
@@ -304,7 +304,7 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 - `scale_factor` não-inteiro (alinhamento irracional).
 - Pareamento N:1 (várias LRs degradadas pra mesmo HR).
 - Channels-last.
-- `dilation` customizado (fixo em 1 — round-trip exige).
+- `dilation` customizado (fixo em 1, porque o round-trip exige).
 - Coerção implícita LR→HR de dtype/device (caller normaliza antes).
 
 ### 9.4 `resize(image, target_size, backend="pil", resample=None)`
@@ -317,7 +317,7 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 - `resample=None` → default por backend (LANCZOS pra PIL, bilinear pra torch).
 
 **Rejeita (`ValueError`):**
-- `Tensor` em CUDA com `backend == "pil"` (PIL não enxerga GPU — exigir `.cpu()` explícito do caller).
+- `Tensor` em CUDA com `backend == "pil"` (PIL não enxerga GPU, então exige `.cpu()` explícito do caller).
 - `target_size` não é 2-tupla ou contém valor ≤ 0.
 - `backend` não em `{"pil", "torch"}`.
 - `resample` não suportado pelo backend escolhido (mensagem amigável, não trace interno).
@@ -332,7 +332,7 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 **Aceita:**
 - `root` inexistente → auto-criado (`mkdir(parents=True, exist_ok=True)`).
 - Entries de qualquer tamanho que caiba em RAM (sem mmap em v0.1).
-- Writes concorrentes (last-writer-wins via rename atômico + retry com backoff — §4).
+- Writes concorrentes (last-writer-wins via rename atômico + retry com backoff, §4).
 - Reads concorrentes (sem lock).
 - Write race transitório (OneDrive, antivírus, indexador) → retry transparente; só falha após esgotar 5 tentativas.
 - Paths com caracteres não-ASCII (smoke-test obrigatório com `Acadêmicos/` no caminho).
@@ -363,7 +363,7 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 **Aceita (`tilings`):**
 - `image_shape` as above; `allow_overlap: bool`; `min_patch_size: int >= 1`; `max_patch_size: int >= 1` or `None`.
 - Always emits square geometries (`ph == pw`, `sh == sw`) with `dilation=(1, 1)`.
-- Always emits *full-coverage* geometries only — exact tilings always; overlap-with-clean-edges if `allow_overlap=True`.
+- Always emits *full-coverage* geometries only: exact tilings always; overlap-with-clean-edges if `allow_overlap=True`.
 - Returns sorted list of `TilingSpec` (a `NamedTuple`).
 
 **Rejeita (`ValueError`):**
@@ -395,9 +395,9 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 - `paired_tilings`: shapes not related by an integer scale factor (delegates to `scale_factor`'s `None` return; surfaces as an explicit `ValueError` because there's nothing useful to enumerate).
 
 **Fora de escopo v0.1:**
-- Non-integer (fractional) scale factors — `pair` rejects them too; the math has no clean alignment.
-- N:1 enumeration (multiple LR shapes against one HR) — compose externally.
-- Rectangular paired tilings — square-only inherited from `tilings`.
+- Non-integer (fractional) scale factors: `pair` rejects them too; the math has no clean alignment.
+- N:1 enumeration (multiple LR shapes against one HR): compose externally.
+- Rectangular paired tilings: square-only, inherited from `tilings`.
 
 ### 9.8 `patch_metrics(a, b, *, max_value=1.0)`, `per_patch_mse(a, b)`, `per_patch_psnr(a, b, *, max_value=1.0)`
 

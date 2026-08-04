@@ -215,7 +215,7 @@ class TestScaleFactor:
         assert scale_factor((10, 10), (20, 30)) is None
 
     def test_lr_larger_returns_none(self) -> None:
-        # k must be >= 1 — LR cannot exceed HR
+        # k must be >= 1; LR cannot exceed HR
         assert scale_factor((28, 28), (14, 14)) is None
 
     @pytest.mark.parametrize("bad", [(28,), (1, 28, 28, 28), 28, [28, 28]])

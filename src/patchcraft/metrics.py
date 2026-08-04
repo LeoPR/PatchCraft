@@ -2,7 +2,7 @@
 
 Three pure functions, no state, no allocation beyond the diff itself. Lives
 in PatchCraft because every consumer that uses ``extract`` + ``reconstruct``
-or ``pair`` ends up reinventing the same MSE/PSNR per patch — bundling them
+or ``pair`` ends up reinventing the same MSE/PSNR per patch, so bundling them
 here saves consumers from inventing slightly-different reductions and gives
 the test suite a stable comparison surface.
 
@@ -62,7 +62,7 @@ def patch_metrics(
 
     Computes over the full tensor (reduces every axis). Works on single
     patches ``(C, h, w)``, patch stacks ``(L, C, h, w)``, paired patches
-    of either shape — anything as long as ``a.shape == b.shape``.
+    of either shape, anything as long as ``a.shape == b.shape``.
 
     Internal accumulation promotes to ``float64`` for stability, regardless
     of input dtype. Returns plain Python floats so the dict can be
@@ -131,7 +131,7 @@ def per_patch_psnr(
 ) -> torch.Tensor:
     """Return a ``(L,)`` tensor of PSNR values (dB), one per patch.
 
-    Identical patches yield ``+inf`` (no clamp tricks — the result is
+    Identical patches yield ``+inf`` (no clamp tricks, because the result is
     mathematically infinite and the caller should treat it as such).
 
     Parameters

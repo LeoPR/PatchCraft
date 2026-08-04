@@ -1,4 +1,4 @@
-# PatchCraft — auxiliary tooling (NOT part of the wheel)
+# PatchCraft: auxiliary tooling (NOT part of the wheel)
 
 The lib is the car. This document describes the **track**: the
 auxiliary tooling in this repo that exists to test, exercise, and
@@ -13,12 +13,12 @@ Two boundaries are load-bearing:
 2. **Docs** in this file describe the auxiliary side. Docs in
    [`THEORY.md`](THEORY.md), [`USAGE.md`](USAGE.md),
    [`SCOPE.md`](SCOPE.md), and [`ADR/`](ADR/) describe the lib. The
-   two sides never mix — when an auxiliary helper does something
+   two sides never mix. When an auxiliary helper does something
    that looks core-shaped, it stays here.
 
 ---
 
-## 1. `tests/_datasets.py` — dev fixtures, leading underscore on purpose
+## 1. `tests/_datasets.py`: dev fixtures, leading underscore on purpose
 
 PatchCraft core takes one image at a time. The test suite needs *real*
 images to drive the primitives through varied conditions, but the
@@ -26,7 +26,7 @@ lib must not ship a dataset loader. `tests/_datasets.py` resolves
 that tension:
 
 - Lives under `tests/`, so it never ends up in the wheel.
-- The filename has a leading underscore — Python convention for "not
+- The filename has a leading underscore, the Python convention for "not
   part of any public API of the enclosing package".
 - Imports `torchvision` lazily, inside the function. `torchvision` is
   in the `[dev]` extra ([`pyproject.toml`](../pyproject.toml)), never
@@ -38,7 +38,7 @@ that tension:
 from tests._datasets import label_subset, mnist_subset
 ```
 
-- **`label_subset(labels, n_per_label, seed=0) -> list[int]`** —
+- **`label_subset(labels, n_per_label, seed=0) -> list[int]`**:
   pure function over a labels sequence. Picks up to `n_per_label`
   indices per distinct label, deterministically seeded.
   *Not* part of the published API; if a downstream consumer needs
@@ -48,7 +48,7 @@ from tests._datasets import label_subset, mnist_subset
   (see [`SCOPE.md`](SCOPE.md) §1, "Label-stratified subset selection"
   row, and [`THEORY.md`](THEORY.md) §7).
 - **`mnist_subset(n_per_label=5, seed=0, train=True)
-  -> list[tuple[Tensor[1,28,28], int]]`** — downloads MNIST on first
+  -> list[tuple[Tensor[1,28,28], int]]`** downloads MNIST on first
   call into `Z:\caches\datasets\mnist\`; subsequent calls hit the
   cache. Returns balanced `(image, label)` pairs as `float32` in
   `[0, 1]`, ready to feed straight into `patchcraft.extract`.
@@ -61,16 +61,16 @@ from tests._datasets import label_subset, mnist_subset
   different formats. Forcing one in the wheel pleases none of them.
 - The test suite needs exactly one cheap fixture: balanced MNIST.
   That fixture is too narrow to be a feature and too useful to throw
-  away — `tests/_datasets.py` is its home.
+  away, because `tests/_datasets.py` is its home.
 
 ---
 
-## 2. `lab/` — ephemeral bench
+## 2. `lab/`: ephemeral bench
 
 ```
 lab/
-├── README.md       (tracked — the rules)
-└── .gitignore      (tracked — ignores everything else)
+├── README.md       (tracked: the rules)
+└── .gitignore      (tracked: ignores everything else)
 ```
 
 Everything inside `lab/` other than `README.md` and `.gitignore` is
@@ -96,11 +96,11 @@ local to your working copy. The rules:
 
 The current local working copy has, at the time of writing:
 
-- `lab/2026-05-16-roundtrip-mnist.py` — the script that validated
+- `lab/2026-05-16-roundtrip-mnist.py` is the script that validated
   M2 + M3 end-to-end on MNIST (4 geometries, max diff `1.19e-7`
   on `stride=1 float32`). Produced
   `Z:\outputs\patchcraft\2026-05-16-roundtrip-mnist\sample0-digit0-half-overlap.png`.
-- `lab/usage_demo.py` + `lab/usage_demo.out` — the script and
+- `lab/usage_demo.py` + `lab/usage_demo.out` are the script and
   captured output behind [`USAGE.md`](USAGE.md). Re-run if any
   public API signature changes.
 
@@ -118,15 +118,15 @@ specific to PatchCraft:
 
 | Path | Contents | Created by | Cleanable |
 |---|---|---|---|
-| `Z:\caches\datasets\<name>\` | Downloaded reference datasets (MNIST so far; CIFAR-10 / DIV2K when needed). | `tests/_datasets.py` on first call | Yes — will re-download |
-| `Z:\outputs\patchcraft\<slug>\` | Artefacts from `lab/` scripts: PNGs, JSONs, CSVs, dumps. | Each lab script creates its own subdir. | Yes — these are derived |
+| `Z:\caches\datasets\<name>\` | Downloaded reference datasets (MNIST so far; CIFAR-10 / DIV2K when needed). | `tests/_datasets.py` on first call | Yes, will re-download |
+| `Z:\outputs\patchcraft\<slug>\` | Artefacts from `lab/` scripts: PNGs, JSONs, CSVs, dumps. | Each lab script creates its own subdir. | Yes, these are derived |
 
 Neither path is created by `pip install patchcraft`. Both are created
 on demand by the auxiliary tooling. If you move machines and your
 new dev environment doesn't have `Z:\`, edit
 [`tests/_datasets.py::DATASETS_ROOT`](../tests/_datasets.py) and the
 hardcoded paths inside your lab scripts. There is no PatchCraft setting
-for these — they belong to the bench, not the lib.
+for these, because they belong to the bench, not the lib.
 
 The canonical reference for `Z:\` is the project-external
 `dev-environment/README.md` outside this repo. PatchCraft knows nothing
@@ -160,10 +160,10 @@ You should see only `patchcraft/` (the eight primitive modules
 
 ## 5. Pointers
 
-- [`SCOPE.md`](SCOPE.md) — formal responsibilities table, including
+- [`SCOPE.md`](SCOPE.md) has the formal responsibilities table, including
   what counts as auxiliary in row-by-row form.
-- [`USAGE.md`](USAGE.md) — the lib's API exercised with real outputs.
+- [`USAGE.md`](USAGE.md) exercises the lib's API with real outputs.
   Uses `mnist_subset` only via the auxiliary path, never inside an
   example presented as "the library does this".
-- [`lab/README.md`](../lab/README.md) — the bench rules from inside
+- [`lab/README.md`](../lab/README.md) has the bench rules from inside
   the bench.

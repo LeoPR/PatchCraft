@@ -2,7 +2,7 @@
 
 Lazy: data lives in ``Z:\\caches\\datasets\\<name>\\`` and is downloaded on
 first use. PatchCraft core does NOT depend on torchvision or on dataset
-abstractions — only tests and ``lab/`` do. This module is NOT part of the
+abstractions; only tests and ``lab/`` do. This module is NOT part of the
 public API (underscore prefix).
 """
 from __future__ import annotations

@@ -23,7 +23,7 @@ def reconstruct(
     Uses ``F.fold`` plus an overlap count map. Bit-exact round-trip when
     ``stride == patch_size`` (each pixel covered exactly once). For overlap
     (``stride < patch_size``), each pixel's reconstructed value is the average
-    of all patches covering it — same as the original when patches came from
+    of all patches covering it, the same as the original when patches came from
     ``extract`` unmodified.
 
     Rejects (per §9.2): ``dilation != 1``; ``stride > patch_size`` in any axis
@@ -67,7 +67,7 @@ def reconstruct(
     if dh != 1 or dw != 1:
         raise ValueError(
             f"reconstruct requires dilation==1, got dilation=({dh}, {dw}). "
-            "Patches extracted with dilation > 1 cannot round-trip — consume them as features."
+            "Patches extracted with dilation > 1 cannot round-trip; consume them as features."
         )
     if sh > ph or sw > pw:
         raise ValueError(
@@ -102,7 +102,7 @@ def reconstruct(
         stride=(sh, sw),
     )
 
-    # Count map: same fold geometry but 1 "channel" — broadcasts across C in division.
+    # Count map: same fold geometry but 1 "channel", which broadcasts across C in division.
     ones = torch.ones(
         1, ph * pw, n_patches, dtype=patches.dtype, device=patches.device
     )

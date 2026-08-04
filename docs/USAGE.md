@@ -1,4 +1,4 @@
-# PatchCraft — usage walkthrough
+# PatchCraft: usage walkthrough
 
 Every snippet below was captured from a live REPL session against
 `patchcraft==0.2.0`. Outputs are real, not pseudocode. Re-run the
@@ -8,7 +8,7 @@ script behind it at any time:
 python lab/usage_demo.py
 ```
 
-The script is intentionally not part of the wheel — see
+The script is intentionally not part of the wheel. See
 [`AUXILIARY.md`](AUXILIARY.md) for why bench scripts live in
 `lab/` and stay out of the shipped package.
 
@@ -33,7 +33,7 @@ PascalCase.
 
 ---
 
-## 1. `num_patches` — pre-flight, no allocation
+## 1. `num_patches`: pre-flight, no allocation
 
 The shape formula from [`THEORY.md`](THEORY.md) §1, exposed as a
 function. Takes `(H, W)` or `(C, H, W)`; channels are ignored. Returns
@@ -56,7 +56,7 @@ or to fill in a progress bar.
 
 ---
 
-## 2. `tilings` — every full-coverage geometry for an image
+## 2. `tilings`: every full-coverage geometry for an image
 
 ```python
 >>> from patchcraft import tilings
@@ -70,7 +70,7 @@ TilingSpec(patch_size=(28, 28), stride=(28, 28), dilation=(1, 1), num_patches=(1
 ```
 
 Exact tilings only. Divisors of 28 that are `>= 2` are
-`{2, 4, 7, 14, 28}` — five entries, matching what the function
+`{2, 4, 7, 14, 28}`, so five entries, matching what the function
 emits. Every spec here gives a bit-exact `extract` + `reconstruct`
 round-trip (see §5).
 
@@ -86,7 +86,7 @@ be exact.
 
 ---
 
-## 3. `extract` — patches from one `(C, H, W)` image
+## 3. `extract`: patches from one `(C, H, W)` image
 
 ```python
 >>> import torch
@@ -102,12 +102,12 @@ torch.float32
 ```
 
 Truncation is the only boundary policy. If the geometry fits no
-patch, `extract` returns `Tensor[0, C, ph, pw]` instead of raising —
+patch, `extract` returns `Tensor[0, C, ph, pw]` instead of raising,
 callers decide whether that's an error.
 
 ---
 
-## 4. `Patchify` — callable companion for `transforms.Compose`
+## 4. `Patchify`: callable companion for `transforms.Compose`
 
 ```python
 >>> from patchcraft import Patchify
@@ -119,13 +119,13 @@ torch.Size([169, 1, 4, 4])
 ```
 
 Eager validation: a bad geometry fails at `Patchify(...)`, not at the
-first `__call__`. `__slots__`-bound — no cache, no fixed image_size,
+first `__call__`. `__slots__`-bound, with no cache, no fixed image_size,
 no surprise state. See [ADR 0002](ADR/0002-patchify-transform.md) for
 the rationale.
 
 ---
 
-## 5. `reconstruct` — bit-exact when `stride == patch_size`
+## 5. `reconstruct`: bit-exact when `stride == patch_size`
 
 ```python
 >>> from patchcraft import reconstruct
@@ -154,14 +154,14 @@ value; sum is `k * value`; division by the count map gives back
 `value`. Bit-exact for `float64`; within `~1 ULP` for `float32`.
 
 `reconstruct` rejects `dilation != 1` and `stride > patch_size`
-(partial coverage forbidden — see [`THEORY.md`](THEORY.md) §9.2).
+(partial coverage forbidden, see [`THEORY.md`](THEORY.md) §9.2).
 
 ---
 
-## 6. `stitch` — blend modified patches back with a window kernel
+## 6. `stitch`: blend modified patches back with a window kernel
 
 `reconstruct` is the bit-exact inverse of `extract`. When patches
-have been *modified* — model output, denoised, super-resolved —
+have been *modified* (model output, denoised, super-resolved)
 uniform averaging makes the disagreement between adjacent patches
 show up as visible seams. `stitch` weights each patch by a 2-D
 window kernel (`uniform`, `hann`, `gaussian`) so each pixel "trusts"
@@ -221,7 +221,7 @@ and §9.9 for the full contract.
 
 ---
 
-## 7. `pair` — LR / HR correspondences
+## 7. `pair`: LR / HR correspondences
 
 ```python
 >>> from patchcraft import pair
@@ -256,7 +256,7 @@ both spatial axes.
 
 ---
 
-## 8. `resize` — output type matches input
+## 8. `resize`: output type matches input
 
 ```python
 >>> from patchcraft import resize
@@ -283,7 +283,7 @@ with `backend="torch"`.
 
 ---
 
-## 9. `Cache` — bytes in, bytes out, atomic, version-aware
+## 9. `Cache`: bytes in, bytes out, atomic, version-aware
 
 ```python
 >>> import tempfile
@@ -319,7 +319,7 @@ antivirus, indexer) up to five times with exponential backoff.
 >>> k == k2
 False
 >>> c2.get(k2)
->>> # (None) — different key by construction; old entries unreachable
+>>> # (None); different key by construction; old entries unreachable
 ```
 
 Bumping `version` produces a different SHA-256 for the same parts,
@@ -329,7 +329,7 @@ logic.
 
 ---
 
-## 10. `scale_factor` — integer scale between two image shapes
+## 10. `scale_factor`: integer scale between two image shapes
 
 ```python
 >>> from patchcraft import scale_factor
@@ -349,7 +349,7 @@ integer `k` exists such that `hr == k * lr`. Accepts `(H, W)` or
 
 ---
 
-## 11. `paired_tilings` — aligned LR↔HR geometries
+## 11. `paired_tilings`: aligned LR↔HR geometries
 
 ```python
 >>> from patchcraft import paired_tilings
@@ -372,12 +372,12 @@ Every entry is guaranteed by construction to:
   stride=p.lr.stride[0])`.
 
 This is the answer to the question "for MNIST 14×14 ↔ 28×28, what
-patch geometries align with the same `k`?" — three options, take
+patch geometries align with the same `k`?", so three options, take
 your pick based on how big a patch you want vs how many examples.
 
 ---
 
-## 12. `patch_metrics` / `per_patch_psnr` — canonical comparisons
+## 12. `patch_metrics` / `per_patch_psnr`: canonical comparisons
 
 ```python
 >>> import torch
@@ -470,12 +470,12 @@ full responsibilities table.
 
 ## What this page deliberately does not show
 
-- **Dataset loading** — `tests/_datasets.py::mnist_subset` is the dev
+- **Dataset loading** stays out: `tests/_datasets.py::mnist_subset` is the dev
   fixture; see [`AUXILIARY.md`](AUXILIARY.md). PatchCraft core never
   touches a dataset.
-- **Training loops** — out of scope. PatchCraft is infrastructure.
-- **Multi-image batching** — use `torch.vmap`, a Python loop, or a
+- **Training loops** are out of scope. PatchCraft is infrastructure.
+- **Multi-image batching** is the caller's job: use `torch.vmap`, a Python loop, or a
   `DataLoader`. The lib stays one-image-at-a-time on purpose.
-- **GPU details** — `extract`, `Patchify`, `reconstruct`, `pair`, and
+- **GPU details**: `extract`, `Patchify`, `reconstruct`, `pair`, and
   `resize(..., backend="torch")` all preserve device. `resize(...,
   backend="pil")` requires CPU input.

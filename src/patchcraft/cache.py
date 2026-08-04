@@ -57,9 +57,9 @@ def _try_zstandard() -> Any | None:
 def _normalize_part(part: Any) -> Any:
     """Coerce a key-part into something JSON-stable.
 
-    Lists and tuples both serialize as JSON arrays — order matters. Dicts
+    Lists and tuples both serialize as JSON arrays, so order matters. Dicts
     are sorted by key. Bytes are hashed (avoids embedding binary blobs in
-    the key). Anything else falls back to ``repr`` — explicit but uglier."""
+    the key). Anything else falls back to ``repr``, which is explicit but uglier."""
     if isinstance(part, (str, int, float, bool)) or part is None:
         return part
     if isinstance(part, (list, tuple)):
@@ -234,7 +234,7 @@ class Cache:
 
         if hashlib.sha256(data).hexdigest() != sidecar.get("checksum"):
             raise OSError(
-                f"cache entry {key[:16]!r} checksum mismatch — corrupt; "
+                f"cache entry {key[:16]!r} checksum mismatch, corrupt; "
                 f"remove {bin_path.name} and {sidecar_path.name} from "
                 f"{self._root} to invalidate"
             )

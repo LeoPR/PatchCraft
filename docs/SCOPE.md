@@ -1,4 +1,4 @@
-# PatchCraft — scope and responsibilities
+# PatchCraft: scope and responsibilities
 
 This document maps every concern in the patch-extraction pipeline to
 **whose job it is**: the PatchCraft core, the caller's pipeline, or a
@@ -23,21 +23,21 @@ long-form companion.
 | Compute patch geometry without allocating | ✓ (`num_patches`, `tilings`) | | |
 | Plan LR↔HR aligned tilings from two shapes | ✓ (`scale_factor`, `paired_tilings`, `PairedTilingSpec`) | | |
 | Pixel-level metrics between patches (MAE/MSE/max\|·\|/PSNR) | ✓ (`patch_metrics`, `per_patch_mse`, `per_patch_psnr`) | | discussed in §4 below |
-| Windowed / learned image metrics (SSIM, MS-SSIM, LPIPS, FID) | ✗ — see §4 | ✓ (`pytorch-msssim`, `lpips`, etc.) | |
+| Windowed / learned image metrics (SSIM, MS-SSIM, LPIPS, FID) | ✗, see §4 | ✓ (`pytorch-msssim`, `lpips`, etc.) | |
 | Cache derived bytes on disk | ✓ (`Cache`) | | discussed in §4 below |
 | Drop-in to `transforms.Compose([...])` | ✓ (`Patchify`) | | |
-| **Loop over many images** | ✗ — caller writes the loop | ✓ (`for`, `vmap`, `DataLoader`) | |
-| **Download / cache a dataset** | ✗ — never | ✓ (`torchvision.datasets`, custom) | |
+| **Loop over many images** | ✗, caller writes the loop | ✓ (`for`, `vmap`, `DataLoader`) | |
+| **Download / cache a dataset** | ✗, never | ✓ (`torchvision.datasets`, custom) | |
 | Shuffle / sample / batch a dataset | ✗ | ✓ (`DataLoader`, `Sampler`) | |
 | Training loop / loss / optimizer | ✗ | ✓ | |
 | Data augmentation other than resize | ✗ | ✓ (`torchvision.transforms`) | |
-| GPU device management | ✗ — preserves whatever you give it | ✓ (`.cuda()`, `.to(device)`) | |
-| Mixed-precision dtype management | ✗ — preserves dtype | ✓ (`amp.autocast`, `.to(dtype)`) | |
+| GPU device management | ✗, preserves whatever you give it | ✓ (`.cuda()`, `.to(device)`) | |
+| Mixed-precision dtype management | ✗, preserves dtype | ✓ (`amp.autocast`, `.to(dtype)`) | |
 | Worker-process parallelism | ✗ | ✓ (`DataLoader(num_workers=...)`) | |
 | Distributed training | ✗ | ✓ (`DistributedDataParallel`, etc.) | |
-| Quantization (color / vector) | ✗ — v0.1 deferred | ✓ (caller pre-processes) | future companion package |
-| Channels-last layout | ✗ — v0.1 channels-first only | ✓ (caller converts) | open question (THEORY §8) |
-| Label-stratified subset selection | ✗ — moved out of core | (`tests/_datasets.py::label_subset` for dev) | |
+| Quantization (color / vector) | ✗, v0.1 deferred | ✓ (caller pre-processes) | future companion package |
+| Channels-last layout | ✗, v0.1 channels-first only | ✓ (caller converts) | open question (THEORY §8) |
+| Label-stratified subset selection | ✗, moved out of core | (`tests/_datasets.py::label_subset` for dev) | |
 | Logging / metrics / progress | ✗ | ✓ | |
 | Pretty pictures / visualization | ✗ | ✓ (matplotlib, torchvision.utils) | |
 
@@ -55,12 +55,12 @@ parallel** inside one call, and that the standard way to scale
 "many images" in PyTorch is parallelism at the pipeline level, not
 inside the primitive.
 
-### 2.1 Inside `extract` — torch already does it
+### 2.1 Inside `extract`: torch already does it
 
 `extract(image, ...)` reduces to a single `torch.nn.functional.unfold`
 call. There is no Python loop over patches. The work happens in:
 
-- **CPU**: `im2col` — vectorized C++ implementation; uses SIMD where
+- **CPU**: `im2col` is a vectorized C++ implementation; uses SIMD where
   applicable. Operates on the whole `(C, H, W)` tensor at once.
 - **CUDA**: a single `im2col` kernel launch. Patches are produced in
   parallel across thousands of CUDA threads.
@@ -68,7 +68,7 @@ call. There is no Python loop over patches. The work happens in:
 You get the parallelism for free; PatchCraft does not need to and does
 not try to.
 
-### 2.2 Across many images — caller's pipeline
+### 2.2 Across many images: the caller's pipeline
 
 For "I have N images and want patches from each", the standard
 torch idioms apply unchanged. PatchCraft does not add a batch API
@@ -76,12 +76,12 @@ because none of the available options is unambiguously better:
 
 | Pattern | When to reach for it | Where parallelism comes from |
 |---|---|---|
-| `for img in images: extract(img, ...)` | Few images, ad hoc scripts | Sequential — fine if N is small |
+| `for img in images: extract(img, ...)` | Few images, ad hoc scripts | Sequential, fine if N is small |
 | `torch.vmap(extract_fn)(batch)` | Same-size images, same geometry, want a single kernel launch | Torch's vmap engine fuses the per-image calls; works on CPU and CUDA |
 | `Dataset` + `DataLoader(num_workers=K)` with `Patchify` in the transform | The general case for training pipelines | K worker processes, each calling `Patchify(image)` on one image at a time. Pipeline overlap (load + transform + train) handled by torch |
 | Manual `multiprocessing.Pool` / `concurrent.futures` | When `DataLoader` doesn't fit (e.g., offline preprocessing into a Cache) | OS process pool; each process imports patchcraft independently |
 
-The pattern PatchCraft cares about is the third one — `Patchify`
+The pattern PatchCraft cares about is the third one, `Patchify`
 exists *exactly* to slot into that pipeline ([ADR
 0002](ADR/0002-patchify-transform.md)).
 
@@ -94,11 +94,11 @@ exists *exactly* to slot into that pipeline ([ADR
   provided by the torch operators and by the pipeline above.
 - **No batched `extract(images: (B, C, H, W))`.** Different images
   can have different shapes (and therefore different `L`), so the
-  output would need padding or a list-of-tensors — both leak
+  output would need padding or a list-of-tensors, and both leak
   complexity into a primitive that does not need it. `vmap` works
   when shapes match; the loop works always.
 - **No `Patchify` as `nn.Module`.** It would imply parameter
-  registration, `.to(device)`, training/eval modes, gradient hooks —
+  registration, `.to(device)`, training/eval modes, gradient hooks,
   none of which `Patchify` honors. The callable class is what
   `torchvision.transforms.v2` itself does for stateless transforms.
 
@@ -129,8 +129,8 @@ easy to misread as "one call at a time". The precise statement:
 
 - Every public function takes **one** `image: Tensor[C, H, W]` (or
   one `image: PIL.Image`, or one `(lr, hr)` pair).
-- The output may be a tensor *batch* — `extract` returns
-  `Tensor[L, C, ph, pw]` — but that batch is patches *of that single
+- The output may be a tensor *batch*, because `extract` returns
+  `Tensor[L, C, ph, pw]`, but that batch is patches *of that single
   image*, not images.
 - Multiple images are someone else's problem.
 
@@ -143,7 +143,7 @@ opens a `Dataset`. If a downstream consumer wants a
 
 ## 4. Grey areas, discussed
 
-### 4.1 `Cache` — is it really core?
+### 4.1 `Cache`: is it really core?
 
 **Argument it isn't:** caching is a generic concern, the cache only
 handles bytes, and any user could plug `joblib.Memory` or `shelve`
@@ -158,7 +158,7 @@ fingerprints), and it handles the OneDrive / antivirus write-race
 that PatchCraft's own development surfaced.
 
 **Decision:** core, but explicitly bytes-only. PatchCraft does not
-provide `cached_resize` or `cached_extract` helpers — those would
+provide `cached_resize` or `cached_extract` helpers, because those would
 re-introduce orchestration concerns. If you want cached resize, two
 lines:
 
@@ -177,21 +177,21 @@ if cached is None:
 The cache does not know about images, tensors, or PIL. That ignorance
 is the feature.
 
-### 4.2 `Patchify` — is it surface area creep over `extract`?
+### 4.2 `Patchify`: is it surface area creep over `extract`?
 
 It is a 30-line callable wrapper around `extract` with eager
 validation and a `__repr__`. Without it, every Compose user writes
-`lambda img: extract(img, 4, 2)`. Two ways to do the same thing — one
+`lambda img: extract(img, 4, 2)`. Two ways to do the same thing, one
 of which is a function for one-off scripts, the other a class for
-pipelines — is a real surface area cost. We accepted it because the
+pipelines, is a real surface area cost. We accepted it because the
 class-in-a-pipeline pattern is the dominant integration mode for any
 real consumer ([ADR 0002](ADR/0002-patchify-transform.md)).
 
-### 4.3 Pixel-level metrics — core or scope creep?
+### 4.3 Pixel-level metrics: core or scope creep?
 
 `patch_metrics`, `per_patch_mse`, and `per_patch_psnr` (added post-v0.1.0)
 sit right at the edge of the charter. They take *tensors*, not patches
-specifically — strictly, the math works on any same-shape pair. We kept
+specifically, and strictly the math works on any same-shape pair. We kept
 them in core for three reasons:
 
 - They are the canonical "did the round-trip / model output work?"
@@ -202,7 +202,7 @@ them in core for three reasons:
   README would be without them.
 - They do **not** depend on any new third-party library and they do
   **not** allocate beyond the diff tensor. The "cache of cache /
-  buffer of buffer" risk you might worry about is zero — these are
+  buffer of buffer" risk you might worry about is zero, because these are
   pure arithmetic.
 
 What we explicitly **excluded**: SSIM, MS-SSIM, LPIPS, FID, any
@@ -217,7 +217,7 @@ multiple projects (e.g., per-region MAE histogram, structural
 ranking), build it in the consumer first, prove it useful, then
 revisit moving it down into PatchCraft under a new ADR.
 
-### 4.4 `stitch` — why a separate function from `reconstruct`?
+### 4.4 `stitch`: why a separate function from `reconstruct`?
 
 `reconstruct` and `stitch` share the same `F.fold` geometry and the same
 rejection rules (no `dilation`, no `stride > patch_size`, ndim/grid checks).
@@ -234,7 +234,7 @@ We rejected that for two reasons.
   no surprise behavior.
 - **Float-only on `stitch`.** Window kernels are float-valued. Multiplying
   integer patches by a Hann window would either silently quantize or
-  implicitly promote — both are surprises a primitive should refuse. So
+  implicitly promote, and both are surprises a primitive should refuse. So
   `stitch` rejects non-float patches explicitly, with a message telling the
   caller to use `patches.float()`.
 
@@ -251,7 +251,7 @@ The runtime cost of the duplication is negligible (the second function
 is ~150 lines, validation and all). The cognitive cost of a kwarg that
 silently changes the contract is much higher.
 
-### 4.5 `num_patches` and `tilings` — test helpers in disguise?
+### 4.5 `num_patches` and `tilings`: test helpers in disguise?
 
 They were initially proposed because the test suite needed to
 parametrize over valid geometries. They survived as public API
@@ -280,14 +280,14 @@ parses, validates, or persists it.
 
 ## 5. Pointers
 
-- [`THEORY.md`](THEORY.md) §0 — binding scope (the short version).
-- [`THEORY.md`](THEORY.md) §9 — the per-API condition contract
+- [`THEORY.md`](THEORY.md) §0 gives the binding scope (the short version).
+- [`THEORY.md`](THEORY.md) §9 has the per-API condition contract
   (Accepts / Rejects / Out of scope), one row per primitive.
-- [`USAGE.md`](USAGE.md) — usage walkthrough with real outputs.
-- [`AUXILIARY.md`](AUXILIARY.md) — documents the bench tooling
+- [`USAGE.md`](USAGE.md) is the usage walkthrough with real outputs.
+- [`AUXILIARY.md`](AUXILIARY.md) documents the bench tooling
   (`tests/_datasets.py`, `lab/`, dataset / output conventions on
   `Z:\`). Never mixed with the core docs.
 - [`ADR/0001-patch-extraction-api.md`](ADR/0001-patch-extraction-api.md)
-  — `extract` as a pure function (rejection of class-based extractor).
+  covers `extract` as a pure function (rejection of class-based extractor).
 - [`ADR/0002-patchify-transform.md`](ADR/0002-patchify-transform.md)
-  — `Patchify` as a callable wrapper for `Compose`.
+  covers `Patchify` as a callable wrapper for `Compose`.

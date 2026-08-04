@@ -80,7 +80,7 @@ class Patchify:
 
     Equivalent to `lambda img: extract(img, patch_size, stride, dilation)`,
     but composable, repr-friendly, and validates the geometry at construction
-    instead of at first call. Holds no state beyond the geometry — no cache,
+    instead of at first call. Holds no state beyond the geometry: no cache,
     no fixed image size, no device. See ADR 0002.
 
     Output shape is `(L, C, ph, pw)`, the same as `extract`. Subsequent

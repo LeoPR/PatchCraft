@@ -175,7 +175,7 @@ def resize(
     # PIL branch.
     try:
         from PIL.Image import Image as PILImageCls
-    except ImportError as exc:  # pragma: no cover — pillow is a runtime dep
+    except ImportError as exc:  # pragma: no cover; pillow is a runtime dep
         raise ImportError("Pillow is required for resize") from exc
     if not isinstance(image, PILImageCls):
         raise TypeError(

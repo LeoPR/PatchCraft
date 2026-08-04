@@ -11,7 +11,7 @@ pytest
 pytest -m "not gpu"        # skip GPU-requiring tests
 ```
 
-CI runs the full suite on every push and PR — see [`.github/workflows/test.yml`](.github/workflows/test.yml). Matrix is `{ubuntu-latest, windows-latest} × {python 3.12, 3.13}`. To run the same checks locally before pushing:
+CI runs the full suite on every push and PR. See [`.github/workflows/test.yml`](.github/workflows/test.yml). Matrix is `{ubuntu-latest, windows-latest} × {python 3.12, 3.13}`. To run the same checks locally before pushing:
 
 ```
 ruff check src tests
@@ -35,7 +35,7 @@ PatchCraft/
 ├── .github/workflows/
 │   ├── test.yml                    matrix CI on PRs/main
 │   └── release.yml                 publishes to PyPI on vX.Y.Z tag push (Trusted Publishing)
-├── src/patchcraft/                 library core — one-image-at-a-time primitives
+├── src/patchcraft/                 library core, one-image-at-a-time primitives
 │   ├── __init__.py                 re-exports the full public API
 │   ├── extract.py                  patches via F.unfold; Patchify wrapper (ADR 0002)
 │   ├── reconstruct.py              inverse via F.fold + count map
@@ -56,7 +56,7 @@ PatchCraft/
 │   ├── test_cache.py
 │   ├── test_datasets_helper.py     label_subset
 │   ├── test_import.py
-│   └── _datasets.py                dev-only fixtures (MNIST, etc) — NOT public API
+│   └── _datasets.py                dev-only fixtures (MNIST, etc), NOT public API
 ├── lab/                            ephemeral experiments; see lab/README.md
 │   ├── README.md                   bench rules (tracked)
 │   ├── usage_demo.py               regenerates the live REPL outputs in docs/USAGE.md
@@ -70,17 +70,17 @@ PatchCraft/
 │   └── ADR/
 │       ├── 0001-patch-extraction-api.md   pure function `extract`
 │       └── 0002-patchify-transform.md     callable wrapper for Compose pipelines
-└── archive/                        reference-only; gitignored (pruned 2026-05-17 — only HISTORY.md kept)
+└── archive/                        reference-only; gitignored (pruned 2026-05-17, only HISTORY.md kept)
 ```
 
 ---
 
 ## Validation lab
 
-The library is "one image in, one tensor out" by design — but you only know it works once you run it end-to-end on real images. That happens in two places, neither of which is part of the shipped package:
+The library is "one image in, one tensor out" by design, but you only know it works once you run it end-to-end on real images. That happens in two places, neither of which is part of the shipped package:
 
-- [`tests/`](tests/) — formal pytest suite that defines the contract from [`docs/THEORY.md`](docs/THEORY.md) §9.
-- [`lab/`](lab/) — ephemeral scripts and notebooks for fast hypothesis-checking. See [`lab/README.md`](lab/README.md) for the bench rules; outputs go to `Z:\outputs\patchcraft\` (off-tree).
+- [`tests/`](tests/) holds the formal pytest suite that defines the contract from [`docs/THEORY.md`](docs/THEORY.md) §9.
+- [`lab/`](lab/) holds ephemeral scripts and notebooks for fast hypothesis-checking. See [`lab/README.md`](lab/README.md) for the bench rules; outputs go to `Z:\outputs\patchcraft\` (off-tree).
 
 Datasets used by tests/lab are downloaded lazily into `Z:\caches\datasets\<name>\` on first use; they do not ship with the package and are never bundled into the wheel.
 
@@ -91,7 +91,7 @@ The dev framework that makes this all work (fixtures, dataset helpers, `Z:\` con
 ## Releasing (maintainer only)
 
 1. Bump `__version__` in [`src/patchcraft/__init__.py`](src/patchcraft/__init__.py).
-2. Close the `[Unreleased]` section in [`CHANGELOG.md`](CHANGELOG.md) as `[X.Y.Z] — YYYY-MM-DD`.
+2. Close the `[Unreleased]` section in [`CHANGELOG.md`](CHANGELOG.md) as `[X.Y.Z] YYYY-MM-DD`.
 3. Update [`docs/ROADMAP.md`](docs/ROADMAP.md) milestone checkboxes.
 4. Commit: `release: vX.Y.Z`.
 5. Tag + push: `git tag -a vX.Y.Z -m "..."` then `git push origin vX.Y.Z`.

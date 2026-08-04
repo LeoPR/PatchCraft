@@ -1,4 +1,4 @@
-"""PatchCraft — image patch extraction, pairing and reconstruction utilities."""
+"""PatchCraft: image patch extraction, pairing and reconstruction utilities."""
 
 from patchcraft.cache import Cache
 from patchcraft.extract import Patchify, extract

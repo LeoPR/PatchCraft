@@ -1,4 +1,4 @@
-"""Tests for `patchcraft.Cache` — contract from docs/THEORY.md §9.5."""
+"""Tests for `patchcraft.Cache`, contract from docs/THEORY.md §9.5."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -116,7 +116,7 @@ class TestVersioning:
 
 class TestCorruption:
     def test_corruption_raises_oserror(self, tmp_path: Path) -> None:
-        """Tampered .bin file is detected — either via zstd decode failure
+        """Tampered .bin file is detected, either via zstd decode failure
         (when compressed) or via checksum mismatch (when uncompressed).
         Both surface as `OSError` with a clear message."""
         c = Cache(tmp_path, namespace="t")

@@ -1,4 +1,4 @@
-"""Tests for `patchcraft.pair` — contract from docs/THEORY.md §3 and §9.3."""
+"""Tests for `patchcraft.pair`, contract from docs/THEORY.md §3 and §9.3."""
 from __future__ import annotations
 
 import pytest
