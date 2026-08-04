@@ -6,11 +6,82 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Known defects in 0.2.0 (found by a full audit on 2026-08-03, fixes pending)
+
+All four were reproduced against `patchcraft 0.2.0` on `torch 2.13.0+cpu`. The
+test suite is green (309 passed) because its blind spots are systematic: it
+exercises only divisible geometries, only `float32`/`float64`, and only inputs
+already inside `[0, 1]`.
+
+- **`reconstruct` and `stitch` silently zero every pixel the patch grid does
+  not cover.** Both validate only the patch *count*
+  (`n_patches == num_h * num_w`) and never the *coverage*
+  (`(num_h - 1) * sh + ph == h`). A truncated grid therefore returns a
+  partly-black image instead of raising, contradicting the bit-exact
+  round-trip guarantee in `docs/THEORY.md` §9.2. Measured: `10×10` with
+  `patch_size=4, stride=4` returns 36 of 100 pixels zeroed; `13×13` with
+  `patch_size=5, stride=5` returns 69 of 169.
+- **`stitch(..., weight="hann")` zeroes most of the image, not the four
+  corners.** See `docs/THEORY.md` §2.5 for the measurements. `patch_size=2`
+  degenerates to an all-zero window and returns an all-black image with no
+  error.
+- **`resize` corrupts integer dtypes on the torch backend.** `_resize_torch`
+  casts back with a bare `out[0].to(original_dtype)`, with no clamp and no
+  round. Bicubic legitimately overshoots the input range, so the cast wraps:
+  `-9.0 → 247`, `281.9 → 25`. On an 8×8 uint8 hard edge resized to 32×32,
+  256 of 1024 pixels are wrong, with black pixels becoming 254 and white
+  pixels becoming 1. Separately, the default `pil` backend silently clamps
+  out-of-range floats: `resize(torch.full((3, 8, 8), 200.0), (4, 4))` returns
+  all `1.0`.
+- **`per_patch_mse` / `per_patch_psnr` do not promote to `float64`** the way
+  `patch_metrics` does. `uint8` input raises a raw torch `RuntimeError` with
+  no mention of PatchCraft, and `float16` input silently returns `inf`.
+
+Also recorded: `float16` overflows to `inf` in `reconstruct`/`stitch`
+(`docs/THEORY.md` §9.2), integer dtypes are unsupported end to end rather than
+merely `uint8` (§9.1), and `WeightKind` is unreachable from the public
+namespace despite appearing in `stitch`'s signature.
+
+### Fixed
+
+- The sdist no longer ships `lab/` or `.vscode/`. The published
+  `patchcraft-0.2.0.tar.gz` contains `lab/usage_demo.py`,
+  `lab/usage_demo.out` and `lab/2026-05-16-roundtrip-mnist.py`, three files
+  that `lab/.gitignore` excludes from version control, which made that sdist
+  impossible to reproduce from any commit. The wheel was never affected.
+- `.github/workflows/release.yml` passes `skip-existing: true` to
+  `gh-action-pypi-publish`, so re-running the pipeline on an already-published
+  version is a no-op instead of a hard failure that also skips the
+  GitHub Release job. The `validate` job now refuses to proceed when the tag
+  does not match `patchcraft.__version__`.
+- Both workflows run `uv sync --locked`, so `uv.lock` is now actually enforced
+  in CI rather than being advisory.
+
 ## [0.2.0] — 2026-05-17
 
 Second public release. Adds three feature groups motivated by the QPatchSR
 super-resolution consumer plus internal ergonomics. No breaking changes vs
 v0.1.0 — all v0.1.0 imports keep working.
+
+### Changed — package name (twice, both on 2026-05-17)
+
+The project shipped v0.1.0 to GitHub under the name **PatchKit** and was
+renamed twice in the run-up to the first PyPI upload, each time because the
+name was already taken:
+
+1. `patchkit` → `patchforge` (commit `f761834`) — `pypi.org/project/patchkit/`
+   belongs to an unrelated model-patching utility.
+2. `patchforge` → `patchcraft` (commit `627a9c8`, final) —
+   `pypi.org/project/patchforge/` was also taken, by a llama-server CLI.
+
+Both renames were done by string substitution across the tree, which rewrote
+the historical entries below: the v0.1.0 section of this file says
+`patchcraft`, but `git show v0.1.0:pyproject.toml` says `name = "patchkit"`
+and `git ls-tree v0.1.0 src/` says `src/patchkit`. **v0.1.0 was never
+published to PyPI under any name** — `patchcraft` 0.2.0 is the first and only
+PyPI release, so no import path that ever existed on PyPI has changed, and no
+migration shim is needed. Read the v0.1.0 section as a record of *what the API
+was*, not of *what the package was called*.
 
 ### Added — cross-resolution geometry (THEORY §1.5, §9.7)
 

@@ -2,7 +2,7 @@
 
 A small library for **encoding an image into patches and decoding it back**. Built to slot into other people's `torch` pipelines as one transform among many — like a `GaussianBlur` step in a `Compose([...])`.
 
-> **Status (2026-05-17):** v0.1.0 released; v0.2.0-track is on `main` (not yet tagged). Public API: `extract`, `Patchify`, `reconstruct`, `stitch`, `pair`, `resize`, `Cache`, plus geometry helpers (`num_patches`, `tilings`, `TilingSpec`, `scale_factor`, `paired_tilings`, `PairedTilingSpec`), pixel metrics (`patch_metrics`, `per_patch_mse`, `per_patch_psnr`), and `PatchPair`/`PatchMeta`.
+> **Status:** v0.2.0 on PyPI — `pip install patchcraft`. Public API (18 symbols): `extract`, `Patchify`, `reconstruct`, `stitch`, `pair`, `resize`, `Cache`, plus geometry helpers (`num_patches`, `tilings`, `TilingSpec`, `scale_factor`, `paired_tilings`, `PairedTilingSpec`), pixel metrics (`patch_metrics`, `per_patch_mse`, `per_patch_psnr`), and `PatchPair`/`PatchMeta`.
 
 ## The lib vs. this repo
 

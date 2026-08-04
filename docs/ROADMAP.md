@@ -9,7 +9,7 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 - [x] `tests/test_import.py` verifying the package imports.
 - [x] `docs/THEORY.md` and `docs/ROADMAP.md` skeletons.
 - [x] `archive/` populated with reference implementations.
-- [x] Venv on `Z:\venvs\patchcraft` with torch+CUDA (**Stage 3** in the parent workflow). Originally created as `Z:\venvs\patchkit`; renamed in step with the package rename to `patchcraft`.
+- [x] Venv on `Z:\venvs\patchcraft` (**Stage 3** in the parent workflow). Originally created as `Z:\venvs\patchkit`; renamed in step with the package rename to `patchcraft`. Note: the installed torch is the CPU build (`torch 2.13.0+cpu`, `torch.cuda.is_available() == False`), which is what the default PyPI index yields on Windows. The `gpu`-marked tests therefore skip locally, and CI runs `-m "not gpu"`, so the CUDA paths of `extract`/`reconstruct`/`resize`/`stitch` are currently unexercised.
 - [x] `pytest` green with the single import test.
 
 ## M1 — Theory distilled
@@ -83,12 +83,25 @@ Motivated by the QPatchSR consumer's needs surfaced after v0.1.0 shipped. Public
 - [x] README ASCII "Visual cheat sheet" covering extract / reconstruct / pair / stitch.
 - [x] `__version__` bump to `0.2.0`, CHANGELOG `[0.2.0]` section closed.
 - [x] CI scaffold: [`.github/workflows/test.yml`](../.github/workflows/test.yml) (PR validation) and [`.github/workflows/release.yml`](../.github/workflows/release.yml) (PyPI publish via Trusted Publishing on `vX.Y.Z` tag push).
-- [ ] Tag `v0.2.0` pushed.
-- [ ] PyPI account + Trusted Publisher setup (manual, one-time).
-- [ ] First PyPI release published (triggered by tag push).
+- [x] PyPI account + Trusted Publisher setup (manual, one-time).
+- [x] First PyPI release published: [`patchcraft` 0.2.0](https://pypi.org/project/patchcraft/0.2.0/), uploaded 2026-05-17. Note it was uploaded manually with an account-scoped API token, *not* by the tag-triggered pipeline, because the tag was never pushed at the time.
+- [x] Tag `v0.2.0` pushed (2026-08-03, retroactively). The tag sits on the docs/CI housekeeping pass that follows the release, not on the commit the wheel was built from, because the tag never existed at upload time. This is sound: `git diff 627a9c8..v0.2.0 -- src/` is empty, so the tagged tree still builds byte-identical library code. Everything between the two commits is documentation, CI configuration and the lockfile.
 
 ## Post-release
 
-- Integration back into QPatchSR: `pip install patchcraft` and implement kernels/regressors on top of the validated v0.2 API.
-- Potential auxiliary #2 for quantum components (naming TBD).
-- Companion package `patchcraft-quant` for quantization primitives (THEORY §6) if a second consumer surfaces the need.
+PatchCraft is feature-complete for its declared scope (THEORY §0). There is no
+feature roadmap, by design: the library has no consumer yet, so any new symbol
+would be speculative.
+
+- **Consumer gate.** QPatchSR, which motivated the v0.2.0 additions, was
+  abandoned. Its replacement, **PatchSR**, has not started. The gate is: PatchSR
+  consumes `patchcraft` v0.2 as published, and only a need it surfaces in real
+  use justifies a 19th public symbol, via a new ADR. Nothing gets built ahead of
+  that.
+- **Correctness backlog** (independent of any consumer, tracked in
+  `CHANGELOG.md` under Unreleased): the partial-coverage guard for
+  `reconstruct`/`stitch`, the `hann` window fix, and the `resize` integer-cast
+  fix. These are bug fixes to shipped behavior, not features, and are not gated
+  on a consumer.
+- Potential auxiliary #2 for quantum components (naming TBD) — gated, unchanged.
+- Companion package `patchcraft-quant` for quantization primitives (THEORY §6) if a second consumer surfaces the need — gated, unchanged.

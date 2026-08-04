@@ -163,11 +163,15 @@ re-introduce orchestration concerns. If you want cached resize, two
 lines:
 
 ```python
+import io
+
 key = c.key_for("resize", image_bytes_or_fingerprint, target_size, backend)
 cached = c.get(key)
 if cached is None:
     out = resize(image, target_size, backend)
-    c.put(key, torch.save(out, ...))  # caller picks serialization
+    buf = io.BytesIO()
+    torch.save(out, buf)             # caller picks serialization
+    c.put(key, buf.getvalue())       # the cache only ever sees bytes
 ```
 
 The cache does not know about images, tensors, or PIL. That ignorance
@@ -230,11 +234,18 @@ We rejected that for two reasons.
   no surprise behavior.
 - **Float-only on `stitch`.** Window kernels are float-valued. Multiplying
   integer patches by a Hann window would either silently quantize or
-  implicitly promote — both are surprises a primitive should refuse.
-  `reconstruct` accepts integer patches (`stride == patch_size` is a
-  cheap copy and round-trips them exactly); `stitch` does not. That
-  asymmetry is cleaner as two function signatures than as one signature
-  with a hidden dtype guard.
+  implicitly promote — both are surprises a primitive should refuse. So
+  `stitch` rejects non-float patches explicitly, with a message telling the
+  caller to use `patches.float()`.
+
+  Note the asymmetry is *declared* rather than *exercised*: `reconstruct` has
+  no dtype guard, but it cannot actually process integer patches either,
+  because `F.fold` has no integer kernel on CPU (`col2im_out_cpu` is not
+  implemented for `Byte`/`Int`/`Long`; `extract` fails symmetrically on
+  `im2col_out_cpu`). Integer patches therefore reach `reconstruct` and fail
+  with a raw `NotImplementedError` from torch instead of a PatchCraft
+  `ValueError`. Keeping the two functions separate is still justified by the
+  contract divergence above; the dtype argument is weaker than it reads.
 
 The runtime cost of the duplication is negligible (the second function
 is ~150 lines, validation and all). The cognitive cost of a kwarg that

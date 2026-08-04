@@ -134,8 +134,11 @@ For *unmodified* patches, every `patch_k(i_k, j_k)` equals `img(x, y)` (definiti
 **Window kernels.**
 
 - **`uniform`** — `w ≡ 1`. Numerator becomes the same as `reconstruct`'s fold; denominator becomes the count map. Mathematically equivalent to `reconstruct`. Provided so the API is one function with a parameter instead of two functions with a hidden choice.
-- **`hann`** — separable Hann (`outer(hann(ph), hann(pw))`). Center weight is 1, edge weight is 0. Strong seam suppression; cheapest to compute. **Caveat:** image-corner pixels covered only by patches whose `w` at that relative position is zero have numerator and denominator both ≈ 0 — the `clamp(min=1e-6)` divisor makes them zero in the output. This shows up most obviously at `stride == patch_size`, where the four image corners go black. With overlap (`stride < patch_size`) the artifact shrinks to the outermost pixel only on each side.
-- **`gaussian`** — separable Gaussian with `sigma = max(1, min(ph, pw) / 4)` centered at the patch midpoint. Weight is non-zero everywhere, so there is no corner artifact, at the cost of weaker seam suppression than Hann.
+- **`hann`** — separable Hann (`outer(hann(ph), hann(pw))`). Center weight is 1, edge weight is 0. Strong seam suppression; cheapest to compute.
+
+  > **Known defect (measured 2026-08-03, fix pending — see `CHANGELOG.md` under Unreleased).** The current `_hann_1d(n)` is the symmetric window `0.5·(1 − cos(2πi/(n−1)))`, which is **exactly zero at both `i = 0` and `i = n−1`**. Every pixel whose only covering patches place it on a patch edge therefore has numerator and denominator both ≈ 0, and the `clamp(min=1e-6)` divisor sends it to zero. This is **not** limited to the four image corners, which is what an earlier version of this section claimed. Measured: at `12×12, ph=pw=4, stride=4`, **108 of 144 pixels** come back zero; at `13×13, ph=pw=4, stride=3`, **105 of 169**, including black bands in the image interior. Degenerate case: `patch_size=2` makes the window identically `[0, 0]`, so `stitch(..., weight="hann")` returns an **all-zero image with no error at all**. The fix is to use the interior of a longer window, `hann_window(n+2, periodic=False)[1:-1]`, which is strictly positive on every sample; until then, prefer `gaussian` for any real blending work.
+
+- **`gaussian`** — separable Gaussian centered at the patch midpoint, with **per-axis** `sigma`: `sigma_h = max(1, ph/4)` and `sigma_w = max(1, pw/4)`, independently. (An earlier version of this section and the `stitch` docstring both say `sigma = max(1, min(ph, pw)/4)`, i.e. one shared sigma; that is wrong. For a `4×16` patch the real kernel uses `sigma_h = 1.0` and `sigma_w = 4.0`. The docstring in `src/patchcraft/stitch.py` still carries the old wording and is corrected separately, since it ships inside the wheel.) Weight is non-zero everywhere, so there is no zeroing artifact, at the cost of weaker seam suppression than Hann.
 
 Visualizing the three 2-D kernels at `patch_size=4` (`+` = full weight, `X` = high, `o` = medium, `.` = zero or near-zero):
 
@@ -238,7 +241,9 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 `Patchify(...)(image)` is the callable form and delegates to `extract` — same contract, plus eager geometry validation at `__init__`.
 
 **Aceita:**
-- `image` é `Tensor` 3D `(C, H, W)` com `C ≥ 1` arbitrário; dtype suportado por `torch.nn.functional.unfold` (todos os float — `float16/float32/float64/bfloat16` — e integer ≥ 16 bits no caminho CUDA; em CPU, `uint8` não é suportado por `im2col_cpu` e o caller deve converter pra float antes); CPU ou CUDA (preservados na saída).
+- `image` é `Tensor` 3D `(C, H, W)` com `C ≥ 1` arbitrário; dtype suportado por `torch.nn.functional.unfold` (todos os float: `float16/float32/float64/bfloat16`); CPU ou CUDA (preservados na saída).
+
+  Em CPU, **nenhum** dtype inteiro funciona: `im2col_out_cpu` não é implementado para `Byte`, `Int` nem `Long` (verificado em torch 2.13.0+cpu). Uma versão anterior desta seção dizia que só `uint8` era o problema; está errado. O caller converte pra float antes. `extract` não intercepta isso, então o erro que sobe é um `NotImplementedError` cru do torch, não um `ValueError` do PatchCraft.
 - `patch_size`, `stride`, `dilation` como `int` (quadrado) ou `(int, int)` com valores positivos.
 - Patch maior que imagem → retorna `Tensor[0, C, ph, pw]` (não levanta).
 - `stride > patch_size` (grid esparso com lacunas — válido para features que não fazem round-trip; ver §9.2 para a contrapartida em `reconstruct`).
@@ -260,7 +265,8 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 **Aceita:**
 - `sh ≤ ph` e `sw ≤ pw` (cobertura total ou overlap).
 - `image_shape` igual a `(C, H, W)` consistente com a geometria implícita pelo `patches.shape[0]`.
-- Qualquer dtype, **com aviso** de que `float16` perde precisão na divisão pelo count map.
+- Dtypes float (`float16/float32/float64/bfloat16`). Dtypes inteiros **não** funcionam: `col2im_out_cpu` não é implementado para `Byte`/`Int`/`Long`, simetricamente ao `extract` em §9.1. `reconstruct` não tem guarda de dtype, então o erro é um `NotImplementedError` cru do torch.
+- Sobre `float16`: a ressalva correta não é perda de precisão, é **overflow**. O `F.fold` acumula a soma de todos os patches sobrepostos *antes* de dividir pelo count map, e o numerador estoura o máximo finito de fp16 (65504) bem antes de a divisão acontecer. Medido: imagem fp16 constante de valor `10000.0`, `ph=pw=3`, `stride=1`, devolve `inf` em **144 de 256** pixels. A suíte não pega isso porque `test_reconstruct.py` e `test_stitch.py` parametrizam apenas `float32`/`float64`, embora `test_extract.py` anuncie fp16 como suportado. Fix pendente, ver `CHANGELOG.md` em Unreleased.
 
 **Rejeita (`ValueError`):**
 - `dilation != 1`.

@@ -1,7 +1,7 @@
 # PatchCraft — usage walkthrough
 
 Every snippet below was captured from a live REPL session against
-`patchcraft==0.1.0`. Outputs are real, not pseudocode. Re-run the
+`patchcraft==0.2.0`. Outputs are real, not pseudocode. Re-run the
 script behind it at any time:
 
 ```
@@ -19,7 +19,7 @@ The script is intentionally not part of the wheel — see
 ```python
 >>> import patchcraft
 >>> patchcraft.__version__
-'0.1.0'
+'0.2.0'
 >>> sorted(patchcraft.__all__)
 ['Cache', 'PairedTilingSpec', 'PatchMeta', 'PatchPair', 'Patchify',
  'TilingSpec', 'extract', 'num_patches', 'pair', 'paired_tilings',
@@ -27,10 +27,9 @@ The script is intentionally not part of the wheel — see
  'resize', 'scale_factor', 'stitch', 'tilings']
 ```
 
-Eighteen public symbols on the v0.2-track main branch (the wheel
-tagged `v0.1.0` shipped eleven; `__version__` will bump to `0.2.0`
-once the additions validate in real use). Functions are lowercase;
-classes / dataclasses / NamedTuples are PascalCase.
+Eighteen public symbols as of v0.2.0 (v0.1.0 shipped eleven).
+Functions are lowercase; classes / dataclasses / NamedTuples are
+PascalCase.
 
 ---
 
