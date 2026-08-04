@@ -172,17 +172,21 @@ Visual: the kernel shape applied to each patch for `patch_size=4`:
 
 ```
    weight="uniform"     weight="hann"        weight="gaussian"
-   (== reconstruct)     centers > edges      centers >> edges (never 0)
+   (== reconstruct)     centers > edges      centers >> edges
+                        (never 0)            (never 0)
 
-   + + + +              . . . .              . o o .
-   + + + +              . X X .              o X X o
-   + + + +              . X X .              o X X o
-   + + + +              . . . .              . o o .
+   + + + +              . X X .              . o o .
+   + + + +              X X X X              o X X o
+   + + + +              X X X X              o X X o
+   + + + +              . X X .              . o o .
 ```
 
-Hann zeros the patch edges (the `0.5 * (1 - cos(...))` is `0` at
-`i == 0` and `i == ph - 1`); Gaussian uses `sigma = max(1, min(ph,
-pw) / 4)` so the edge weight is small but never zero.
+Hann uses the interior of a longer symmetric window
+(`hann_window(n + 2)[1:-1]`, so the edge weight is small but never zero;
+before 0.2.1 the plain symmetric window was exactly `0` at both edges and
+zeroed pixels covered only by patch edges). Gaussian uses per-axis
+`sigma = max(1, ph / 4)` / `max(1, pw / 4)` so the edge weight is small
+but never zero.
 
 ```python
 >>> from patchcraft import stitch, reconstruct, extract
@@ -196,16 +200,16 @@ pw) / 4)` so the edge weight is small but never zero.
 ... )
 True
 
->>> # weight="hann" zeros image corners that fall on Hann's edge-weight-zero
->>> # positions (documented artifact). Interior pixels are preserved.
+>>> # weight="hann" blends overlap seams away; with unmodified patches the
+>>> # round-trip is exact, corners included, because the window never hits 0.
 >>> out_hann = stitch(patches_small, image_shape=img_small.shape,
 ...                    stride=4, weight="hann")
->>> out_hann[0, 0, 0].item()   # corner: covered only at relative (0,0) where hann=0
-0.0
->>> out_hann[0, 1, 1].item()   # interior of patch: hann>0 there, recovered
+>>> out_hann[0, 0, 0].item()   # corner: small edge weight, still recovered
+0.5
+>>> out_hann[0, 1, 1].item()   # interior of patch: full weight, recovered
 0.5
 
->>> # weight="gaussian" has no zero-weight edges, so no corner artifact.
+>>> # weight="gaussian" likewise has no zero-weight edges.
 >>> out_gauss = stitch(patches_small, image_shape=img_small.shape,
 ...                     stride=4, weight="gaussian")
 >>> out_gauss[0, 0, 0].item()

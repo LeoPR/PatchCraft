@@ -112,6 +112,10 @@ def per_patch_mse(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     or after a lossy round-trip. Reduction is over ``C, h, w``; the leading
     axis is preserved.
 
+    Internal accumulation promotes to ``float64`` (mirroring
+    :func:`patch_metrics`), so integer and half-precision inputs work and the
+    return dtype is always ``float64``.
+
     Raises ``ValueError`` if either input is not 4-D or shapes differ.
     """
     _check_pair(a, b)
@@ -119,7 +123,9 @@ def per_patch_mse(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
         raise ValueError(
             f"per_patch_mse expects 4-D tensors (L, C, h, w), got ndim={a.ndim}"
         )
-    diff = a - b
+    a64 = a.to(torch.float64) if a.dtype != torch.float64 else a
+    b64 = b.to(torch.float64) if b.dtype != torch.float64 else b
+    diff = a64 - b64
     return (diff * diff).mean(dim=(1, 2, 3))
 
 
@@ -132,7 +138,9 @@ def per_patch_psnr(
     """Return a ``(L,)`` tensor of PSNR values (dB), one per patch.
 
     Identical patches yield ``+inf`` (no clamp tricks, because the result is
-    mathematically infinite and the caller should treat it as such).
+    mathematically infinite and the caller should treat it as such). Computed
+    in ``float64`` via :func:`per_patch_mse`, so the return dtype is always
+    ``float64`` regardless of input dtype.
 
     Parameters
     ----------

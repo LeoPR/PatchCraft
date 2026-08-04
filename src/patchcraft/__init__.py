@@ -14,9 +14,9 @@ from patchcraft.metrics import patch_metrics, per_patch_mse, per_patch_psnr
 from patchcraft.pair import PatchMeta, PatchPair, pair
 from patchcraft.reconstruct import reconstruct
 from patchcraft.resize import resize
-from patchcraft.stitch import stitch
+from patchcraft.stitch import WeightKind, stitch
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __all__ = [
     "Cache",
     "PairedTilingSpec",
@@ -24,6 +24,7 @@ __all__ = [
     "PatchPair",
     "Patchify",
     "TilingSpec",
+    "WeightKind",
     "extract",
     "num_patches",
     "pair",

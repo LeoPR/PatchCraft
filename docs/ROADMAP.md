@@ -97,12 +97,15 @@ would be speculative.
 - **Consumer gate.** QPatchSR, which motivated the v0.2.0 additions, was
   abandoned. Its replacement, **PatchSR**, has not started. The gate is: PatchSR
   consumes `patchcraft` v0.2 as published, and only a need it surfaces in real
-  use justifies a 19th public symbol, via a new ADR. Nothing gets built ahead of
-  that.
-- **Correctness backlog** (independent of any consumer, tracked in
-  `CHANGELOG.md` under Unreleased): the partial-coverage guard for
-  `reconstruct`/`stitch`, the `hann` window fix, and the `resize` integer-cast
-  fix. These are bug fixes to shipped behavior, not features, and are not gated
-  on a consumer.
+  use justifies a 20th public symbol, via a new ADR. Nothing gets built ahead of
+  that. (The 19th symbol, `WeightKind`, was not gated: it already appeared in
+  `stitch`'s public signature in 0.2.0 but was unreachable from the namespace,
+  a defect closed in 0.2.1.)
+- **Correctness backlog** (independent of any consumer): **closed in 0.2.1**
+  (2026-08-04). The partial-coverage guard for `reconstruct`/`stitch`, the
+  `hann` window fix, the `resize` integer-cast fix, the `float64` promotion in
+  the per-patch metrics, the fp16/bf16 fold overflow, the integer-dtype guard
+  in `reconstruct`, and the `WeightKind` export all shipped; see
+  `CHANGELOG.md` under `[0.2.1]`.
 - Potential auxiliary #2 for quantum components (naming TBD), gated, unchanged.
 - Companion package `patchcraft-quant` for quantization primitives (THEORY §6) if a second consumer surfaces the need, gated, unchanged.

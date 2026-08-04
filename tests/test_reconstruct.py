@@ -133,6 +133,29 @@ class TestCountMap:
 
 # ------------------------------------------------------------------ Rejeita ---
 
+class TestHalfPrecisionAccumulation:
+    """Regression (0.2.0 audit, §9.2): F.fold accumulates the sum of all
+    overlapping patches *before* the count-map division, so a float16 constant
+    image of 10000.0 with patch 3 stride 1 returned inf in 144 of 256 pixels.
+    Accumulation is now done in float32 for half-precision inputs."""
+
+    @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
+    def test_large_constant_no_overflow(self, dtype: torch.dtype) -> None:
+        img = torch.full((1, 16, 16), 10000.0, dtype=dtype)
+        patches = extract(img, patch_size=3, stride=1)
+        out = reconstruct(patches, image_shape=img.shape, stride=1)
+        assert out.dtype == dtype
+        assert torch.isfinite(out).all()
+        assert torch.allclose(out, img)
+
+    def test_int_dtype_rejected_with_clear_error(self) -> None:
+        """Integer dtypes fail inside F.fold with a raw NotImplementedError;
+        raise a clear ValueError instead (§9.1/§9.2: integers unsupported)."""
+        patches = torch.zeros(4, 1, 4, 4, dtype=torch.uint8)
+        with pytest.raises(ValueError, match="floating-point"):
+            reconstruct(patches, image_shape=(1, 8, 8), stride=4)
+
+
 class TestRejects:
     def test_patches_not_tensor(self) -> None:
         with pytest.raises(TypeError, match=r"must be torch\.Tensor"):
@@ -203,3 +226,37 @@ class TestRejects:
         patches = torch.zeros(4, 1, 4, 4)
         with pytest.raises(ValueError, match="stride must be positive"):
             reconstruct(patches, image_shape=(1, 8, 8), stride=0)
+
+
+class TestCoverageGuard:
+    """Regression (0.2.0 audit): the grid-consistency check validated only the
+    patch *count*, never the *coverage*. A truncated grid returned a
+    partly-black image instead of raising, contradicting §9.2."""
+
+    def test_truncated_grid_10x10_patch_4(self) -> None:
+        """10x10 with patch 4 stride 4 covers only 8 rows/cols: 36 of 100
+        pixels came back zero in 0.2.0. Now raises."""
+        patches = torch.zeros(4, 1, 4, 4)
+        with pytest.raises(ValueError, match="coverage"):
+            reconstruct(patches, image_shape=(1, 10, 10), stride=4)
+
+    def test_truncated_grid_13x13_patch_5(self) -> None:
+        """13x13 with patch 5 stride 5 covers only 10 rows/cols: 69 of 169
+        pixels came back zero in 0.2.0. Now raises."""
+        patches = torch.zeros(4, 1, 5, 5)
+        with pytest.raises(ValueError, match="coverage"):
+            reconstruct(patches, image_shape=(1, 13, 13), stride=5)
+
+    def test_truncated_grid_overlap(self) -> None:
+        """Overlap does not excuse truncation: 9x9 with patch 4 stride 2
+        covers (3-1)*2+4 = 8 rows/cols, one short."""
+        patches = torch.zeros(9, 1, 4, 4)
+        with pytest.raises(ValueError, match="coverage"):
+            reconstruct(patches, image_shape=(1, 9, 9), stride=2)
+
+    def test_exact_coverage_boundary_still_accepted(self) -> None:
+        """Grid that ends exactly on the image edge must not raise."""
+        img = torch.arange(100, dtype=torch.float32).reshape(1, 10, 10)
+        patches = extract(img, patch_size=4, stride=2)  # (4-1)*2+4 == 10
+        out = reconstruct(patches, image_shape=img.shape, stride=2)
+        assert torch.allclose(out, img)

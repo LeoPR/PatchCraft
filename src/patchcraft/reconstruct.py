@@ -28,12 +28,15 @@ def reconstruct(
 
     Rejects (per §9.2): ``dilation != 1``; ``stride > patch_size`` in any axis
     (partial coverage would synthesize pixel values, which PatchCraft refuses);
+    grids that do not cover the image exactly (the last patch must end on the
+    image edge on both axes, otherwise pixels would come back zeroed);
     ``image_shape`` inconsistent with the patch grid (channels mismatch or
     ``L`` does not match the geometry); ``patches.ndim != 4``.
 
-    Dtype and device of ``patches`` are preserved. For ``float16``, precision
-    is degraded by the divide-by-count-map step; promote to ``float32`` before
-    calling if exactness matters.
+    Dtype and device of ``patches`` are preserved. Integer dtypes are
+    rejected (``F.fold`` is not implemented for them). Half-precision inputs
+    (``float16``, ``bfloat16``) accumulate internally in ``float32`` to avoid
+    overflow inside ``F.fold`` and are cast back on return.
     """
     if not isinstance(patches, torch.Tensor):
         raise TypeError(
@@ -45,6 +48,13 @@ def reconstruct(
         )
 
     n_patches, c, ph, pw = patches.shape
+
+    if not patches.is_floating_point():
+        raise ValueError(
+            f"reconstruct requires floating-point patches, got dtype={patches.dtype}. "
+            "F.fold is not implemented for integer dtypes; convert with "
+            "patches.float() first."
+        )
 
     if not (isinstance(image_shape, tuple) and len(image_shape) == 3):
         raise ValueError(
@@ -82,6 +92,16 @@ def reconstruct(
             f"image_shape={image_shape} too small for patch_size=({ph}, {pw}) "
             f"and stride=({sh}, {sw})"
         )
+    covered_h = (num_h - 1) * sh + ph
+    covered_w = (num_w - 1) * sw + pw
+    if covered_h != h or covered_w != w:
+        raise ValueError(
+            f"patch grid leaves pixels uncovered (partial coverage forbidden): "
+            f"image_shape={image_shape}, patch_size=({ph}, {pw}), "
+            f"stride=({sh}, {sw}) covers ({covered_h}, {covered_w}) of "
+            f"({h}, {w}). Choose a geometry with exact coverage "
+            f"(see patchcraft.tilings)."
+        )
     expected_n_patches = num_h * num_w
     if n_patches != expected_n_patches:
         raise ValueError(
@@ -91,9 +111,19 @@ def reconstruct(
             f"(num_h={num_h}, num_w={num_w})."
         )
 
+    # Half-precision inputs overflow inside F.fold, which accumulates the sum
+    # of all overlapping patches before the count-map division (fp16 max is
+    # 65504). Accumulate in float32 and cast back at the end (§9.2).
+    accum_dtype = (
+        torch.float32
+        if patches.dtype in (torch.float16, torch.bfloat16)
+        else patches.dtype
+    )
+    work = patches.to(accum_dtype)
+
     # (L, C, ph, pw) -> (1, C*ph*pw, L), the layout F.fold expects.
     patches_flat = (
-        patches.permute(1, 2, 3, 0).reshape(c * ph * pw, n_patches).unsqueeze(0)
+        work.permute(1, 2, 3, 0).reshape(c * ph * pw, n_patches).unsqueeze(0)
     )
     folded = F.fold(
         patches_flat,
@@ -104,7 +134,7 @@ def reconstruct(
 
     # Count map: same fold geometry but 1 "channel", which broadcasts across C in division.
     ones = torch.ones(
-        1, ph * pw, n_patches, dtype=patches.dtype, device=patches.device
+        1, ph * pw, n_patches, dtype=accum_dtype, device=patches.device
     )
     count = F.fold(
         ones,
@@ -115,4 +145,4 @@ def reconstruct(
 
     # clamp(min=1e-6) absorbs float noise on covered pixels; geometry validation
     # above guarantees there are no uncovered pixels (count > 0 everywhere).
-    return (folded / count.clamp(min=1e-6))[0]
+    return (folded / count.clamp(min=1e-6))[0].to(patches.dtype)

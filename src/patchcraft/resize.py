@@ -122,6 +122,12 @@ def _resize_torch(
     if mode in {"bilinear", "bicubic"}:
         kwargs["align_corners"] = False
     out = F.interpolate(x, **kwargs)
+    if not torch.empty(0, dtype=original_dtype).is_floating_point():
+        # Integer dtypes: bicubic/bilinear overshoot the input range, and a
+        # bare cast wraps (-9.0 -> 247 in uint8) and truncates. Round to the
+        # nearest integer and clamp to the dtype range instead (0.2.0 defect).
+        info = torch.iinfo(original_dtype)
+        return out[0].round().clamp(info.min, info.max).to(original_dtype)
     return out[0].to(original_dtype)
 
 
@@ -142,6 +148,13 @@ def resize(
     ``resample=None`` picks each backend's default: LANCZOS for ``"pil"``,
     bilinear for ``"torch"``. The accepted resample strings differ between
     backends; an unsupported choice raises ``ValueError``.
+
+    Dtype notes. Integer tensors on the ``"torch"`` backend are interpolated
+    in float and cast back with round + clamp to the dtype range, because
+    bicubic legitimately overshoots the input range and a bare cast wraps
+    (``-9.0 -> 247`` in uint8). Float tensors on the ``"pil"`` backend pass
+    through a uint8 hop and are clamped to ``[0, 1]`` on the way in;
+    values outside that range are not preserved by this backend.
 
     Rejects (per §9.4): non-2-tuple or non-positive ``target_size``;
     ``backend`` not in ``{"pil", "torch"}``; CUDA tensor with

@@ -52,44 +52,62 @@ class TestUniformEqualsReconstruct:
 # -------------------------------------------------------------- hann window --
 
 class TestHann:
-    """Hann window emphasizes patch centers; corner-pixel artifact is documented."""
+    """Hann window emphasizes patch centers and is strictly positive everywhere,
+    so unmodified patches round-trip exactly under any tiling (§2.5)."""
 
-    def test_unmodified_overlap_recovers_interior(self) -> None:
-        """With overlap, interior pixels still recover the original under Hann."""
+    def test_unmodified_overlap_recovers_image(self) -> None:
+        """With overlap, unmodified patches recover the full image under Hann."""
         img = _ramp(1, 16, 16, dtype=torch.float64)
         patches = extract(img, patch_size=4, stride=2)
         out = stitch(patches, image_shape=img.shape, stride=2, weight="hann")
-        # Interior strip (away from rows/cols 0 and H-1) is bit-correct-ish.
-        assert torch.allclose(out[:, 2:-2, 2:-2], img[:, 2:-2, 2:-2],
-                              rtol=1e-9, atol=1e-9)
+        assert torch.allclose(out, img, rtol=1e-9, atol=1e-9)
 
-    def test_corner_artifact_with_exact_tiling(self) -> None:
-        """At stride==patch_size, image corners are covered by patches whose
-        Hann edge-weight is 0, so the documented artifact makes them zero."""
-        img = torch.full((1, 8, 8), 0.5)
+    def test_exact_tiling_recovers_image(self) -> None:
+        """Regression (0.2.0 audit): the old symmetric Hann was exactly 0 at both
+        edges, so at stride == patch_size a 12x12 image with 4x4 patches came
+        back with 108 of 144 pixels zeroed. The window is now the interior of a
+        longer Hann window, strictly positive on every sample."""
+        img = _ramp(1, 12, 12, dtype=torch.float64) + 1.0
         patches = extract(img, patch_size=4, stride=4)
         out = stitch(patches, image_shape=img.shape, stride=4, weight="hann")
-        # Corner pixels of the image: covered by exactly 1 patch at its corner.
-        assert out[0, 0, 0].item() == pytest.approx(0.0, abs=1e-6)
-        assert out[0, 0, 7].item() == pytest.approx(0.0, abs=1e-6)
-        assert out[0, 7, 0].item() == pytest.approx(0.0, abs=1e-6)
-        assert out[0, 7, 7].item() == pytest.approx(0.0, abs=1e-6)
+        assert torch.allclose(out, img, rtol=1e-9, atol=1e-9)
+
+    def test_no_zeroed_pixels_with_overlap(self) -> None:
+        """Regression (0.2.0 audit): 13x13 with patch 4 stride 3 lost 105 of 169
+        pixels under the old window, including black bands in the interior."""
+        img = _ramp(1, 13, 13, dtype=torch.float64) + 1.0
+        patches = extract(img, patch_size=4, stride=3)
+        out = stitch(patches, image_shape=img.shape, stride=3, weight="hann")
+        assert torch.allclose(out, img, rtol=1e-9, atol=1e-9)
+
+    def test_patch_size_2_not_degenerate(self) -> None:
+        """Regression (0.2.0 audit): patch_size=2 made the old window
+        identically [0, 0] and stitch returned an all-zero image with no error."""
+        img = _ramp(1, 8, 8, dtype=torch.float64)
+        patches = extract(img, patch_size=2, stride=2)
+        out = stitch(patches, image_shape=img.shape, stride=2, weight="hann")
+        assert torch.allclose(out, img, rtol=1e-9, atol=1e-9)
+
+    @pytest.mark.parametrize("n", [1, 2, 3, 4, 7, 16])
+    def test_kernel_strictly_positive(self, n: int) -> None:
+        """The 1-D Hann window is strictly positive on every sample."""
+        from patchcraft.stitch import _hann_1d
+        w = _hann_1d(n, torch.float64, torch.device("cpu"))
+        assert w.shape == (n,)
+        assert (w > 0).all()
 
     def test_center_pixel_weighted_more_than_edge(self) -> None:
         """Hann at stride==patch_size: pixel offset (1, 1) inside the patch
-        (Hann ≈ 0.75 each axis) should equal its source patch value exactly
-        (single contributor in single-patch coverage). Pixel offset (0, 0)
-        (Hann = 0 each axis) becomes the documented zero artifact."""
+        (higher Hann weight) and pixel offset (0, 0) (lower weight) both equal
+        their source patch values, because coverage has a single contributor."""
         # Single patch tile: image is the patch itself.
         img = torch.arange(16, dtype=torch.float64).reshape(1, 4, 4)
         patches = extract(img, patch_size=4, stride=4)
         out = stitch(patches, image_shape=img.shape, stride=4, weight="hann")
-        # Interior pixel: single patch, single non-zero weight, ratio = patch value.
         assert out[0, 1, 1].item() == pytest.approx(img[0, 1, 1].item(), abs=1e-9)
         assert out[0, 2, 2].item() == pytest.approx(img[0, 2, 2].item(), abs=1e-9)
-        # Edge / corner pixels: Hann weight at edge is 0 -> zero artifact.
-        assert out[0, 0, 0].item() == pytest.approx(0.0, abs=1e-9)
-        assert out[0, 3, 3].item() == pytest.approx(0.0, abs=1e-9)
+        assert out[0, 0, 0].item() == pytest.approx(img[0, 0, 0].item(), abs=1e-9)
+        assert out[0, 3, 3].item() == pytest.approx(img[0, 3, 3].item(), abs=1e-9)
 
 
 # ---------------------------------------------------------- gaussian window --
@@ -227,3 +245,39 @@ class TestRejects:
         patches = torch.zeros(4, 1, 4, 4)
         with pytest.raises(ValueError, match="stride must be positive"):
             stitch(patches, image_shape=(1, 8, 8), stride=0)
+
+
+class TestHalfPrecisionAccumulation:
+    """Same fp16/bf16 overflow fix as `reconstruct`; see
+    tests/test_reconstruct.py::TestHalfPrecisionAccumulation."""
+
+    @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("weight", ["uniform", "hann", "gaussian"])
+    def test_large_constant_no_overflow(self, dtype: torch.dtype, weight: str) -> None:
+        img = torch.full((1, 16, 16), 10000.0, dtype=dtype)
+        patches = extract(img, patch_size=3, stride=1)
+        out = stitch(patches, image_shape=img.shape, stride=1, weight=weight)  # type: ignore[arg-type]
+        assert out.dtype == dtype
+        assert torch.isfinite(out).all()
+        assert torch.allclose(out, img)
+
+
+class TestCoverageGuard:
+    """Regression (0.2.0 audit): same truncated-grid defect as `reconstruct`;
+    see tests/test_reconstruct.py::TestCoverageGuard."""
+
+    def test_truncated_grid_10x10_patch_4(self) -> None:
+        patches = torch.zeros(4, 1, 4, 4)
+        with pytest.raises(ValueError, match="coverage"):
+            stitch(patches, image_shape=(1, 10, 10), stride=4)
+
+    def test_truncated_grid_13x13_patch_5(self) -> None:
+        patches = torch.zeros(4, 1, 5, 5)
+        with pytest.raises(ValueError, match="coverage"):
+            stitch(patches, image_shape=(1, 13, 13), stride=5)
+
+    def test_exact_coverage_boundary_still_accepted(self) -> None:
+        img = torch.arange(100, dtype=torch.float32).reshape(1, 10, 10)
+        patches = extract(img, patch_size=4, stride=2)  # (4-1)*2+4 == 10
+        out = stitch(patches, image_shape=img.shape, stride=2)
+        assert torch.allclose(out, img)

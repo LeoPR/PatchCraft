@@ -98,7 +98,8 @@ class TestPerPatchMSE:
         b = torch.ones(5, 1, 4, 4)
         out = per_patch_mse(a, b)
         assert out.shape == (5,)
-        assert torch.allclose(out, torch.ones(5))
+        assert out.dtype == torch.float64
+        assert torch.allclose(out, torch.ones(5, dtype=torch.float64))
 
     def test_per_patch_varies(self) -> None:
         a = torch.zeros(3, 1, 2, 2)
@@ -107,11 +108,53 @@ class TestPerPatchMSE:
         b[1] = 0.5  # MSE 0.25
         b[2] = 1.0  # MSE 1
         out = per_patch_mse(a, b)
-        assert torch.allclose(out, torch.tensor([0.0, 0.25, 1.0]))
+        assert torch.allclose(
+            out, torch.tensor([0.0, 0.25, 1.0], dtype=torch.float64)
+        )
 
     def test_rejects_non_4d(self) -> None:
         with pytest.raises(ValueError, match="4-D"):
             per_patch_mse(torch.zeros(3, 4, 4), torch.zeros(3, 4, 4))
+
+
+class TestPerPatchDtypePromotion:
+    """Regression (0.2.0 audit): `per_patch_mse`/`per_patch_psnr` did not
+    promote to float64 the way `patch_metrics` does. uint8 raised a raw torch
+    RuntimeError (mean over integer dtype), and float16 silently returned inf.
+    Both now compute in float64 and return float64."""
+
+    @pytest.mark.parametrize(
+        "dtype",
+        [torch.uint8, torch.int32, torch.float16, torch.bfloat16,
+         torch.float32, torch.float64],
+    )
+    def test_output_is_float64_for_any_input(self, dtype: torch.dtype) -> None:
+        a = torch.zeros(3, 1, 4, 4, dtype=dtype)
+        b = torch.ones(3, 1, 4, 4, dtype=dtype)
+        mse = per_patch_mse(a, b)
+        assert mse.dtype == torch.float64
+        assert torch.allclose(mse, torch.ones(3, dtype=torch.float64))
+        psnr = per_patch_psnr(a, b)
+        assert psnr.dtype == torch.float64
+        assert torch.all(torch.isfinite(psnr))
+
+    def test_uint8_identical_patches_zero_mse(self) -> None:
+        """uint8 raised a raw RuntimeError in 0.2.0; now MSE is exactly 0 and
+        PSNR is +inf, with no exception."""
+        a = torch.randint(0, 256, (4, 1, 8, 8), dtype=torch.uint8)
+        mse = per_patch_mse(a, a)
+        assert (mse == 0).all()
+        psnr = per_patch_psnr(a, a)
+        assert torch.all(torch.isinf(psnr)) and torch.all(psnr > 0)
+
+    def test_float16_small_differences_finite_psnr(self) -> None:
+        """float16 with sub-ulp differences overflowed to inf in 0.2.0."""
+        a = torch.full((2, 1, 4, 4), 1000.0, dtype=torch.float16)
+        b = a + 0.5
+        psnr = per_patch_psnr(a, b, max_value=1024.0)
+        assert torch.all(torch.isfinite(psnr))
+        expected = 10 * math.log10(1024.0**2 / 0.25)
+        assert psnr[0].item() == pytest.approx(expected, rel=1e-9)
 
 
 # ----------------------------------------------------------- per_patch_psnr ---

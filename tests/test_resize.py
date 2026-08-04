@@ -89,6 +89,48 @@ class TestTorchBackend:
         assert out.device.type == "cuda"
 
 
+class TestIntegerDtypeCast:
+    """Regression (0.2.0 audit): `_resize_torch` cast back to the original
+    integer dtype with a bare `.to()`, no clamp, no round. Bicubic legitimately
+    overshoots the input range, so the cast wrapped: -9.0 -> 247, 281.9 -> 25."""
+
+    def test_uint8_bicubic_hard_edge_no_wrap(self) -> None:
+        """8x8 uint8 hard edge resized to 32x32: in 0.2.0, 256 of 1024 pixels
+        were wrong, with black pixels becoming 254 and white pixels becoming 1.
+        After clamp+round, each side of the edge stays on its own side."""
+        img = torch.zeros(1, 8, 8, dtype=torch.uint8)
+        img[:, :, 4:] = 255
+        out = resize(img, target_size=(32, 32), backend="torch", resample="bicubic")
+        assert out.dtype == torch.uint8
+        center_row = out[0, 16, :]
+        assert (center_row[:16] < 128).all()
+        assert (center_row[16:] > 128).all()
+        # Saturated regions far from the edge are untouched.
+        assert (out[:, :, :8] == 0).all()
+        assert (out[:, :, -8:] == 255).all()
+
+    def test_int32_cast_rounds_and_does_not_wrap(self) -> None:
+        """Same wrap on int32: in 0.2.0 the bright side of a hard edge came
+        back as int32 min. Values are rounded and stay on their own side."""
+        img = torch.zeros(1, 8, 8, dtype=torch.int32)
+        img[:, :, 4:] = 1_000_000
+        out = resize(img, target_size=(32, 32), backend="torch", resample="bicubic")
+        assert out.dtype == torch.int32
+        center_row = out[0, 16, :]
+        assert (center_row[:16] < 500_000).all()
+        assert (center_row[16:] > 500_000).all()
+        assert (out[:, :, -8:] == 1_000_000).all()
+
+    def test_uint8_bilinear_no_overshoot_regression(self) -> None:
+        """Bilinear never overshoots, so values stay within the convex hull of
+        the input; this held in 0.2.0 and must keep holding."""
+        img = torch.randint(0, 256, (1, 8, 8), dtype=torch.uint8)
+        out = resize(img, target_size=(16, 16), backend="torch", resample="bilinear")
+        assert out.dtype == torch.uint8
+        assert int(out.min()) >= int(img.min())
+        assert int(out.max()) <= int(img.max())
+
+
 class TestCrossBackend:
     def test_pil_in_torch_backend_returns_pil(self) -> None:
         img = _rgb_pil(16, 16)

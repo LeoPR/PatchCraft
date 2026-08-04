@@ -4,45 +4,70 @@ All notable changes to PatchCraft will be documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.1] 2026-08-04
 
-### Known defects in 0.2.0 (found by a full audit on 2026-08-03, fixes pending)
+Bugfix release. Closes the full correctness backlog found by the 0.2.0 audit
+(2026-08-03). Every fix below was first reproduced as a failing regression
+test measuring the same quantities quoted from the audit, then fixed, then
+verified by round-trip lab scripts under `lab/2026-08-04-*.py` (reports in
+`Z:\outputs\patchcraft\2026-08-04-*\`). Test suite: 309 → 345 passed. No new
+features; the only namespace change is `WeightKind` becoming reachable, which
+was itself an audit defect.
 
-All four were reproduced against `patchcraft 0.2.0` on `torch 2.13.0+cpu`. The
-test suite is green (309 passed) because its blind spots are systematic: it
-exercises only divisible geometries, only `float32`/`float64`, and only inputs
-already inside `[0, 1]`.
+### Fixed: the four audit defects
 
-- **`reconstruct` and `stitch` silently zero every pixel the patch grid does
-  not cover.** Both validate only the patch *count*
+- **`reconstruct` and `stitch` silently zeroed every pixel the patch grid did
+  not cover.** Both validated only the patch *count*
   (`n_patches == num_h * num_w`) and never the *coverage*
-  (`(num_h - 1) * sh + ph == h`). A truncated grid therefore returns a
-  partly-black image instead of raising, contradicting the bit-exact
-  round-trip guarantee in `docs/THEORY.md` §9.2. Measured: `10×10` with
-  `patch_size=4, stride=4` returns 36 of 100 pixels zeroed; `13×13` with
-  `patch_size=5, stride=5` returns 69 of 169.
-- **`stitch(..., weight="hann")` zeroes most of the image, not the four
-  corners.** See `docs/THEORY.md` §2.5 for the measurements. `patch_size=2`
-  degenerates to an all-zero window and returns an all-black image with no
-  error.
-- **`resize` corrupts integer dtypes on the torch backend.** `_resize_torch`
-  casts back with a bare `out[0].to(original_dtype)`, with no clamp and no
-  round. Bicubic legitimately overshoots the input range, so the cast wraps:
-  `-9.0 → 247`, `281.9 → 25`. On an 8×8 uint8 hard edge resized to 32×32,
-  256 of 1024 pixels are wrong, with black pixels becoming 254 and white
-  pixels becoming 1. Separately, the default `pil` backend silently clamps
-  out-of-range floats: `resize(torch.full((3, 8, 8), 200.0), (4, 4))` returns
-  all `1.0`.
-- **`per_patch_mse` / `per_patch_psnr` do not promote to `float64`** the way
-  `patch_metrics` does. `uint8` input raises a raw torch `RuntimeError` with
-  no mention of PatchCraft, and `float16` input silently returns `inf`.
+  (`(num_h - 1) * sh + ph == h`). A truncated grid returned a partly-black
+  image instead of raising, contradicting the bit-exact round-trip guarantee
+  in `docs/THEORY.md` §9.2. Measured on 0.2.0: `10×10` with `patch_size=4,
+  stride=4` returned 36 of 100 pixels zeroed; `13×13` with `patch_size=5,
+  stride=5` returned 69 of 169. Both functions now reject any grid whose last
+  patch does not end exactly on the image edge, with a `ValueError` naming the
+  covered vs. requested extents and pointing at `patchcraft.tilings`.
+- **`stitch(..., weight="hann")` zeroed most of the image, not the four
+  corners.** The old `_hann_1d(n)` was the symmetric window
+  `0.5·(1 − cos(2πi/(n−1)))`, exactly zero at both endpoints. Measured on
+  0.2.0: `12×12, patch 4, stride 4` came back with 108 of 144 pixels zeroed;
+  `patch_size=2` degenerated to an all-zero window and returned an all-black
+  image with no error. The window is now the interior of a longer symmetric
+  Hann window, `hann_window(n + 2, periodic=False)[1:-1]`, strictly positive
+  on every sample (THEORY §2.5). Output values of `stitch(hann)` change for
+  every geometry; round-trip of unmodified patches remains exact.
+- **`resize` corrupted integer dtypes on the torch backend.** `_resize_torch`
+  cast back with a bare `out[0].to(original_dtype)`, with no clamp and no
+  round. Bicubic legitimately overshoots the input range, so the cast wrapped:
+  `-9.0 → 247`, `281.9 → 25`. Measured on 0.2.0: an 8×8 uint8 hard edge
+  resized to 32×32 had 256 of 1024 pixels wrong, black pixels becoming 254
+  and white pixels becoming 1. The cast back now rounds and clamps to the
+  `torch.iinfo` range of the integer dtype. Separately, the `pil` backend's
+  clamp of out-of-range floats to `[0, 1]` (the uint8 hop) is now documented
+  behavior in the docstring and THEORY §9.4 instead of a silent surprise.
+- **`per_patch_mse` / `per_patch_psnr` did not promote to `float64`** the way
+  `patch_metrics` does. On 0.2.0, `uint8` input raised a raw torch
+  `RuntimeError` with no mention of PatchCraft, and `float16` input silently
+  returned `inf`. Both now compute in `float64` for any input dtype and always
+  return `float64` (contract change recorded in THEORY §9.8).
 
-Also recorded: `float16` overflows to `inf` in `reconstruct`/`stitch`
-(`docs/THEORY.md` §9.2), integer dtypes are unsupported end to end rather than
-merely `uint8` (§9.1), and `WeightKind` is unreachable from the public
-namespace despite appearing in `stitch`'s signature.
+### Fixed: secondary defects recorded by the audit
 
-### Fixed
+- **`reconstruct` and `stitch` overflowed to `inf` on `float16`/`bfloat16`.**
+  `F.fold` accumulates the sum of all overlapping patches before the count-map
+  division, and the numerator exceeds the fp16 finite max (65504) well before
+  the division happens. Measured on 0.2.0: fp16 constant image of `10000.0`,
+  `patch 3, stride 1`, returned `inf` in 144 of 256 pixels. Half-precision
+  inputs now accumulate internally in `float32` (fold, count map, division)
+  and are cast back to the original dtype on return.
+- **`reconstruct` rejected integer dtypes with a raw torch
+  `NotImplementedError`** (`col2im_out_cpu` not implemented for
+  `Byte`/`Int`/`Long`). It now raises a clear `ValueError` up front, matching
+  the `stitch` guard.
+- **`WeightKind` was unreachable from the public namespace** despite appearing
+  in `stitch`'s signature. It is now exported by `patchcraft.stitch` and
+  re-exported by `patchcraft` (public API: 18 → 19 symbols).
+
+### Fixed: CI and packaging (carried over from the audit pass)
 
 - The sdist no longer ships `lab/` or `.vscode/`. The published
   `patchcraft-0.2.0.tar.gz` contains `lab/usage_demo.py`,

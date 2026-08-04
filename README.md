@@ -2,7 +2,7 @@
 
 A small library for **encoding an image into patches and decoding it back**. Built to slot into other people's `torch` pipelines as one transform among many, like a `GaussianBlur` step in a `Compose([...])`.
 
-> **Status:** v0.2.0 on PyPI, installable with `pip install patchcraft`. Public API (18 symbols): `extract`, `Patchify`, `reconstruct`, `stitch`, `pair`, `resize`, `Cache`, plus geometry helpers (`num_patches`, `tilings`, `TilingSpec`, `scale_factor`, `paired_tilings`, `PairedTilingSpec`), pixel metrics (`patch_metrics`, `per_patch_mse`, `per_patch_psnr`), and `PatchPair`/`PatchMeta`.
+> **Status:** v0.2.1 on PyPI, installable with `pip install patchcraft`. Public API (19 symbols): `extract`, `Patchify`, `reconstruct`, `stitch` (+ its `WeightKind`), `pair`, `resize`, `Cache`, plus geometry helpers (`num_patches`, `tilings`, `TilingSpec`, `scale_factor`, `paired_tilings`, `PairedTilingSpec`), pixel metrics (`patch_metrics`, `per_patch_mse`, `per_patch_psnr`), and `PatchPair`/`PatchMeta`.
 
 ## The lib vs. this repo
 
@@ -91,15 +91,16 @@ Use when patches were modified by a model and uniform averaging shows boundary s
 
 ```
    weight="uniform"     weight="hann"        weight="gaussian"
-   (== reconstruct)     centers > edges      centers >> edges (never 0)
+   (== reconstruct)     centers > edges      centers >> edges
+                        (never 0)            (never 0)
 
-   + + + +              . . . .              . o o .
-   + + + +              . X X .              o X X o
-   + + + +              . X X .              o X X o
-   + + + +              . . . .              . o o .
+   + + + +              . X X .              . o o .
+   + + + +              X X X X              o X X o
+   + + + +              X X X X              o X X o
+   + + + +              . X X .              . o o .
 
    no seam attenuation  strong attenuation,  smooth attenuation,
-                        image corners -> 0   corners preserved
+                        corners preserved    corners preserved
 ```
 
 ### Everything stays one-image-at-a-time

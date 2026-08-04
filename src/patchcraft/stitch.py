@@ -13,7 +13,6 @@ Contract: docs/THEORY.md §2.5 and §9.9.
 """
 from __future__ import annotations
 
-import math
 from typing import Literal
 
 import torch
@@ -21,7 +20,7 @@ import torch.nn.functional as F  # noqa: N812 (torch convention)
 
 from patchcraft.extract import _as_pair
 
-__all__ = ["stitch"]
+__all__ = ["WeightKind", "stitch"]
 
 
 WeightKind = Literal["uniform", "hann", "gaussian"]
@@ -29,11 +28,17 @@ _WEIGHT_KINDS: tuple[WeightKind, ...] = ("uniform", "hann", "gaussian")
 
 
 def _hann_1d(n: int, dtype: torch.dtype, device: torch.device) -> torch.Tensor:
-    """Symmetric Hann window in ``[0, 1]``. ``n == 1`` is degenerate → ``[1.0]``."""
+    """Hann window, strictly positive on every sample. ``n == 1`` → ``[1.0]``.
+
+    Uses the interior of a longer symmetric Hann window,
+    ``hann_window(n + 2, periodic=False)[1:-1]``, instead of the plain symmetric
+    window, which is exactly zero at both endpoints and zeroed every pixel whose
+    only covering patches placed it on a patch edge (0.2.0 defect, THEORY §2.5).
+    """
     if n == 1:
         return torch.ones(1, dtype=dtype, device=device)
-    i = torch.arange(n, dtype=dtype, device=device)
-    return 0.5 * (1.0 - torch.cos(2.0 * math.pi * i / (n - 1)))
+    w = torch.hann_window(n + 2, periodic=False, dtype=dtype, device=device)
+    return w[1:-1]
 
 
 def _gaussian_1d(n: int, dtype: torch.dtype, device: torch.device) -> torch.Tensor:
@@ -88,13 +93,14 @@ def stitch(
 
     - ``"uniform"``: each covering patch contributes equally. Mathematically
       equivalent to ``reconstruct`` (no seam attenuation).
-    - ``"hann"``: Hann window with full weight at patch center, zero at patch
-      edges. Strong seam suppression. **Caveat:** image-corner pixels that
-      are covered only by patches whose edge-weight at that location is zero
-      will be zero in the output. Document this for callers.
-    - ``"gaussian"``: Gaussian centered on the patch with
-      ``sigma = max(1.0, min(ph, pw) / 4)``. Smooth seam suppression without
-      the strict zero at the edge (no corner-zero artifact).
+    - ``"hann"``: Hann window with full weight at patch center and low weight
+      at patch edges. Strong seam suppression. The window is the interior of a
+      longer symmetric Hann window (``hann_window(n + 2)[1:-1]``), so it is
+      strictly positive on every sample and no output pixel is zeroed by the
+      window itself.
+    - ``"gaussian"``: Gaussian centered on the patch with per-axis
+      ``sigma = max(1.0, ph / 4)`` and ``sigma = max(1.0, pw / 4)``. Smooth
+      seam suppression with weight strictly above ``exp(-2)`` everywhere.
 
     Internally: each patch is multiplied by the 2-D weight kernel, the
     weighted patches are folded into the numerator, the weight kernel itself
@@ -104,10 +110,11 @@ def stitch(
     no uncovered pixels.
 
     Rejects (per §9.9): ``dilation != 1``; ``stride > patch_size`` in any
-    axis; ``patches.ndim != 4``; non-floating-point patches (kernel
-    multiplication breaks integer semantics for non-uniform weights,
-    callers convert to ``float`` first); ``image_shape`` inconsistent with
-    the patch grid; unknown ``weight``.
+    axis; grids that do not cover the image exactly (same coverage guard as
+    :func:`patchcraft.reconstruct`); ``patches.ndim != 4``; non-floating-point
+    patches (kernel multiplication breaks integer semantics for non-uniform
+    weights, callers convert to ``float`` first); ``image_shape`` inconsistent
+    with the patch grid; unknown ``weight``.
 
     Dtype and device of ``patches`` are preserved.
     """
@@ -169,6 +176,16 @@ def stitch(
             f"image_shape={image_shape} too small for patch_size=({ph}, {pw}) "
             f"and stride=({sh}, {sw})"
         )
+    covered_h = (num_h - 1) * sh + ph
+    covered_w = (num_w - 1) * sw + pw
+    if covered_h != h or covered_w != w:
+        raise ValueError(
+            f"patch grid leaves pixels uncovered (partial coverage forbidden): "
+            f"image_shape={image_shape}, patch_size=({ph}, {pw}), "
+            f"stride=({sh}, {sw}) covers ({covered_h}, {covered_w}) of "
+            f"({h}, {w}). Choose a geometry with exact coverage "
+            f"(see patchcraft.tilings)."
+        )
     expected_n_patches = num_h * num_w
     if n_patches != expected_n_patches:
         raise ValueError(
@@ -178,10 +195,18 @@ def stitch(
             f"(num_h={num_h}, num_w={num_w})."
         )
 
-    kernel = _window_kernel(weight, ph, pw, patches.dtype, patches.device)
+    # Half-precision inputs overflow inside F.fold, which accumulates the sum
+    # of all overlapping patches before the division (fp16 max is 65504).
+    # Build the kernel and accumulate in float32, cast back at the end (§9.2).
+    accum_dtype = (
+        torch.float32
+        if patches.dtype in (torch.float16, torch.bfloat16)
+        else patches.dtype
+    )
+    kernel = _window_kernel(weight, ph, pw, accum_dtype, patches.device)
 
     # Weighted patches: broadcast kernel (ph, pw) across (L, C, ph, pw).
-    weighted = patches * kernel
+    weighted = patches.to(accum_dtype) * kernel
 
     # Numerator fold: (L, C, ph, pw) -> (1, C*ph*pw, L) for F.fold.
     num_flat = (
@@ -208,8 +233,7 @@ def stitch(
         stride=(sh, sw),
     )
 
-    # clamp(min=1e-6): for "uniform" this matches reconstruct's count-map
-    # clamp. For "hann", corner pixels covered only by edge-weight-zero
-    # positions have ~0 numerator AND ~0 denominator, so output is dominated
-    # by the clamp (i.e., zero). Documented artifact (§9.9).
-    return (folded_num / folded_den.clamp(min=1e-6))[0]
+    # clamp(min=1e-6): absorbs float noise on covered pixels; geometry
+    # validation above guarantees no uncovered pixels, and all three windows
+    # are strictly positive, so the denominator is genuinely positive.
+    return (folded_num / folded_den.clamp(min=1e-6))[0].to(patches.dtype)
