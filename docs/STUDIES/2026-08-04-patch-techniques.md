@@ -61,7 +61,7 @@ dela. Tasks só migram para `src/` depois de passarem pelo funil do lab
 - *Gradient-domain blending* (Poisson/Pérez 2003): costura patches modificados
   impondo gradientes em vez de valores; superior a janelas quando o conteúdo
   modificado é estruturado (edição, inpainting).
-- *Reconstrução multi-escala*: pirâmide Laplaciana — decompõe em bandas,
+- *Reconstrução multi-escala*: pirâmide Laplaciana, que decompõe em bandas,
   patchifica por banda, reconstrói bottom-up. Base de SR e de blending de
   alta qualidade (Burt-Adelson).
 - *OLA generalizado*: weighted overlap-add com janelas customizadas pelo
@@ -74,7 +74,7 @@ dela. Tasks só migram para `src/` depois de passarem pelo funil do lab
   stacks de patches similares.
 - *EPLL* (Zoran-Weiss 2011): prior de patches via GMM; restauração iterativa.
 - *Shift-and-add / drizzle*: SR por registro sub-pixel de múltiplas grades
-  deslocadas — conecta com `pair` e grades jittered.
+  deslocadas, o que conecta com `pair` e grades jittered.
 - *MAE-style masking*: esconder fração dos patches e reconstruir os ausentes
   (consumer-side é o modelo; a lib forneceria mask/unmask exato).
 
@@ -92,7 +92,7 @@ Escopo natural de um `patchcraft-quant` (ROADMAP já prevê):
 - *Bit-depth reduction*: 8→4/2/1 bits com métricas de erro (`patch_metrics`
   já mede).
 - *Quantização por bloco estilo JPEG*: DCT por patch 8×8 + matriz de
-  quantização — fecha o loop com §1.2 DCT.
+  quantização, o que fecha o loop com §1.2 DCT.
 
 ## 4. Rotação com reversão (pedido do Leo)
 
@@ -116,7 +116,7 @@ que a matemática não entrega. Ver task T7.
 - **(IA) Scope creep.** §1.2 e §2.2 cobrem ~20 anos de literatura patch-based.
   Implementar tudo é um projeto de anos. Sugestão: ordenar por "o que o lab
   consegue validar em uma sessão" e pelo consumidor PatchSR (quando nascer).
-  KSVD/EPLL/BM3D são bibliotecas inteiras; talvez nunca devam entrar — o
+  KSVD/EPLL/BM3D são bibliotecas inteiras; talvez nunca devam entrar, porque o
   estudo os registra como *referência*, não como compromisso.
 - **(IA) Onde cada coisa mora.** Core: só o que é primitivo geométrico com
   contrato bit-exato (padding round-trip, rot90, flips, OLA com janela do
@@ -163,3 +163,28 @@ existe para medir o quão ruim é a reversão aproximada antes de prometê-la.
   backlog 0.2.1. `uv publish` verificado funcional (uv 0.11.11; cuidado:
   `dist/` contém 0.2.0 e 0.2.1, publicar com glob explícito). Estrutura do
   documento e tasks T1–T14 propostas. Aguardando críticas do Leo.
+- **2026-08-04 (IA, segunda entrada):** interlúdio de infraestrutura fechado:
+  0.2.1 publicada manualmente via `uv publish`, Trusted Publishing da pipeline
+  diagnosticado e corrigido (publisher do PyPI desalinhado dos 4 campos;
+  corrigido no registro do publisher, run `30887862622` verde, GitHub Release
+  criada). ROADMAP M8 marcado como verificado. **Crítica (IA):** a depuração
+  consumiu tempo por falta de acesso ao log do job (API exige admin; `gh`
+  desautenticado). Lição registrada: autenticar `gh` na máquina dev ou aceitar
+  que diagnóstico de CI passa por steps verbosos commitados. Execução do
+  estudo retomada: T1 (ADR 0003) e T3/T7 (rotação) iniciados.
+- **2026-08-04 (IA, terceira entrada):** T1 entregue como **ADR 0003
+  (Proposed)**: três classes de reversibilidade (R1 bit-exata, R2 aproximada
+  medida, R3 irreversível), com regra de naming (inversos R2 nunca usam
+  vocabulário de inversão exata) e core restrito a R1. Aguarda revisão do Leo
+  para virar Accepted. **T3 confirmado no lab**: rot90 k=0..3 e flips
+  invertem bit-exato em imagem e em patch stack, float32/64 e uint8
+  (`lab/2026-08-04-rotation-reversibility.py`). **T7 medido**: round-trip de
+  ângulo arbitrário via `grid_sample` bilinear teto de ~24 dB entre 5° e 45°
+  (max_abs ~0.37 em escala [0,1], ou seja, erro visível), e mesmo 90.0° pelo caminho
+  interpolado dá 132.8 dB onde `rot90` dá infinito. **Conclusão dos dados:**
+  a hipótese da crítica §4 estava certa, porque a rotação arbitrária é R2 no melhor
+  caso, e a separação rot90 (R1, candidata a core) de rotate (R2, auxiliar)
+  é obrigatória, não estilística. **Crítica (IA):** a curva de erro não é
+  monotônica no ângulo (1° dá 32 dB, 5° cai para 24 dB e achata); vale uma
+  entrada futura investigando se `bicubic` ou `padding_mode="reflection"`
+  melhora o teto antes de qualquer contrato R2 ser escrito.
