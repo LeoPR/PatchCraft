@@ -12,6 +12,24 @@
 
 **One image at a time, on purpose.** Every call takes one `(C, H, W)` float tensor and returns one tensor, because the patch count depends on the image and a batched API would have to pad or return a list. Your `for` loop, `torch.vmap` or `DataLoader` supplies the batching.
 
+```
+   one image                     the patch stack                one image again
+   (1, 4, 4)                     (4, 1, 2, 2), row-major        (1, 4, 4)
+
+   +-----+-----+                 +-----+   +-----+              +-----+-----+
+   | A A | B B |                 | A A |   | B B |              | A A | B B |
+   | A A | B B |    extract      | A A |   | B B |  reconstruct | A A | B B |
+   +-----+-----+   ---------->   +--p0-+   +--p1-+  ----------> +-----+-----+
+   | C C | D D |   patch_size=2  +-----+   +-----+   stride=2   | C C | D D |
+   | C C | D D |   stride=2      | C C |   | D D |              | C C | D D |
+   +-----+-----+                 | C C |   | D D |              +-----+-----+
+                                 +--p2-+   +--p3-+
+```
+
+The image goes out as a stack of patches, you do your work on the stack, and it comes back as one
+image. That last arrow has two doors: `reconstruct` when the patches are untouched, and `stitch`
+when a model rewrote them and the seams need to fade.
+
 This page is the call page. The manual is [docs/GUIDE.md](docs/GUIDE.md), and it carries the measurements, the tables and the long examples that used to live here.
 
 ## Install

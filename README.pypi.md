@@ -11,6 +11,24 @@ PatchCraft takes a single `(C, H, W)` float tensor, cuts it into a stack of patc
 
 The scope is one image at a time, and that is worth knowing before you install anything, because it is the constraint that decides whether PatchCraft fits your problem at all. There is no batching across images, no `Dataset`, no `DataLoader` and no training loop, so multi-image work stays in your own `for` loop, in your `torch.vmap`, or in your `DataLoader` calling this once per item.
 
+```
+   one image                     the patch stack                one image again
+   (1, 4, 4)                     (4, 1, 2, 2), row-major        (1, 4, 4)
+
+   +-----+-----+                 +-----+   +-----+              +-----+-----+
+   | A A | B B |                 | A A |   | B B |              | A A | B B |
+   | A A | B B |    extract      | A A |   | B B |  reconstruct | A A | B B |
+   +-----+-----+   ---------->   +--p0-+   +--p1-+  ----------> +-----+-----+
+   | C C | D D |   patch_size=2  +-----+   +-----+   stride=2   | C C | D D |
+   | C C | D D |   stride=2      | C C |   | D D |              | C C | D D |
+   +-----+-----+                 | C C |   | D D |              +-----+-----+
+                                 +--p2-+   +--p3-+
+```
+
+The image goes out as a stack of patches, you do your work on the stack, and it comes back as one
+image. That last arrow has two doors: `reconstruct` when the patches are untouched, and `stitch`
+when a model rewrote them and the seams need to fade.
+
 This page is the short one. The manual is [docs/GUIDE.md](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md), which carries the measurements, the tables and the long examples.
 
 ## Install

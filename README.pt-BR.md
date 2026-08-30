@@ -12,6 +12,24 @@
 
 **Uma imagem por vez, de propósito.** Cada chamada recebe um tensor float `(C, H, W)` e devolve um tensor, porque a quantidade de patches depende da imagem, e uma API em lote teria que preencher com padding ou devolver uma lista. Quem fornece o lote é o seu `for`, o `torch.vmap` ou o `DataLoader`.
 
+```
+   uma imagem                    a pilha de patches             a imagem de volta
+   (1, 4, 4)                     (4, 1, 2, 2), ordem row-major  (1, 4, 4)
+
+   +-----+-----+                 +-----+   +-----+              +-----+-----+
+   | A A | B B |                 | A A |   | B B |              | A A | B B |
+   | A A | B B |    extract      | A A |   | B B |  reconstruct | A A | B B |
+   +-----+-----+   ---------->   +--p0-+   +--p1-+  ----------> +-----+-----+
+   | C C | D D |   patch_size=2  +-----+   +-----+   stride=2   | C C | D D |
+   | C C | D D |   stride=2      | C C |   | D D |              | C C | D D |
+   +-----+-----+                 | C C |   | D D |              +-----+-----+
+                                 +--p2-+   +--p3-+
+```
+
+A imagem sai como uma pilha de patches, você faz o seu trabalho sobre a pilha, e ela volta como uma
+imagem só. Aquela última seta tem duas portas: o `reconstruct`, quando os patches estão intocados, e
+o `stitch`, quando um modelo os reescreveu e as emendas precisam sumir.
+
 Esta é a página de chamada. O manual está em [docs/GUIDE.md](docs/GUIDE.md), e é lá que ficam as medições, as tabelas e os exemplos longos.
 
 ## Instalação
