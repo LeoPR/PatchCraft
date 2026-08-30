@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "patchcraft"
 description = "Image patch extraction, reconstruction, pairing and seam-aware stitching for super-resolution and dataset pipelines."
-readme = "README.md"
+readme = "README.pypi.md"
 license = "MIT"
 requires-python = ">=3.12"
 authors = [{ name = "Leonardo Marques de Souza" }]
