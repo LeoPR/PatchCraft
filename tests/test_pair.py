@@ -101,6 +101,35 @@ class TestSameRegion:
         meta_5 = result.metas[5]
         assert (meta_5.row, meta_5.col) == (4, 4)
 
+    def test_meta_coords_are_pixels_not_grid_indices(self) -> None:
+        """``row``/``col`` are LR pixel offsets, with the stride already applied.
+
+        Regression guard for a docstring bug shipped in 0.2.1, which told
+        callers the top-left was at ``(row * sh_lr, col * sw_lr)``. That
+        double-applies the stride. It is invisible at ``stride == 1``, where
+        grid index and pixel coordinate coincide, so this test uses
+        ``stride != 1`` and asserts both that the stored value indexes the
+        right region and that the old formula indexes a different one.
+        """
+        stride = 2
+        lr, hr = _make_lr_hr(1, 8, 8, scale=2)
+        result = pair(lr, hr, lr_patch_size=2, scale_factor=2, stride=stride)
+
+        for meta, lr_p in zip(result.metas, result.lr_patches, strict=True):
+            ph, pw = meta.lr_patch_size
+            r, c = meta.row, meta.col
+            # The stored coordinate is the pixel offset: use it as-is.
+            assert torch.equal(lr_p, lr[:, r : r + ph, c : c + pw])
+
+        # And the discarded formula really does land elsewhere, so a future
+        # edit cannot quietly reintroduce it and still pass.
+        off_grid = result.metas[1]
+        r2, c2 = off_grid.row * stride, off_grid.col * stride
+        assert (r2, c2) != (off_grid.row, off_grid.col)
+        assert not torch.equal(
+            result.lr_patches[1], lr[:, r2 : r2 + 2, c2 : c2 + 2]
+        )
+
 
 # ---------------------------------------------------------------- PatchMeta ---
 

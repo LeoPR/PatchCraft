@@ -167,7 +167,7 @@ Visualizing the three 2-D kernels at `patch_size=4` (`+` = full weight, `X` = hi
   `num_h_lr = floor((H_lr - ph_lr) / sh_lr) + 1`
   `num_h_hr = floor((H_hr - ph_hr) / sh_hr) + 1 = floor((r·H_lr - r·ph_lr) / (r·sh_lr)) + 1 = floor((H_lr - ph_lr) / sh_lr) + 1`
 
-So `num_h_lr == num_h_hr` (and analogously for width) exactly when the scale factor is an integer. The top-left of LR patch `k` is at `(row · sh_lr, col · sw_lr)`; multiply by `r` to get the HR patch origin, the same image region at a different resolution.
+So `num_h_lr == num_h_hr` (and analogously for width) exactly when the scale factor is an integer. The top-left of LR patch `k` is at `(i · sh_lr, j · sw_lr)`, where `(i, j) = (k // num_w_lr, k % num_w_lr)` is the grid position defined in §1. Beware the name collision: this grid index is **not** what `PatchMeta.row` and `PatchMeta.col` hold. Those fields store the pixel coordinate itself, with the stride already applied, so you multiply them by `r` to get the HR origin and never by the stride again.
 
 **Truncation.** When `(H_lr − ph_lr) % sh_lr != 0`, the trailing LR rows that don't fit a full patch are dropped. Because of the integer scaling, the same trailing HR rows are also dropped, so the two grids stay aligned. The user loses a strip on the right/bottom of both resolutions. If full coverage is required, pad the LR image *before* extracting (and the HR image correspondingly), because PatchCraft does not pad implicitly.
 

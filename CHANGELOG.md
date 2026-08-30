@@ -4,6 +4,39 @@ All notable changes to PatchCraft will be documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **`pair()`'s docstring double-applied the stride, and could silently
+  misplace every patch for a caller who trusted it.** It said patch `k` has
+  its top-left at LR pixel `(row * sh_lr, col * sw_lr)`, but `PatchMeta.row`
+  and `PatchMeta.col` already have the stride applied: they are built as
+  `(k // num_w_lr) * sh_lr` and `(k % num_w_lr) * sw_lr`. Following the
+  docstring multiplied by the stride a second time and landed on a different
+  patch. Only the text was wrong; the code, the tests and the runtime
+  behaviour were correct throughout, so no output of any released version
+  changes.
+
+  The failure mode was quiet, which is why it is worth a changelog entry: no
+  exception is raised, the patch exists, and only its recorded position is
+  wrong, so a consumer using patch position as a feature gets a worse model
+  rather than a crash. It is also invisible at `stride == 1`, where the grid
+  index and the pixel coordinate coincide, which is why it survived review.
+
+  Root cause was a name collision rather than a typo. `row`/`col` mean grid
+  indices in `THEORY.md` §1 (where `(row · sh, col · sw)` is the correct
+  pixel formula) and pixel coordinates in `PatchMeta`. The `pair()` docstring
+  took §1's formula and applied it to `PatchMeta`'s fields. `THEORY.md` §3
+  now flags the collision explicitly instead of carrying both meanings eight
+  lines apart, and `tests/test_pair.py` gains
+  `test_meta_coords_are_pixels_not_grid_indices`, which uses `stride != 1`
+  and asserts both that the stored coordinate indexes the right region and
+  that the discarded formula indexes a different one.
+
+  Reported from an API review done for the QSR prototype, which uses patch
+  position as a context feature.
+
 ## [0.2.1] 2026-08-04
 
 Bugfix release. Closes the full correctness backlog found by the 0.2.0 audit

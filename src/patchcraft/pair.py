@@ -62,9 +62,14 @@ def pair(
     ``(C, scale_factor * H_lr, scale_factor * W_lr)``. HR patch size and HR
     stride are derived as ``scale_factor * lr_*``; dilation is fixed at 1.
 
-    Patch ``k`` on the LR side has its top-left at LR pixel
-    ``(row * sh_lr, col * sw_lr)``; the corresponding HR patch covers the
-    same image region at ``scale_factor`` times the resolution.
+    Patch ``k`` on the LR side has its top-left at LR pixel ``(row, col)``,
+    read straight off its :class:`PatchMeta`. **The stride is already applied
+    there**: the fields are built as ``row = (k // num_w_lr) * sh_lr`` and
+    ``col = (k % num_w_lr) * sw_lr``, so multiplying them by the stride again
+    lands on the wrong patch whenever ``stride != 1``. The corresponding HR
+    patch covers the same image region at ``scale_factor`` times the
+    resolution, with its top-left at ``(row * scale_factor,
+    col * scale_factor)``.
 
     Returns a ``PatchPair`` with:
     - ``lr_patches``: ``Tensor[L, C, ph_lr, pw_lr]`` (from `extract`).
