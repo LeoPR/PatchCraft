@@ -37,6 +37,42 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Reported from an API review done for the QSR prototype, which uses patch
   position as a context feature.
 
+## [0.2.2] 2026-08-30
+
+Documentation release. No behaviour changes, so every call that worked on 0.2.1
+works identically here, and the only file under `src/` that changed is a
+docstring.
+
+### Fixed
+
+- **`reconstruct`'s docstring claimed the overlap round trip returns the
+  original image.** It said each pixel comes back as "the average of all patches
+  covering it, the same as the original when patches came from `extract`
+  unmodified". The second half is false. Measured on a 16x16 image with
+  `patch_size=4, stride=1`, unmodified patches straight from `extract` come back
+  with `torch.equal` False and a maximum absolute error of 2.4e-07 in float32.
+
+  The docstring now states the real rule: the round trip is bit-exact when every
+  value in the count map is a power of two, because dividing a float by a power
+  of two is the one division that never rounds. It also says that widening the
+  dtype does not rescue it, since the deciding axis is the geometry rather than
+  the precision.
+
+### Changed
+
+- **The README is now a call page and the manual moved to `docs/GUIDE.md`.** The
+  README had reached 864 lines, which made it a manual printed on the front
+  door. It is 137 lines now, and it answers what the library is, where you are
+  getting into, and which of `reconstruct` or `stitch` you want. Nothing was
+  discarded: every measurement, table and long example moved into the guide,
+  which gained its own table of contents.
+- **PyPI gets its own page.** `pyproject.toml` publishes `README.pypi.md`, which
+  stands alone for a reader arriving from a search, and carries only absolute
+  links because PyPI drops relative ones.
+- **A Portuguese cover page joins the English one.** `README.pt-BR.md` is the
+  translation, `README.md` stays canonical, both carry an l10n colophon sharing
+  one `doc_id`, and git measures whether the translation is current.
+
 ## [0.2.1] 2026-08-04
 
 Bugfix release. Closes the full correctness backlog found by the 0.2.0 audit

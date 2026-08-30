@@ -48,7 +48,7 @@ Homepage = "https://github.com/LeoPR/PatchCraft"
 Repository = "https://github.com/LeoPR/PatchCraft"
 Issues = "https://github.com/LeoPR/PatchCraft/issues"
 Changelog = "https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md"
-Documentation = "https://github.com/LeoPR/PatchCraft/blob/main/docs/USAGE.md"
+Documentation = "https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md"
 
 [tool.hatch.version]
 path = "src/patchcraft/__init__.py"

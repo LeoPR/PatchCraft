@@ -1,5 +1,11 @@
 # PatchCraft: usage walkthrough
 
+> **This walkthrough is behind the library.** It was captured against 0.2.0, so it predates
+> `WeightKind` becoming public, the four correctness fixes in 0.2.1 and the docstring correction in
+> 0.2.2, and some of its examples no longer reproduce. The current manual is
+> [GUIDE.md](GUIDE.md), and the per-function contract is in [THEORY.md](THEORY.md) §9. Regenerating
+> this page is tracked in [FOCO-1.0.md](FOCO-1.0.md) as blocker B4.
+
 Every snippet below was captured from a live REPL session against
 `patchcraft==0.2.0`. Outputs are real, not pseudocode. Re-run the
 script behind it at any time:
