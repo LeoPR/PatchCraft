@@ -227,3 +227,14 @@ class TestRejects:
     def test_non_tensor_non_pil(self) -> None:
         with pytest.raises(TypeError, match=r"torch\.Tensor or PIL"):
             resize([1, 2, 3], target_size=(2, 2), backend="torch")  # type: ignore[arg-type]
+
+
+def test_tensor_to_pil_int_tensor_clamps_instead_of_wrapping():
+    """int16 values outside [0, 255] must clamp, not wrap (300 -> 255, not 44)."""
+    t = torch.tensor([[[300, -5], [100, 255]]], dtype=torch.int16)
+    out = resize(t, (2, 2), backend="pil")
+    assert out.dtype == torch.int16
+    assert out[0, 0, 0].item() == 255  # would be 44 with a bare astype(uint8)
+    assert out[0, 0, 1].item() == 0    # would be 251 with a bare astype(uint8)
+    assert out[0, 1, 0].item() == 100
+    assert out[0, 1, 1].item() == 255

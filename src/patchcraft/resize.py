@@ -55,7 +55,10 @@ def _tensor_to_pil_u8(tensor: torch.Tensor) -> PILImage:
     if tensor.is_floating_point():
         arr = (tensor.clamp(0, 1).cpu().numpy() * 255).round().astype(np.uint8)
     else:
-        arr = tensor.cpu().numpy().astype(np.uint8)
+        # Integer tensors: clamp to the uint8 range before casting, otherwise
+        # values outside [0, 255] wrap (300 -> 44) -- same defect class as the
+        # 0.2.0 bicubic overshoot wrap on the torch backend.
+        arr = tensor.clamp(0, 255).cpu().numpy().astype(np.uint8)
     c = arr.shape[0]
     if c == 1:
         return Image.fromarray(arr[0], mode="L")
@@ -122,7 +125,7 @@ def _resize_torch(
     if mode in {"bilinear", "bicubic"}:
         kwargs["align_corners"] = False
     out = F.interpolate(x, **kwargs)
-    if not torch.empty(0, dtype=original_dtype).is_floating_point():
+    if not original_dtype.is_floating_point:
         # Integer dtypes: bicubic/bilinear overshoot the input range, and a
         # bare cast wraps (-9.0 -> 247 in uint8) and truncates. Round to the
         # nearest integer and clamp to the dtype range instead (0.2.0 defect).
@@ -180,7 +183,7 @@ def resize(
             pil_in = _tensor_to_pil_u8(image)
             pil_out = _resize_pil(pil_in, target_size, resample)
             tensor_out = _pil_to_tensor_f32(pil_out)
-            if not torch.empty(0, dtype=original_dtype).is_floating_point():
+            if not original_dtype.is_floating_point:
                 tensor_out = (tensor_out * 255).round()
             return tensor_out.to(original_dtype)
         return _resize_torch(image, target_size, resample)
