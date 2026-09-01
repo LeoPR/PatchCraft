@@ -211,3 +211,50 @@ class TestRoundtripIntegration:
         m = patch_metrics(img, recon)
         assert m["psnr_db"] == float("inf")
         assert m["max_abs"] == 0.0
+
+
+def _patch_metrics_reference(a, b, max_value=1.0):
+    """The pre-0.3.0 patch_metrics computation, as ground truth."""
+    import math
+    a64 = a.to(torch.float64) if a.dtype != torch.float64 else a
+    b64 = b.to(torch.float64) if b.dtype != torch.float64 else b
+    diff = a64 - b64
+    abs_diff = diff.abs()
+    mse = (diff * diff).mean().item()
+    psnr_db = float("inf") if mse == 0.0 else 10.0 * math.log10(max_value * max_value / mse)
+    return {
+        "mae": abs_diff.mean().item(),
+        "mse": mse,
+        "max_abs": abs_diff.max().item(),
+        "psnr_db": psnr_db,
+    }
+
+
+@pytest.mark.parametrize("shape", [(3, 8, 8), (16, 3, 4, 5), (2, 1, 1, 1)])
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64, torch.float16])
+def test_patch_metrics_matches_reference(shape, dtype):
+    a = torch.randn(shape, dtype=dtype)
+    b = torch.randn(shape, dtype=dtype)
+    got = patch_metrics(a, b)
+    ref = _patch_metrics_reference(a, b)
+    assert got.keys() == ref.keys()
+    for k in ref:
+        assert got[k] == ref[k], k  # bit-exact, not approximate
+
+
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64, torch.float16])
+def test_per_patch_mse_matches_reference(dtype):
+    a = torch.randn(7, 3, 4, 5, dtype=dtype)
+    b = torch.randn(7, 3, 4, 5, dtype=dtype)
+    got = per_patch_mse(a, b)
+    diff = a.to(torch.float64) - b.to(torch.float64)
+    ref = (diff * diff).mean(dim=(1, 2, 3))
+    assert torch.equal(got, ref)
+
+
+def test_patch_metrics_does_not_mutate_inputs():
+    a = torch.randn(4, 3, 4, 4, dtype=torch.float64)
+    b = torch.randn(4, 3, 4, 4, dtype=torch.float64)
+    a0, b0 = a.clone(), b.clone()
+    patch_metrics(a, b)
+    assert torch.equal(a, a0) and torch.equal(b, b0)

@@ -91,16 +91,24 @@ def patch_metrics(
     _check_pair(a, b)
     mv = _check_max_value(max_value)
 
-    a64 = a.to(torch.float64) if a.dtype != torch.float64 else a
-    b64 = b.to(torch.float64) if b.dtype != torch.float64 else b
-    diff = a64 - b64
+    # Single f64 materialization: in-place subtract casts b elementwise, so
+    # no separate f64 copy of b (and no mutation of a when a is already f64).
+    if a.dtype == torch.float64:
+        diff = a - b
+    else:
+        diff = a.to(torch.float64)
+        diff.sub_(b)
     abs_diff = diff.abs()
-    mse = (diff * diff).mean().item()
+    # One device->host sync for all three scalars instead of three .item()s.
+    mae_t, mse_t, max_abs_t = torch.stack(
+        [abs_diff.mean(), (diff * diff).mean(), abs_diff.max()]
+    ).tolist()
+    mse = float(mse_t)
     psnr_db = float("inf") if mse == 0.0 else 10.0 * math.log10(mv * mv / mse)
     return {
-        "mae": abs_diff.mean().item(),
+        "mae": float(mae_t),
         "mse": mse,
-        "max_abs": abs_diff.max().item(),
+        "max_abs": float(max_abs_t),
         "psnr_db": psnr_db,
     }
 
@@ -123,9 +131,11 @@ def per_patch_mse(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
         raise ValueError(
             f"per_patch_mse expects 4-D tensors (L, C, h, w), got ndim={a.ndim}"
         )
-    a64 = a.to(torch.float64) if a.dtype != torch.float64 else a
-    b64 = b.to(torch.float64) if b.dtype != torch.float64 else b
-    diff = a64 - b64
+    if a.dtype == torch.float64:
+        diff = a - b
+    else:
+        diff = a.to(torch.float64)
+        diff.sub_(b)
     return (diff * diff).mean(dim=(1, 2, 3))
 
 
@@ -150,10 +160,8 @@ def per_patch_psnr(
         Signal dynamic range; see :func:`patch_metrics`.
     """
     mv = _check_max_value(max_value)
-    mse = per_patch_mse(a, b)
-    finfo = torch.finfo(mse.dtype) if mse.is_floating_point() else None
-    tiny = finfo.tiny if finfo is not None else 1e-12
-    mse_safe = mse.clamp_min(tiny)
+    mse = per_patch_mse(a, b)  # always float64 per per_patch_mse's contract
+    mse_safe = mse.clamp_min(torch.finfo(torch.float64).tiny)
     psnr = 10.0 * torch.log10((mv * mv) / mse_safe)
     inf = torch.full_like(mse, float("inf"))
     return torch.where(mse == 0, inf, psnr)
