@@ -1,4 +1,7 @@
-"""Reconstruction of an image from its patches via torch.nn.functional.fold.
+"""Reconstruction of an image from its patches.
+
+Non-overlapping grids are a pure rearrangement; overlapping grids use
+F.fold for the patches plus a closed-form O(H+W) count map.
 
 Contract: docs/THEORY.md §2 and §9.2.
 """
@@ -63,11 +66,18 @@ def reconstruct(
             "patches.float() first."
         )
 
-    h, w, num_h, num_w = check_fold_geometry(  # noqa: RUF059 (used in Tasks 4-5)
+    h, w, num_h, num_w = check_fold_geometry(
         patches, image_shape, stride, dilation, op="reconstruct"
     )
     # stride was validated inside the helper; normalize it for the F.fold calls.
     sh, sw = (stride, stride) if isinstance(stride, int) else stride
+
+    if sh == ph and sw == pw:
+        # Non-overlapping grid: every pixel is covered exactly once, so
+        # reconstruction is a pure rearrangement -- no fold, no count map, and
+        # no widening for half precision (nothing accumulates).
+        grid = patches.reshape(num_h, num_w, c, ph, pw)
+        return grid.permute(2, 0, 3, 1, 4).reshape(c, h, w)
 
     # Half-precision inputs overflow inside F.fold, which accumulates the sum
     # of all overlapping patches before the count-map division (fp16 max is
@@ -90,17 +100,23 @@ def reconstruct(
         stride=(sh, sw),
     )
 
-    # Count map: same fold geometry but 1 "channel", which broadcasts across C in division.
-    ones = torch.ones(
-        1, ph * pw, n_patches, dtype=accum_dtype, device=patches.device
-    )
-    count = F.fold(
-        ones,
-        output_size=(h, w),
-        kernel_size=(ph, pw),
-        stride=(sh, sw),
-    )
+    # Closed-form count map: on a full-coverage regular grid the number of
+    # patches covering row y is
+    #   min(y//sh + 1, num_h) + min((h-1-y)//sh + 1, num_h) - num_h
+    # (prefix ramp + suffix ramp - total; inclusion-exclusion), same along W,
+    # and the 2-D map is the outer product. O(H+W) integer math instead of a
+    # second F.fold of ones; the contents are identical integers, so the
+    # division is bit-exact vs the fold.
+    ys = torch.arange(h, device=patches.device)
+    num_h_t = torch.full_like(ys, num_h)
+    count_h = torch.minimum(ys // sh + 1, num_h_t)
+    count_h = count_h + torch.minimum((h - 1 - ys) // sh + 1, num_h_t) - num_h
+    xs = torch.arange(w, device=patches.device)
+    num_w_t = torch.full_like(xs, num_w)
+    count_w = torch.minimum(xs // sw + 1, num_w_t)
+    count_w = count_w + torch.minimum((w - 1 - xs) // sw + 1, num_w_t) - num_w
+    count = (count_h.unsqueeze(1) * count_w.unsqueeze(0)).to(accum_dtype)
 
-    # clamp(min=1e-6) absorbs float noise on covered pixels; geometry validation
-    # above guarantees there are no uncovered pixels (count > 0 everywhere).
-    return (folded / count.clamp(min=1e-6))[0].to(patches.dtype)
+    # Every count is an exact integer >= 1 (coverage is validated), so no
+    # clamp is needed -- unlike the folded ones, there is no float noise.
+    return (folded[0] / count).to(patches.dtype)

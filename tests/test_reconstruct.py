@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 import torch
+import torch.nn.functional as F  # noqa: N812 (torch convention)
 
 from patchcraft import extract, reconstruct
 
@@ -260,3 +261,51 @@ class TestCoverageGuard:
         patches = extract(img, patch_size=4, stride=2)  # (4-1)*2+4 == 10
         out = reconstruct(patches, image_shape=img.shape, stride=2)
         assert torch.allclose(out, img)
+
+
+# ----------------------------------------------------- Characterization (0.3.0) --
+
+
+def _fold_reference(patches, image_shape, stride):
+    """The pre-0.3.0 reconstruct implementation, as ground truth."""
+    n_patches, c, ph, pw = patches.shape
+    h, w = image_shape[1], image_shape[2]
+    sh, sw = (stride, stride) if isinstance(stride, int) else stride
+    accum_dtype = (
+        torch.float32
+        if patches.dtype in (torch.float16, torch.bfloat16)
+        else patches.dtype
+    )
+    work = patches.to(accum_dtype)
+    flat = work.permute(1, 2, 3, 0).reshape(c * ph * pw, n_patches).unsqueeze(0)
+    folded = F.fold(flat, (h, w), (ph, pw), stride=(sh, sw))
+    ones = torch.ones(1, ph * pw, n_patches, dtype=accum_dtype, device=patches.device)
+    count = F.fold(ones, (h, w), (ph, pw), stride=(sh, sw))
+    return (folded / count.clamp(min=1e-6))[0].to(patches.dtype)
+
+
+@pytest.mark.parametrize("c,h,w", [(1, 8, 8), (3, 16, 16), (3, 32, 24), (4, 15, 15)])
+@pytest.mark.parametrize(
+    "ph,pw,sh,sw",
+    [
+        (2, 2, 2, 2),   # exact non-overlap -> fast path
+        (4, 4, 4, 4),   # exact non-overlap, larger
+        (4, 4, 2, 2),   # overlap 50%
+        (3, 3, 1, 1),   # max overlap
+        (4, 6, 2, 3),   # rectangular patch, anisotropic stride
+    ],
+)
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64, torch.float16])
+def test_reconstruct_matches_fold_reference(c, h, w, ph, pw, sh, sw, dtype):
+    num_h = (h - ph) // sh + 1
+    num_w = (w - pw) // sw + 1
+    if (num_h - 1) * sh + ph != h or (num_w - 1) * sw + pw != w:
+        pytest.skip("geometry does not cover exactly")
+    img = torch.randn(c, h, w, dtype=dtype)
+    from patchcraft import extract
+    patches = extract(img, (ph, pw), (sh, sw))
+    got = reconstruct(patches, image_shape=(c, h, w), stride=(sh, sw))
+    ref = _fold_reference(patches, (c, h, w), (sh, sw))
+    assert got.shape == ref.shape
+    assert got.dtype == ref.dtype
+    assert torch.equal(got, ref)
