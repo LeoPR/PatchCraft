@@ -146,7 +146,7 @@ The round trip is exact when every value in the count map is a power of two, whi
 
 **0.4.0, pre-1.0.** Output values can still change in a minor release, and [CHANGELOG.md](CHANGELOG.md) records each change with the measurement behind it.
 
-726 tests collected and CI is green on {Ubuntu, Windows} x {Python 3.12, 3.13}, with `ruff check` and `mypy --strict` in the same run. The package is typed and ships `py.typed`.
+731 tests collected and CI is green on {Ubuntu, Windows} x {Python 3.12, 3.13}, with `ruff check` and `mypy --strict` in the same run. The package is typed and ships `py.typed`.
 
 No external project has consumed it yet, and no CUDA path in this library has ever executed. [The guide](docs/GUIDE.md#8-what-this-project-does-not-claim) lists what else this project declines to claim.
 
@@ -155,7 +155,7 @@ No external project has consumed it yet, and no CUDA path in this library has ev
 | If you want | Open |
 |---|---|
 | The manual: every argument above, measured, with its output | [docs/GUIDE.md](docs/GUIDE.md) |
-| A walkthrough of each of the 19 public symbols | [docs/USAGE.md](docs/USAGE.md) |
+| A walkthrough of each of the 20 public symbols | [docs/USAGE.md](docs/USAGE.md) |
 | The line between this library and your pipeline | [docs/SCOPE.md](docs/SCOPE.md) |
 | The math, the decisions and the per-function contract | [docs/THEORY.md](docs/THEORY.md) |
 | Why the API looks like this | [docs/ADR/](docs/ADR) |

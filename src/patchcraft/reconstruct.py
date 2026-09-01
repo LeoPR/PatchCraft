@@ -97,7 +97,9 @@ def reconstruct(
 
     # Numerator of the overlap fold: native accelerator when available,
     # otherwise F.fold of the (1, C*ph*pw, L) flattening. Both produce the
-    # (C, H, W) sum over covering patches in ascending patch order.
+    # (C, H, W) sum over covering patches in descending patch order
+    # (= ascending kernel offset, ATen col2im's per-pixel order — bit-exact
+    # against each other).
     numerator = fold_weighted(work, (c, h, w), (sh, sw), None)
     if numerator is None:
         # (L, C, ph, pw) -> (1, C*ph*pw, L), the layout F.fold expects.

@@ -195,3 +195,29 @@ def test_reconstruct_noncontiguous_matches_pure(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setenv("PATCHCRAFT_ACCEL", "1")
     fast = reconstruct(patches, (3, 16, 16), 2)
     assert torch.equal(pure, fast)
+
+
+@real_accel
+def test_requires_grad_falls_back_to_differentiable_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The native kernel writes a leaf tensor; autograd needs the torch path."""
+    torch.manual_seed(0)
+    patches = torch.rand(49, 3, 4, 4, requires_grad=True)
+    monkeypatch.setenv("PATCHCRAFT_ACCEL", "1")
+    out = reconstruct(patches, (3, 16, 16), 2)
+    assert out.requires_grad
+    assert out.grad_fn is not None
+    out.sum().backward()
+    assert patches.grad is not None
+
+
+@real_accel
+def test_requires_grad_falls_back_stitch(monkeypatch: pytest.MonkeyPatch) -> None:
+    torch.manual_seed(0)
+    patches = torch.rand(49, 3, 4, 4, requires_grad=True)
+    monkeypatch.setenv("PATCHCRAFT_ACCEL", "1")
+    out = stitch(patches, (3, 16, 16), 2, weight="hann")
+    assert out.grad_fn is not None
+    out.sum().backward()
+    assert patches.grad is not None

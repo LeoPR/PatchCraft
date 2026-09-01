@@ -60,7 +60,9 @@ def fold_weighted(
     ``out[c, y, x] = sum_p patches[p, c, y - row_p, x - col_p] * kernel[...]``
     over the patches covering ``(y, x)`` — the numerator of the overlap fold,
     before the count/denominator division the caller performs. Summation per
-    pixel is in ascending patch index, matching ``F.fold``'s col2im order.
+    pixel is in descending patch index (= ascending kernel offset), matching
+    ATen col2im's per-pixel order — the order that is bit-exact against
+    ``F.fold``.
 
     Returns ``None`` when the accelerator is unavailable or the input is
     ineligible (non-CPU device, dtype outside float32/float64, mismatched
@@ -73,6 +75,10 @@ def fold_weighted(
     if patches.device.type != "cpu":
         return None
     if patches.dtype not in (torch.float32, torch.float64):
+        return None
+    if patches.requires_grad:
+        # The native kernel writes a leaf tensor through raw pointers — no
+        # autograd graph. Fall back to the differentiable torch path.
         return None
     if kernel is not None and (
         kernel.dtype != patches.dtype or kernel.device != patches.device

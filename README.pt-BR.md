@@ -146,7 +146,7 @@ O round-trip é exato quando todo valor do mapa de cobertura é potência de doi
 
 **0.4.0, pré-1.0.** Os valores de saída ainda podem mudar numa versão menor, e o [CHANGELOG.md](CHANGELOG.md) registra cada mudança com a medição por trás dela.
 
-São 726 testes coletados, com CI verde em {Ubuntu, Windows} x {Python 3.12, 3.13}, e com `ruff check` e `mypy --strict` na mesma execução. O pacote é tipado e distribui o `py.typed`.
+São 731 testes coletados, com CI verde em {Ubuntu, Windows} x {Python 3.12, 3.13}, e com `ruff check` e `mypy --strict` na mesma execução. O pacote é tipado e distribui o `py.typed`.
 
 Nenhum projeto externo consumiu a biblioteca ainda, e nenhum caminho CUDA dela jamais executou. [O manual](docs/GUIDE.md#8-what-this-project-does-not-claim) lista o que mais este projeto se recusa a afirmar.
 
@@ -155,7 +155,7 @@ Nenhum projeto externo consumiu a biblioteca ainda, e nenhum caminho CUDA dela j
 | Se você quer | Abra |
 |---|---|
 | O manual: cada argumento acima, medido, com a saída | [docs/GUIDE.md](docs/GUIDE.md) |
-| Um passeio por cada um dos 19 símbolos públicos | [docs/USAGE.md](docs/USAGE.md) |
+| Um passeio por cada um dos 20 símbolos públicos | [docs/USAGE.md](docs/USAGE.md) |
 | A linha entre esta biblioteca e o seu pipeline | [docs/SCOPE.md](docs/SCOPE.md) |
 | A matemática, as decisões e o contrato por função | [docs/THEORY.md](docs/THEORY.md) |
 | Por que a API tem essa cara | [docs/ADR/](docs/ADR) |
