@@ -72,9 +72,14 @@ independência de memória obrigatório.
 - Fast path `stride==patch_size` (count==1 em todo pixel): reshape+permute
   direto, sem fold nem count map.
 - Caso geral: count map em forma fechada, sem fold de `ones`:
-  `count_h[y] = min(y//sh + 1, num_h, (h-1-y)//sh + 1)` (idem W), e
+  `count_h[y] = min(y//sh + 1, num_h) + min((h-1-y)//sh + 1, num_h) - num_h`
+  (rampa de prefixo + rampa de sufixo − total; idem W), e
   `count = count_h[:,None] * count_w[None,:]`. O `F.fold` dos patches
   permanece (é o custo real do col2im).
+  [Corrigido durante a implementação: a fórmula original
+  `min(y//sh+1, num_h, (h-1-y)//sh+1)` rampa até `num_h` em vez de
+  estagnar na cobertura real `ph/sh`; os testes de caracterização da
+  Task 4 pegaram o erro antes de qualquer commit.]
 
 ### 2.3 `stitch`
 
