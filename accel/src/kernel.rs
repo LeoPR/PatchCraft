@@ -5,7 +5,8 @@
 //! Pure Rust — no pyo3 types — so `cargo test` exercises it directly.
 //! Parallelized over output rows with rayon; each output pixel is written by
 //! exactly one worker (no atomics, no data races) and the summation order per
-//! pixel is fixed (ascending patch index), so results are deterministic
+//! pixel is fixed (descending patch index — i.e. ascending kernel offset,
+//! matching ATen col2im's per-pixel order), so results are deterministic
 //! across runs and thread counts.
 
 use rayon::prelude::*;
@@ -74,11 +75,12 @@ pub fn fold_add<T: Scalar>(
         for (x, slot) in out_row.iter_mut().enumerate() {
             let (j_lo, j_hi) = covering(x, pw, num_w, sw);
             let mut acc = T::ZERO;
-            let mut i = i_lo;
-            while i <= i_hi {
+            // Descending patch index = ascending kernel offset (dy, dx): the
+            // same per-pixel summation order as ATen's CPU col2im, so results
+            // are bit-identical to `F.fold`.
+            for i in (i_lo..=i_hi).rev() {
                 let dy = y - i * sh;
-                let mut j = j_lo;
-                while j <= j_hi {
+                for j in (j_lo..=j_hi).rev() {
                     let dx = x - j * sw;
                     let p = i * num_w + j;
                     let v = patches[p * (c * ph * pw) + ch_base + dy * pw + dx];
@@ -87,9 +89,7 @@ pub fn fold_add<T: Scalar>(
                             Some(k) => v * k[dy * pw + dx],
                             None => v,
                         };
-                    j += 1;
                 }
-                i += 1;
             }
             *slot = acc;
         }
@@ -115,9 +115,10 @@ mod tests {
         }
     }
 
-    /// Naive scatter reference: for each patch in ascending order, add it into
-    /// `out`. Per-pixel arrival order is ascending patch index — the same
-    /// order the gather kernel sums in — so results must be bit-identical.
+    /// Naive scatter reference: for each patch in descending order, add it into
+    /// `out`. Per-pixel arrival order is descending patch index (= ascending
+    /// kernel offset, matching ATen col2im's per-pixel order) — the same order
+    /// the gather kernel sums in — so results must be bit-identical.
     #[allow(clippy::too_many_arguments)]
     fn reference<T: Scalar>(
         patches: &[T],
@@ -133,7 +134,7 @@ mod tests {
         kernel: Option<&[T]>,
     ) {
         let num_w = (w - pw) / sw + 1;
-        for p in 0..l {
+        for p in (0..l).rev() {
             let (i, j) = (p / num_w, p % num_w);
             for ch in 0..c {
                 for dy in 0..ph {
