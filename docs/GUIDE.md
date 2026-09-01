@@ -791,7 +791,7 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 **Version 0.4.0 is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 696 tests, skips 30 cases whose geometry does not cover exactly, and deselects 5 GPU tests, in about ten seconds on this machine, so run `pytest` yourself for the number in your environment. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12 and 3.13, and all four cells are green. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 698 tests, skips 30 cases whose geometry does not cover exactly, and deselects 5 GPU tests, in about ten seconds on this machine, so run `pytest` yourself for the number in your environment. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12 and 3.13, and all four cells are green. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Five things this project does not claim.
 
