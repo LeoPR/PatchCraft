@@ -135,7 +135,7 @@ O round-trip é exato quando todo valor do mapa de cobertura é potência de doi
 
 **0.3.0, pré-1.0.** Os valores de saída ainda podem mudar numa versão menor, e o [CHANGELOG.md](CHANGELOG.md) registra cada mudança com a medição por trás dela.
 
-São 346 testes passando, com CI verde em {Ubuntu, Windows} x {Python 3.12, 3.13}, e com `ruff check` e `mypy --strict` na mesma execução. O pacote é tipado e distribui o `py.typed`.
+São 540 testes passando, com CI verde em {Ubuntu, Windows} x {Python 3.12, 3.13}, e com `ruff check` e `mypy --strict` na mesma execução. O pacote é tipado e distribui o `py.typed`.
 
 Nenhum projeto externo consumiu a biblioteca ainda, e nenhum caminho CUDA dela jamais executou. [O manual](docs/GUIDE.md#8-what-this-project-does-not-claim) lista o que mais este projeto se recusa a afirmar.
 

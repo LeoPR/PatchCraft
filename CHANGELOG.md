@@ -37,6 +37,44 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Reported from an API review done for the QSR prototype, which uses patch
   position as a context feature.
 
+## [0.3.0] - 2026-09-01
+
+### Performance
+
+- `extract` uses a strided-window view (`Tensor.unfold`) for `dilation == 1`,
+  one copy instead of im2col + permute-contiguous: 13-21x faster on CPU,
+  bit-exact. `dilation > 1` still uses `F.unfold`.
+- `reconstruct` skips `F.fold` entirely on non-overlapping grids (a pure
+  rearrangement, 27x faster on CPU) and computes the overlap count map in
+  closed form O(H+W) instead of folding a tensor of ones.
+- `stitch` builds its denominator from two 1-D window folds (the kernels are
+  separable) instead of a second 2-D `F.fold`. `uniform` stays bit-exact vs
+  `reconstruct`; `hann`/`gaussian` may differ by ULPs (summation order).
+- `patch_metrics`/`per_patch_mse` materialize one f64 tensor instead of
+  three and sync the device once instead of three times.
+
+### Fixed
+
+- `resize` with `backend="pil"` clamped integer tensors to the uint8 range
+  before casting; values outside [0, 255] used to wrap (300 became 44).
+- Removed the machine-local `cache_dir = "Z:\caches\pytest"` from
+  `pyproject.toml` (created a literal `Z:\caches\...` directory on
+  Linux/macOS).
+
+### Documentation
+
+- Corrected stale 0.2.1 version strings on all cover pages and in GUIDE.
+- Corrected the gaussian-kernel floor claim in `stitch` (exp(-4) at corners,
+  not exp(-2) everywhere).
+- Corrected the bit-exactness rule in THEORY/USAGE (power-of-two count map).
+- SCOPE §4.4 no longer claims `reconstruct` lacks a dtype guard.
+- CHANGELOG: link targets for [Unreleased], [0.2.2], [0.2.1].
+
+### Internal
+
+- `reconstruct`/`stitch` share one fold-geometry validator
+  (`patchcraft._foldgeom.check_fold_geometry`); error messages unchanged.
+
 ## [0.2.2] 2026-08-30
 
 Documentation release. No behaviour changes, so every call that worked on 0.2.1
@@ -336,7 +374,8 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) covers installation, the car-vs-track metaphor,
   validation lab.
 
-[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.3.0
 [0.2.2]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.2.2
 [0.2.1]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.2.1
 [0.2.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.2.0

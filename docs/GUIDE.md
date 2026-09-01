@@ -6,7 +6,7 @@ This is the manual. [The README](../README.md) is the call page, and it answers 
 
 You do not have to read it from the top. Each section stands on its own, so jump into the one that matches the problem in front of you, and follow the links out to [THEORY.md](THEORY.md) when you want the contract rather than the demonstration.
 
-**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run against `patchcraft` 0.3.0 on CPU, with Python 3.13.13 and torch 2.13.0+cpu. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-what-this-project-does-not-claim), and the file and line references, which point at the repository as of 0.2.1.
+**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run against `patchcraft` 0.3.0 on CPU, with Python 3.13.13 and torch 2.13.0+cpu. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-what-this-project-does-not-claim), and the file and line references, which point at the repository as of 0.3.0.
 
 ## Contents
 
@@ -790,7 +790,7 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 **Version 0.3.0 is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 346 tests and deselects 5 GPU tests, in under seven seconds on this machine, so run `pytest` yourself for the number in your environment. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12 and 3.13, and all four cells are green. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 540 tests, skips 30 cases whose geometry does not cover exactly, and deselects 5 GPU tests, in about ten seconds on this machine, so run `pytest` yourself for the number in your environment. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12 and 3.13, and all four cells are green. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Five things this project does not claim.
 
@@ -800,7 +800,7 @@ Five things this project does not claim.
 
 **3. The no-zstandard cache path runs in no environment.** `Cache` falls back to uncompressed payloads when `zstandard` is absent, and every configuration here and in CI installs the extra. So a plain `pip install patchcraft` takes precisely the branch that nothing exercises.
 
-**4. Nothing executes the examples on this page.** They were run by hand against 0.2.1 and pasted verbatim, and no test in the suite runs them. A test that executes every fenced block and checks the figures quoted in prose is the next piece of work on this file, and [USAGE.md](USAGE.md) is in the same position while still being captured against 0.2.0.
+**4. Nothing executes the examples on this page.** They were run by hand against 0.3.0 and pasted verbatim, and no test in the suite runs them. A test that executes every fenced block and checks the figures quoted in prose is the next piece of work on this file, and [USAGE.md](USAGE.md) is in the same position while still being captured against 0.2.0.
 
 **5. Pre-1.0 means output values can change in a minor release.** Version 0.2.1 rewrote the hann window, so `stitch(..., weight="hann")` returns different values than 0.2.0 does for every geometry. The round-trip contract did not change. [CHANGELOG.md](../CHANGELOG.md) records each change together with the measurement that motivated it.
 

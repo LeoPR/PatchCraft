@@ -116,7 +116,7 @@ The everyday shorthand is that `stride == patch_size` and `stride == patch_size 
 
 ## Status
 
-This page documents 0.3.0, which is pre-1.0, so both the output values and the API shape can still change in a minor release, and the [changelog](https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md) is where each of those changes is recorded with the measurement behind it. The suite runs 346 tests and they pass on Python 3.12 and 3.13, on Ubuntu and on Windows alike.
+This page documents 0.3.0, which is pre-1.0, so both the output values and the API shape can still change in a minor release, and the [changelog](https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md) is where each of those changes is recorded with the measurement behind it. The suite runs 540 tests and they pass on Python 3.12 and 3.13, on Ubuntu and on Windows alike.
 
 Two limits are worth knowing before you depend on it. Every figure on this page was measured on CPU, and no CUDA path has ever executed in the test matrix, so the pipeline does preserve the device you hand it while the exactness numbers stay unverified on GPU. The other limit is that no external project has consumed the published API in real use yet, and that consumption is this project's own stated gate for calling the shape settled.
 
