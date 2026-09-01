@@ -49,3 +49,45 @@ jobs:
 
       - name: Pytest (skip GPU markers)
         run: uv run pytest -m "not gpu"
+
+  test-accel:
+    name: ${{ matrix.os }} / py3.12 / accel
+    runs-on: ${{ matrix.os }}
+    env:
+      UV_PYTHON: "3.12"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install project with dev + cache extras
+        run: uv sync --locked --extra cache --extra dev
+
+      - name: Rust unit tests
+        # The venv's interpreter on PATH lets the pyo3 build script resolve
+        # libpython (extension-module is off outside maturin builds).
+        run: uv run cargo test --manifest-path accel/Cargo.toml
+
+      - name: Build + install the accelerator
+        run: |
+          uv pip install maturin
+          uv run maturin develop --manifest-path accel/Cargo.toml --release
+
+      - name: Accelerator is detected
+        run: uv run python -c "import patchcraft; assert patchcraft.accel_available()"
+
+      - name: Pytest (accelerated mode)
+        run: uv run pytest -m "not gpu"

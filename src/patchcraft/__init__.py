@@ -1,5 +1,6 @@
 """PatchCraft: image patch extraction, pairing and reconstruction utilities."""
 
+from patchcraft._accel import accel_available
 from patchcraft.cache import Cache
 from patchcraft.extract import Patchify, extract
 from patchcraft.geometry import (
@@ -16,7 +17,7 @@ from patchcraft.reconstruct import reconstruct
 from patchcraft.resize import resize
 from patchcraft.stitch import WeightKind, stitch
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __all__ = [
     "Cache",
     "PairedTilingSpec",
@@ -25,6 +26,7 @@ __all__ = [
     "Patchify",
     "TilingSpec",
     "WeightKind",
+    "accel_available",
     "extract",
     "num_patches",
     "pair",

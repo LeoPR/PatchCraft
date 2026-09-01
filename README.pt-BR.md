@@ -39,6 +39,17 @@ pip install patchcraft
 pip install "patchcraft[cache]"     # acrescenta o zstandard, que comprime o conteúdo do Cache
 ```
 
+Ou com o acelerador nativo opcional (wheels prontos para Windows x64,
+Linux x86_64, macOS arm64 e macOS x86_64; o pacote continua 100% Python
+puro e funcional sem ele):
+
+```bash
+pip install patchcraft[accel]
+```
+
+`patchcraft.accel_available()` informa em runtime se o acelerador está
+ativo; `PATCHCRAFT_ACCEL=0` no ambiente força o caminho puro.
+
 O nome da distribuição e o nome de importação são os dois `patchcraft`. As dependências de execução são `torch>=2.6`, `numpy>=1.26` e `pillow>=10`. As versões de Python suportadas estão [no manual](docs/GUIDE.md#9-install-details-and-citation), junto com a observação que você precisa ler antes de instalar uma wheel de GPU.
 
 ## Sessenta segundos
@@ -133,9 +144,9 @@ O round-trip é exato quando todo valor do mapa de cobertura é potência de doi
 
 ## Estado
 
-**0.3.0, pré-1.0.** Os valores de saída ainda podem mudar numa versão menor, e o [CHANGELOG.md](CHANGELOG.md) registra cada mudança com a medição por trás dela.
+**0.4.0, pré-1.0.** Os valores de saída ainda podem mudar numa versão menor, e o [CHANGELOG.md](CHANGELOG.md) registra cada mudança com a medição por trás dela.
 
-São 540 testes passando, com CI verde em {Ubuntu, Windows} x {Python 3.12, 3.13}, e com `ruff check` e `mypy --strict` na mesma execução. O pacote é tipado e distribui o `py.typed`.
+São 733 testes coletados, com CI verde em {Ubuntu, Windows} x {Python 3.12, 3.13}, e com `ruff check` e `mypy --strict` na mesma execução. O pacote é tipado e distribui o `py.typed`.
 
 Nenhum projeto externo consumiu a biblioteca ainda, e nenhum caminho CUDA dela jamais executou. [O manual](docs/GUIDE.md#8-what-this-project-does-not-claim) lista o que mais este projeto se recusa a afirmar.
 
@@ -144,7 +155,7 @@ Nenhum projeto externo consumiu a biblioteca ainda, e nenhum caminho CUDA dela j
 | Se você quer | Abra |
 |---|---|
 | O manual: cada argumento acima, medido, com a saída | [docs/GUIDE.md](docs/GUIDE.md) |
-| Um passeio por cada um dos 19 símbolos públicos | [docs/USAGE.md](docs/USAGE.md) |
+| Um passeio por cada um dos 20 símbolos públicos | [docs/USAGE.md](docs/USAGE.md) |
 | A linha entre esta biblioteca e o seu pipeline | [docs/SCOPE.md](docs/SCOPE.md) |
 | A matemática, as decisões e o contrato por função | [docs/THEORY.md](docs/THEORY.md) |
 | Por que a API tem essa cara | [docs/ADR/](docs/ADR) |

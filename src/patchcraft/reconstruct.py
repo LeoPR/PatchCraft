@@ -1,7 +1,8 @@
 """Reconstruction of an image from its patches.
 
-Non-overlapping grids are a pure rearrangement; overlapping grids use
-F.fold for the patches plus a closed-form O(H+W) count map.
+Non-overlapping grids are a pure rearrangement; overlapping grids sum the
+patches with a closed-form O(H+W) count map — via the optional native
+accelerator (patchcraft-accel) when available, otherwise F.fold.
 
 Contract: docs/THEORY.md §2 and §9.2.
 """
@@ -10,6 +11,7 @@ from __future__ import annotations
 import torch
 import torch.nn.functional as F  # noqa: N812 (torch convention)
 
+from patchcraft._accel import fold_weighted
 from patchcraft._foldgeom import check_fold_geometry
 
 __all__ = ["reconstruct"]
@@ -24,9 +26,10 @@ def reconstruct(
     """Inverse of `extract`: rebuild a ``(C, H, W)`` image from ``(L, C, ph, pw)``.
 
     On non-overlapping grids (``stride == patch_size``) this is a pure
-    rearrangement with no arithmetic; on overlapping grids it uses ``F.fold``
-    plus a closed-form overlap count map, and each pixel's reconstructed value
-    is the average of every patch covering it.
+    rearrangement with no arithmetic; on overlapping grids it folds the
+    patches (via the optional native accelerator when available, otherwise
+    ``F.fold``) plus a closed-form overlap count map, and each pixel's
+    reconstructed value is the average of every patch covering it.
 
     The round trip is bit-exact when every value in that count map is a power of
     two, because dividing a float by a power of two is the one division that
@@ -92,16 +95,23 @@ def reconstruct(
     )
     work = patches.to(accum_dtype)
 
-    # (L, C, ph, pw) -> (1, C*ph*pw, L), the layout F.fold expects.
-    patches_flat = (
-        work.permute(1, 2, 3, 0).reshape(c * ph * pw, n_patches).unsqueeze(0)
-    )
-    folded = F.fold(
-        patches_flat,
-        output_size=(h, w),
-        kernel_size=(ph, pw),
-        stride=(sh, sw),
-    )
+    # Numerator of the overlap fold: native accelerator when available,
+    # otherwise F.fold of the (1, C*ph*pw, L) flattening. Both produce the
+    # (C, H, W) sum over covering patches in descending patch order
+    # (= ascending kernel offset, ATen col2im's per-pixel order — bit-exact
+    # against each other).
+    numerator = fold_weighted(work, (c, h, w), (sh, sw), None)
+    if numerator is None:
+        # (L, C, ph, pw) -> (1, C*ph*pw, L), the layout F.fold expects.
+        patches_flat = (
+            work.permute(1, 2, 3, 0).reshape(c * ph * pw, n_patches).unsqueeze(0)
+        )
+        numerator = F.fold(
+            patches_flat,
+            output_size=(h, w),
+            kernel_size=(ph, pw),
+            stride=(sh, sw),
+        )[0]
 
     # Closed-form count map: on a full-coverage regular grid the number of
     # patches covering row y is
@@ -122,4 +132,4 @@ def reconstruct(
 
     # Every count is an exact integer >= 1 (coverage is validated), so no
     # clamp is needed -- unlike the folded ones, there is no float noise.
-    return (folded[0] / count).to(patches.dtype)
+    return (numerator / count).to(patches.dtype)

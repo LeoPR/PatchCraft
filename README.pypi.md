@@ -38,7 +38,18 @@ pip install patchcraft
 pip install "patchcraft[cache]"     # adds zstandard, which compresses Cache payloads
 ```
 
-The distribution name and the import name are both `patchcraft`. The extra is optional, because `Cache` works without `zstandard` as well and simply stores its payload uncompressed.
+Or with the optional native accelerator (prebuilt wheels for Windows x64,
+Linux x86_64, macOS arm64 and macOS x86_64; the package stays pure-Python
+and fully functional without it):
+
+```bash
+pip install patchcraft[accel]
+```
+
+`patchcraft.accel_available()` reports at runtime whether the accelerator is
+active; `PATCHCRAFT_ACCEL=0` in the environment forces the pure path.
+
+The distribution name and the import name are both `patchcraft`. The cache extra is optional, because `Cache` works without `zstandard` as well and simply stores its payload uncompressed.
 
 ## Sixty seconds
 
@@ -116,14 +127,14 @@ The everyday shorthand is that `stride == patch_size` and `stride == patch_size 
 
 ## Status
 
-This page documents 0.3.0, which is pre-1.0, so both the output values and the API shape can still change in a minor release, and the [changelog](https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md) is where each of those changes is recorded with the measurement behind it. The suite runs 540 tests and they pass on Python 3.12 and 3.13, on Ubuntu and on Windows alike.
+This page documents 0.4.0, which is pre-1.0, so both the output values and the API shape can still change in a minor release, and the [changelog](https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md) is where each of those changes is recorded with the measurement behind it. The suite collects 733 tests and passes on Python 3.12 and 3.13, on Ubuntu and on Windows alike.
 
 Two limits are worth knowing before you depend on it. Every figure on this page was measured on CPU, and no CUDA path has ever executed in the test matrix, so the pipeline does preserve the device you hand it while the exactness numbers stay unverified on GPU. The other limit is that no external project has consumed the published API in real use yet, and that consumption is this project's own stated gate for calling the shape settled.
 
 ## Documentation
 
 - [Guide](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md), the manual, with every figure on this page shown as runnable code
-- [Usage](https://github.com/LeoPR/PatchCraft/blob/main/docs/USAGE.md), a walkthrough of each of the 19 public symbols
+- [Usage](https://github.com/LeoPR/PatchCraft/blob/main/docs/USAGE.md), a walkthrough of each of the 20 public symbols
 - [Theory](https://github.com/LeoPR/PatchCraft/blob/main/docs/THEORY.md), the math and the per-function contract
 - [Scope](https://github.com/LeoPR/PatchCraft/blob/main/docs/SCOPE.md), the line between this library and your pipeline
 - [Repository](https://github.com/LeoPR/PatchCraft), [issues](https://github.com/LeoPR/PatchCraft/issues) and [contributing](https://github.com/LeoPR/PatchCraft/blob/main/CONTRIBUTING.md)

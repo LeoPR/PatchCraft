@@ -18,6 +18,7 @@ from typing import Literal
 import torch
 import torch.nn.functional as F  # noqa: N812 (torch convention)
 
+from patchcraft._accel import fold_weighted
 from patchcraft._foldgeom import check_fold_geometry
 
 __all__ = ["WeightKind", "stitch"]
@@ -191,21 +192,27 @@ def stitch(
     ww = _window_1d(weight, pw, accum_dtype, patches.device)
     kernel = wh.unsqueeze(1) * ww.unsqueeze(0)
 
-    # Weighted patches: broadcast kernel (ph, pw) across (L, C, ph, pw).
-    weighted = patches.to(accum_dtype) * kernel
+    work = patches.to(accum_dtype)
 
-    # Numerator fold: (L, C, ph, pw) -> (1, C*ph*pw, L) for F.fold.
-    num_flat = (
-        weighted.permute(1, 2, 3, 0)
-        .reshape(c * ph * pw, n_patches)
-        .unsqueeze(0)
-    )
-    folded_num = F.fold(
-        num_flat,
-        output_size=(h, w),
-        kernel_size=(ph, pw),
-        stride=(sh, sw),
-    )
+    # Numerator of the overlap fold. The native path multiplies by the kernel
+    # during the gather, skipping the full (L, C, ph, pw) pre-multiply pass and
+    # its temporary; the torch path folds the pre-weighted patches.
+    numerator = fold_weighted(work, (c, h, w), (sh, sw), kernel)
+    if numerator is None:
+        # Weighted patches: broadcast kernel (ph, pw) across (L, C, ph, pw).
+        weighted = work * kernel
+        # (L, C, ph, pw) -> (1, C*ph*pw, L) for F.fold.
+        num_flat = (
+            weighted.permute(1, 2, 3, 0)
+            .reshape(c * ph * pw, n_patches)
+            .unsqueeze(0)
+        )
+        numerator = F.fold(
+            num_flat,
+            output_size=(h, w),
+            kernel_size=(ph, pw),
+            stride=(sh, sw),
+        )[0]
 
     # Separable denominator: because the kernel is an outer product,
     # den[y, x] = (sum_i wh[y - i*sh]) * (sum_j ww[x - j*sw]) — two 1-D
@@ -217,4 +224,4 @@ def stitch(
     # clamp(min=1e-6): geometry validation guarantees coverage and all three
     # windows are strictly positive, so the denominator is genuinely
     # positive; the clamp is a defensive no-op kept from the fold version.
-    return (folded_num[0] / den.clamp(min=1e-6)).to(patches.dtype)
+    return (numerator / den.clamp(min=1e-6)).to(patches.dtype)

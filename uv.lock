@@ -130,7 +130,7 @@ name = "cuda-bindings"
 version = "13.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cuda-pathfinder" },
+    { name = "cuda-pathfinder", marker = "python_full_version < '3.15'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ce/67/5e7dba1ba576dd73da5dee894ca076ca5e959450dfff66d6d510a255d1f7/cuda_bindings-13.3.1-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c7855c4868aabc0cfae28abbe83d56734bdfbd08f08fc234ac1912a12858bf49", size = 6025351, upload-time = "2026-05-29T23:11:49.685Z" },
@@ -658,6 +658,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+accel = [
+    { name = "patchcraft-accel" },
+]
 cache = [
     { name = "zstandard" },
 ]
@@ -680,6 +683,7 @@ dev = [
 requires-dist = [
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
     { name = "numpy", specifier = ">=1.26" },
+    { name = "patchcraft-accel", marker = "extra == 'accel'", directory = "accel" },
     { name = "pillow", specifier = ">=10" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
@@ -688,7 +692,7 @@ requires-dist = [
     { name = "torchvision", marker = "extra == 'dev'", specifier = ">=0.20" },
     { name = "zstandard", marker = "extra == 'cache'", specifier = ">=0.22" },
 ]
-provides-extras = ["cache", "dev"]
+provides-extras = ["accel", "cache", "dev"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -696,6 +700,10 @@ dev = [
     { name = "setuptools", specifier = ">=82.0.1" },
     { name = "wheel", specifier = ">=0.47.0" },
 ]
+
+[[package]]
+name = "patchcraft-accel"
+source = { directory = "accel" }
 
 [[package]]
 name = "pathspec"
