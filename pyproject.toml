@@ -71,7 +71,6 @@ exclude = [
 ]
 
 [tool.pytest.ini_options]
-cache_dir = "Z:\\caches\\pytest"
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 markers = [

@@ -79,6 +79,13 @@ class Cache:
     collide even if a caller produces identical key parts). ``version``
     is the invalidation lever: bump it, and old entries become
     unreadable by construction without any delete.
+
+    Filenames address entries by the first 16 hex chars (64 bits) of the
+    full key. Two distinct keys sharing that prefix overwrite each other
+    on ``put``; ``get`` detects the mismatch via the sidecar and reports
+    a transparent miss, never wrong bytes. The birthday bound puts the
+    collision probability at ~50% only around 5e9 entries, so the prefix
+    stays at 16 chars; widen ``_paths`` if that ever stops being true.
     """
 
     def __init__(
