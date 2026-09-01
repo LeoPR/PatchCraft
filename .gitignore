@@ -53,3 +53,6 @@ runs/
 
 # Datasets and caches live on Z:
 data/
+
+# Rust accelerator build artifacts (accel/Cargo.lock IS committed)
+accel/target/

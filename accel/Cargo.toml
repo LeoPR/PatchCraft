@@ -1,0 +1,25 @@
+[package]
+name = "patchcraft-accel"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+license = "MIT"
+description = "Optional native fold accelerator for patchcraft (Rust/pyo3)."
+repository = "https://github.com/LeoPR/PatchCraft"
+
+[lib]
+# rlib so `cargo test` can exercise the kernel; cdylib for the Python module.
+name = "patchcraft_accel"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["abi3-py312"] }
+rayon = "1.10"
+
+[features]
+# Off by default so `cargo test` links libpython (extension-module leaves
+# Python symbols unresolved on purpose). maturin enables it via pyproject.toml.
+default = []
+extension-module = ["pyo3/extension-module"]
+
+# No panic = "abort" profile: panics must unwind into Python exceptions.
