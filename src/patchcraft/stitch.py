@@ -181,7 +181,7 @@ def stitch(
 
     # Half-precision inputs overflow inside F.fold, which accumulates the sum
     # of all overlapping patches before the division (fp16 max is 65504).
-    # Build the kernel and accumulate in float32, cast back at the end (§9.2).
+    # Build the kernel and accumulate in float32, cast back at the end (§9.9).
     accum_dtype = (
         torch.float32
         if patches.dtype in (torch.float16, torch.bfloat16)

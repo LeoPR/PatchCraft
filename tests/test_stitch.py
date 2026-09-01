@@ -291,6 +291,9 @@ class TestCoverageGuard:
 
 def _stitch_reference(patches, image_shape, stride, weight):
     """The pre-0.3.0 stitch implementation, as ground truth."""
+    # Imports _window_kernel from the CURRENT module (not frozen) on purpose: the
+    # 1-D window helpers are numerically unchanged in 0.3.0, but a future change
+    # to _window_kernel would move this reference.
     from patchcraft.stitch import _window_kernel
     n_patches, c, ph, pw = patches.shape
     h, w = image_shape[1], image_shape[2]

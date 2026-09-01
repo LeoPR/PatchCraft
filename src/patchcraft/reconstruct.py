@@ -23,7 +23,9 @@ def reconstruct(
 ) -> torch.Tensor:
     """Inverse of `extract`: rebuild a ``(C, H, W)`` image from ``(L, C, ph, pw)``.
 
-    Uses ``F.fold`` plus an overlap count map. Each pixel's reconstructed value
+    On non-overlapping grids (``stride == patch_size``) this is a pure
+    rearrangement with no arithmetic; on overlapping grids it uses ``F.fold``
+    plus a closed-form overlap count map, and each pixel's reconstructed value
     is the average of every patch covering it.
 
     The round trip is bit-exact when every value in that count map is a power of
@@ -45,8 +47,9 @@ def reconstruct(
 
     Dtype and device of ``patches`` are preserved. Integer dtypes are
     rejected (``F.fold`` is not implemented for them). Half-precision inputs
-    (``float16``, ``bfloat16``) accumulate internally in ``float32`` to avoid
-    overflow inside ``F.fold`` and are cast back on return.
+    (``float16``, ``bfloat16``) accumulate internally in ``float32`` on
+    overlapping grids to avoid overflow inside ``F.fold`` and are cast back on
+    return.
     """
     if not isinstance(patches, torch.Tensor):
         raise TypeError(

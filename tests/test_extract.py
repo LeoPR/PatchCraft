@@ -274,9 +274,21 @@ def _unfold_reference(image, ph, pw, sh, sw, dh, dw):
         (4, 4, 3, 3, 1, 1),   # stride < patch, non-divisor
     ],
 )
-@pytest.mark.parametrize("dtype", [torch.float32, torch.float64, torch.float16])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        torch.bool,
+        torch.float16,
+        torch.bfloat16,
+        torch.float32,
+        torch.float64,
+        torch.complex64,
+        torch.complex128,
+    ],
+)
 def test_extract_matches_unfold_reference(c, h, w, ph, pw, sh, sw, dh, dw, dtype):
-    img = torch.randn(c, h, w, dtype=dtype)
+    # torch.randn does not support bool; build in float32 and cast.
+    img = torch.rand(c, h, w).to(dtype)
     got = extract(img, (ph, pw), (sh, sw), (dh, dw))
     ref = _unfold_reference(img, ph, pw, sh, sw, dh, dw)
     assert got.shape == ref.shape
