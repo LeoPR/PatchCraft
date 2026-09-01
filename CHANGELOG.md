@@ -62,7 +62,7 @@ docstring.
 
 - **The README is now a call page and the manual moved to `docs/GUIDE.md`.** The
   README had reached 864 lines, which made it a manual printed on the front
-  door. It is 137 lines now, and it answers what the library is, where you are
+  door. It is 156 lines now, and it answers what the library is, where you are
   getting into, and which of `reconstruct` or `stitch` you want. Nothing was
   discarded: every measurement, table and long example moved into the guide,
   which gained its own table of contents.
@@ -233,7 +233,7 @@ kernel so each pixel "trusts" patches closer to its center more.
   on overlap). With `"hann"` it strongly suppresses seams at the
   cost of zeroing image corners that fall on Hann's edge-weight-zero
   region (documented artifact). With `"gaussian"`
-  (`sigma = max(1, min(ph, pw) / 4)`) it blends smoothly with no
+  (per-axis `sigma = max(1.0, n / 4.0)`) it blends smoothly with no
   corner artifact.
 
 Floating-point patches only, because window kernels are float-valued and we
@@ -336,5 +336,8 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) covers installation, the car-vs-track metaphor,
   validation lab.
 
+[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.2.2
+[0.2.1]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.2.1
 [0.2.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.2.0
 [0.1.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.1.0

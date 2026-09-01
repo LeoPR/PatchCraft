@@ -238,14 +238,15 @@ We rejected that for two reasons.
   `stitch` rejects non-float patches explicitly, with a message telling the
   caller to use `patches.float()`.
 
-  Note the asymmetry is *declared* rather than *exercised*: `reconstruct` has
-  no dtype guard, but it cannot actually process integer patches either,
+  The asymmetry above is historical. Since 0.2.1, `reconstruct` and `stitch`
+  alike reject non-floating-point patches with a framed `ValueError` telling
+  the caller to convert with `patches.float()` (THEORY §9.2 and §9.9). In
+  0.2.0 `reconstruct` had no dtype guard, and integer patches failed with a
+  raw `NotImplementedError` from torch instead of a PatchCraft `ValueError`,
   because `F.fold` has no integer kernel on CPU (`col2im_out_cpu` is not
   implemented for `Byte`/`Int`/`Long`; `extract` fails symmetrically on
-  `im2col_out_cpu`). Integer patches therefore reach `reconstruct` and fail
-  with a raw `NotImplementedError` from torch instead of a PatchCraft
-  `ValueError`. Keeping the two functions separate is still justified by the
-  contract divergence above; the dtype argument is weaker than it reads.
+  `im2col_out_cpu`). Keeping the two functions separate is still justified by
+  the contract divergence above; the dtype handling is now symmetric.
 
 The runtime cost of the duplication is negligible (the second function
 is ~150 lines, validation and all). The cognitive cost of a kwarg that

@@ -97,7 +97,7 @@ Strict input checks: shape mismatch, dtype mismatch, and device mismatch all rai
 - **Exact**: when `sh == ph` and `sw == pw` and `d == 1`: patches tile the image; reconstruction is a cheap copy (weights are all ones).
 - **Weighted overlap**: when `sh < ph` or `sw < pw`: patches overlap; reconstruction must divide by the overlap count map (from `fold` of an all-ones tensor with the same geometry).
 
-**Worked example (`ph = pw = 4, sh = sw = 2`).** Every interior pixel is covered by 4 patches (2 row overlaps × 2 col overlaps); edge pixels are covered by 2; corners by 1. The count map produced by `fold(ones_like(patches_flat), output_size=(H,W), kernel=(4,4), stride=2)` encodes exactly these weights. Dividing the summed pixel contributions by this map recovers the original image bit-exactly for fractional pixel values, and within one ULP for float32 noise.
+**Worked example (`ph = pw = 4, sh = sw = 2`).** Every interior pixel is covered by 4 patches (2 row overlaps × 2 col overlaps); edge pixels are covered by 2; corners by 1. The count map produced by `fold(ones_like(patches_flat), output_size=(H,W), kernel=(4,4), stride=2)` encodes exactly these weights. Dividing the summed pixel contributions by this map recovers the original image bit-exactly here, because every count in this map (1, 2, 4) is a power of two, and dividing a float by a power of two is the one division that never rounds. The general rule: the round trip is bit-exact when every value in the count map is a power of two — `stride == patch_size` always qualifies, `stride == patch_size / 2` qualifies (counts 1, 2, 4), and a geometry that puts a 3 or a 9 in the map does not, where the error is ~1 ULP (measured 2.4e-07 in float32 on a 16×16 image with `patch_size=4, stride=1`). Widening the dtype does not help, because the deciding axis is the geometry rather than the precision.
 
 Visualizing the count map along one axis (image cols 0..7, `ph=4`, `sh=2`):
 
@@ -150,11 +150,11 @@ Visualizing the three 2-D kernels at `patch_size=4` (`+` = full weight, `X` = hi
    + + + +        . . . .        . o o .
 ```
 
-**Why a separate function and not a parameter on `reconstruct`?** Because the contracts are different. `reconstruct` is bit-exact for unmodified patches and rejects anything that would force interpolation; `stitch` accepts modified patches and explicitly does interpolated blending. Adding a `weight=` parameter to `reconstruct` would conflate "I want my image back" with "I have model output and need to blend." Two functions, one charter each, no surprise behavior when a kwarg is forgotten.
+**Why a separate function and not a parameter on `reconstruct`?** Because the contracts are different. `reconstruct` is bit-exact for unmodified patches under the count-map rule of §2 (exact when every count is a power of two, ~1 ULP otherwise) and rejects anything that would force interpolation; `stitch` accepts modified patches and explicitly does interpolated blending. Adding a `weight=` parameter to `reconstruct` would conflate "I want my image back" with "I have model output and need to blend." Two functions, one charter each, no surprise behavior when a kwarg is forgotten.
 
 **Why float-only?** Window kernels are float-valued by construction (`hann`, `gaussian` produce values in `[0, 1]`). Multiplying integer patches by a float kernel would either silently quantize the output or implicitly promote to float, neither of which is a contract a primitive should carry. Reject non-float input with a clear `ValueError` and let the caller convert.
 
-**Design decision.** `patchcraft.stitch(patches, image_shape, stride, *, weight="uniform"|"hann"|"gaussian", dilation=1) -> Tensor[C, H, W]` in `src/patchcraft/stitch.py`. Lives next to `reconstruct`; uses the same `F.fold` geometry; shares the same rejections (`dilation != 1`, `stride > patch_size`, ndim check, grid-consistency check). Adds: float-only patches, weight-kind validation. Output dtype and device preserved. The `weight="uniform"` path is mathematically equivalent to `reconstruct` (validated by bit-exact equality test on no-overlap and `allclose` on overlap).
+**Design decision.** `patchcraft.stitch(patches, image_shape, stride, *, weight="uniform"|"hann"|"gaussian", dilation=1) -> Tensor[C, H, W]` in `src/patchcraft/stitch.py`. Lives next to `reconstruct`; uses the same `F.fold` geometry; shares the same rejections (`dilation != 1`, `stride > patch_size`, ndim check, grid-consistency check). Adds: float-only patches, weight-kind validation. Output dtype and device preserved. The `weight="uniform"` path is mathematically equivalent to `reconstruct` and inherits the same count-map rule (bit-exact when every count is a power of two, ~1 ULP otherwise; validated by bit-exact equality test on no-overlap and `allclose` on overlap).
 
 ## 3. LR ↔ HR pairing
 
@@ -276,7 +276,6 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 - `patches.ndim != 4`.
 
 **Fora de escopo v0.1:**
-- Promoção automática float16 → float32.
 - Output em PIL.
 
 ### 9.3 `pair(lr_image, hr_image, lr_patch_size, scale_factor, stride, *, image_id=None)`

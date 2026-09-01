@@ -6,7 +6,7 @@ This is the manual. [The README](../README.md) is the call page, and it answers 
 
 You do not have to read it from the top. Each section stands on its own, so jump into the one that matches the problem in front of you, and follow the links out to [THEORY.md](THEORY.md) when you want the contract rather than the demonstration.
 
-**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run against `patchcraft` 0.2.1 on CPU, with Python 3.13.13 and torch 2.13.0+cpu. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-what-this-project-does-not-claim), and the file and line references, which point at the repository as of 0.2.1.
+**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run against `patchcraft` 0.3.0 on CPU, with Python 3.13.13 and torch 2.13.0+cpu. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-what-this-project-does-not-claim), and the file and line references, which point at the repository as of 0.2.1.
 
 ## Contents
 
@@ -723,7 +723,7 @@ The public surface is 19 names, and `__all__` is what fixes it.
 ```python
 import patchcraft
 
-assert patchcraft.__version__ == "0.2.1"
+assert patchcraft.__version__ == "0.3.0"
 assert len(patchcraft.__all__) == 19
 assert all(hasattr(patchcraft, name) for name in patchcraft.__all__)
 print(patchcraft.__all__)
@@ -788,7 +788,7 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 ## 8. What this project does not claim
 
-**Version 0.2.1 is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
+**Version 0.3.0 is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
 
 What is verified is this. The full local run of `pytest -m "not gpu"` passes 346 tests and deselects 5 GPU tests, in under seven seconds on this machine, so run `pytest` yourself for the number in your environment. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12 and 3.13, and all four cells are green. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
@@ -841,7 +841,7 @@ pip install -e ".[dev,cache]"
   author  = {Souza, Leonardo Marques de},
   title   = {PatchCraft: image patch extraction, reconstruction, pairing
              and seam-aware stitching},
-  version = {0.2.1},
+  version = {0.3.0},
   year    = {2026},
   url     = {https://github.com/LeoPR/PatchCraft}
 }

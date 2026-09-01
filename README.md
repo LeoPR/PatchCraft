@@ -133,7 +133,7 @@ The round trip is exact when every value in the count map is a power of two, whi
 
 ## Status
 
-**0.2.1, pre-1.0.** Output values can still change in a minor release, and [CHANGELOG.md](CHANGELOG.md) records each change with the measurement behind it.
+**0.3.0, pre-1.0.** Output values can still change in a minor release, and [CHANGELOG.md](CHANGELOG.md) records each change with the measurement behind it.
 
 346 tests pass and CI is green on {Ubuntu, Windows} x {Python 3.12, 3.13}, with `ruff check` and `mypy --strict` in the same run. The package is typed and ships `py.typed`.
 

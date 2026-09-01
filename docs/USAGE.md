@@ -157,7 +157,10 @@ True
 
 Each pixel covered by *k* patches; each contribution is the original
 value; sum is `k * value`; division by the count map gives back
-`value`. Bit-exact for `float64`; within `~1 ULP` for `float32`.
+`value`. Bit-exact when every count in the map is a power of two —
+`stride == patch_size` always, `stride == patch_size / 2` (counts 1,
+2, 4, as above) — and within ~1 ULP otherwise, whatever the dtype:
+the deciding axis is the geometry, not the precision.
 
 `reconstruct` rejects `dilation != 1` and `stride > patch_size`
 (partial coverage forbidden, see [`THEORY.md`](THEORY.md) §9.2).

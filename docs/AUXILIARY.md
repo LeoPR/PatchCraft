@@ -111,8 +111,8 @@ this README and the `.gitignore`.
 
 ## 3. Off-tree conventions on `Z:\`
 
-The dev environment uses [`Z:\caches`](../../../caches) and
-[`Z:\venvs`](../../../venvs) for everything that should not live
+The dev environment uses `Z:\caches` and
+`Z:\venvs` for everything that should not live
 inside a OneDrive-synced project root. Two sub-conventions are
 specific to PatchCraft:
 
