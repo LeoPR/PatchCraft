@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 import torch
+import torch.nn.functional as F  # noqa: N812 (torch convention)
 
 from patchcraft import Patchify, extract
 
@@ -248,3 +249,46 @@ class TestPatchify:
 
         out = fake_compose([Patchify(patch_size=4, stride=4)], img)
         assert out.shape == (4, 1, 4, 4)
+
+
+# ------------------------------------------------------- 0.3.0 fast path -----
+
+def _unfold_reference(image, ph, pw, sh, sw, dh, dw):
+    """The pre-0.3.0 extract implementation, as ground truth."""
+    c = image.shape[0]
+    unfolded = F.unfold(
+        image.unsqueeze(0), kernel_size=(ph, pw), dilation=(dh, dw), stride=(sh, sw)
+    )
+    return unfolded[0].view(c, ph, pw, -1).permute(3, 0, 1, 2).contiguous()
+
+
+@pytest.mark.parametrize("c,h,w", [(1, 7, 5), (3, 16, 16), (4, 9, 31), (3, 64, 48)])
+@pytest.mark.parametrize(
+    "ph,pw,sh,sw,dh,dw",
+    [
+        (2, 2, 2, 2, 1, 1),   # exact non-overlap
+        (4, 4, 2, 2, 1, 1),   # overlap 50%
+        (3, 5, 1, 2, 1, 1),   # rectangular, anisotropic stride
+        (1, 1, 1, 1, 1, 1),   # degenerate contiguous window
+        (2, 2, 1, 1, 2, 2),   # dilation -> slow path
+        (4, 4, 3, 3, 1, 1),   # stride < patch, non-divisor
+    ],
+)
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64, torch.float16])
+def test_extract_matches_unfold_reference(c, h, w, ph, pw, sh, sw, dh, dw, dtype):
+    img = torch.randn(c, h, w, dtype=dtype)
+    got = extract(img, (ph, pw), (sh, sw), (dh, dw))
+    ref = _unfold_reference(img, ph, pw, sh, sw, dh, dw)
+    assert got.shape == ref.shape
+    assert torch.equal(got, ref)
+
+
+def test_extract_output_does_not_alias_image():
+    """Patch memory must be independent: mutating patches never touches the image.
+
+    patch_size == stride == 1 is the degenerate case where a naive reshape
+    over the unfold view returns a view onto the image itself."""
+    img = torch.arange(12, dtype=torch.float32).reshape(1, 3, 4)
+    patches = extract(img, 1, 1)
+    patches[0, 0, 0, 0] = -1.0
+    assert img[0, 0, 0].item() == 0.0
