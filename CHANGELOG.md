@@ -6,6 +6,36 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-01
+
+### Added
+
+- Optional native accelerator `patchcraft-accel` (`pip install patchcraft[accel]`):
+  a Rust/pyo3 kernel for the overlap fold of `reconstruct`/`stitch`. Prebuilt
+  abi3 wheels (Python 3.12+) for Windows x64, Linux x86_64 (manylinux), macOS
+  arm64 and macOS x86_64; self-contained, no system dependencies, no torch
+  linkage. When it is absent, ABI-mismatched, ineligible (CUDA/integer
+  tensors), or disabled via `PATCHCRAFT_ACCEL=0`, every path falls back
+  silently to pure torch.
+- `patchcraft.accel_available()` reports whether the accelerator is active.
+
+### Performance
+
+- Overlap fold with the accelerator, mean of `lab/bench_phase2.py` on the
+  dev machine: reconstruct 3x512x512 p=32 s=16 17.727 ms -> 2.609 ms (6.80x);
+  stitch[hann] same geometry 23.714 ms -> 8.894 ms (2.67x); 3x2048x2048 p=64
+  s=32 reconstruct 469.814 ms -> 32.458 ms (14.47x). The accelerated `stitch`
+  also skips the full pre-multiply pass over the patches tensor.
+
+### Notes
+
+- Numeric equivalence accel vs pure: bit-exact (`torch.equal`) across the
+  test grid (overlap x rectangular x stride∤patch x C in {1,3,4} x f32/f64).
+- Linux validation: wheel
+  `patchcraft_accel-0.1.0-cp312-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl`
+  installed and the test suite passed accelerated on Ubuntu 26.04 (WSL),
+  built via the manylinux maturin container.
+
 ## [0.3.0] - 2026-09-01
 
 ### Performance

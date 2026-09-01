@@ -49,7 +49,7 @@ pip install patchcraft[accel]
 `patchcraft.accel_available()` reports at runtime whether the accelerator is
 active; `PATCHCRAFT_ACCEL=0` in the environment forces the pure path.
 
-The distribution name and the import name are both `patchcraft`. The extra is optional, because `Cache` works without `zstandard` as well and simply stores its payload uncompressed.
+The distribution name and the import name are both `patchcraft`. The cache extra is optional, because `Cache` works without `zstandard` as well and simply stores its payload uncompressed.
 
 ## Sixty seconds
 
