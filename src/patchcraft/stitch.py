@@ -51,6 +51,49 @@ def _gaussian_1d(n: int, dtype: torch.dtype, device: torch.device) -> torch.Tens
     return torch.exp(-((i - center) ** 2) / (2.0 * sigma * sigma))
 
 
+def _window_1d(
+    kind: WeightKind,
+    n: int,
+    dtype: torch.dtype,
+    device: torch.device,
+) -> torch.Tensor:
+    """Build the 1-D window of ``kind`` and length ``n``."""
+    if kind == "uniform":
+        return torch.ones(n, dtype=dtype, device=device)
+    if kind == "hann":
+        return _hann_1d(n, dtype, device)
+    if kind == "gaussian":
+        return _gaussian_1d(n, dtype, device)
+    raise ValueError(
+        f"weight must be one of {_WEIGHT_KINDS!r}, got {kind!r}"
+    )
+
+
+def _fold_window_1d(
+    w1d: torch.Tensor,
+    length: int,
+    num: int,
+    step: int,
+) -> torch.Tensor:
+    """``S[y] = sum of w1d[y - i*step]`` over ``i`` in ``[0, num)`` with
+    ``0 <= y - i*step < len(w1d)`` — the 1-D analog of folding the kernel.
+
+    Within each residue class modulo ``step`` the sum is a sliding window
+    over the strided kernel, computed with a cumsum: O(length + len(w1d))
+    instead of a 2-D F.fold of the replicated kernel.
+    """
+    out = w1d.new_zeros(length)
+    for r in range(step):
+        sub = w1d[r::step]
+        n_sub = sub.numel()
+        cs = torch.cat([w1d.new_zeros(1), sub.cumsum(0)])
+        ks = torch.arange((length - r + step - 1) // step, device=w1d.device)
+        hi = torch.clamp(ks + 1, max=n_sub)
+        lo = torch.clamp(ks + 1 - num, min=0)
+        out[r::step] = cs[hi] - cs[lo]
+    return out
+
+
 def _window_kernel(
     kind: WeightKind,
     ph: int,
@@ -59,19 +102,9 @@ def _window_kernel(
     device: torch.device,
 ) -> torch.Tensor:
     """Build a ``(ph, pw)`` window as the outer product of two 1-D windows."""
-    if kind == "uniform":
-        return torch.ones(ph, pw, dtype=dtype, device=device)
-    if kind == "hann":
-        wh = _hann_1d(ph, dtype, device)
-        ww = _hann_1d(pw, dtype, device)
-        return wh.unsqueeze(1) * ww.unsqueeze(0)
-    if kind == "gaussian":
-        wh = _gaussian_1d(ph, dtype, device)
-        ww = _gaussian_1d(pw, dtype, device)
-        return wh.unsqueeze(1) * ww.unsqueeze(0)
-    raise ValueError(
-        f"weight must be one of {_WEIGHT_KINDS!r}, got {kind!r}"
-    )
+    wh = _window_1d(kind, ph, dtype, device)
+    ww = _window_1d(kind, pw, dtype, device)
+    return wh.unsqueeze(1) * ww.unsqueeze(0)
 
 
 def stitch(
@@ -100,14 +133,15 @@ def stitch(
       window itself.
     - ``"gaussian"``: Gaussian centered on the patch with per-axis
       ``sigma = max(1.0, ph / 4)`` and ``sigma = max(1.0, pw / 4)``. Smooth
-      seam suppression with weight strictly above ``exp(-2)`` everywhere.
+      seam suppression; the 1-D profile stays above ``exp(-2)`` at the edges,
+      so the 2-D kernel stays above ``exp(-4)`` at the corners.
 
     Internally: each patch is multiplied by the 2-D weight kernel, the
-    weighted patches are folded into the numerator, the weight kernel itself
-    is folded over the same geometry into the denominator, and
-    ``numerator / denominator.clamp(min=1e-6)`` gives the output. The clamp
-    absorbs float noise on covered pixels; geometry validation guarantees
-    no uncovered pixels.
+    weighted patches are folded into the numerator, and the denominator is
+    built from two 1-D window folds (the kernel is separable, so the 2-D
+    denominator is their outer product). ``numerator / denominator`` gives
+    the output; geometry validation guarantees no uncovered pixels and all
+    three windows are strictly positive.
 
     Rejects (per §9.9): ``dilation != 1``; ``stride > patch_size`` in any
     axis; grids that do not cover the image exactly (same coverage guard as
@@ -139,7 +173,7 @@ def stitch(
         )
 
     n_patches, c, ph, pw = patches.shape
-    h, w, num_h, num_w = check_fold_geometry(  # noqa: RUF059 (used in Tasks 4-5)
+    h, w, num_h, num_w = check_fold_geometry(
         patches, image_shape, stride, dilation, op="stitch"
     )
     # stride was validated inside the helper; normalize it for the F.fold calls.
@@ -153,7 +187,9 @@ def stitch(
         if patches.dtype in (torch.float16, torch.bfloat16)
         else patches.dtype
     )
-    kernel = _window_kernel(weight, ph, pw, accum_dtype, patches.device)
+    wh = _window_1d(weight, ph, accum_dtype, patches.device)
+    ww = _window_1d(weight, pw, accum_dtype, patches.device)
+    kernel = wh.unsqueeze(1) * ww.unsqueeze(0)
 
     # Weighted patches: broadcast kernel (ph, pw) across (L, C, ph, pw).
     weighted = patches.to(accum_dtype) * kernel
@@ -171,19 +207,14 @@ def stitch(
         stride=(sh, sw),
     )
 
-    # Denominator fold: replicate kernel across L patches; one "channel"
-    # broadcasts across image C in the division.
-    kernel_flat = (
-        kernel.flatten().unsqueeze(1).repeat(1, n_patches).unsqueeze(0)
-    )
-    folded_den = F.fold(
-        kernel_flat,
-        output_size=(h, w),
-        kernel_size=(ph, pw),
-        stride=(sh, sw),
-    )
+    # Separable denominator: because the kernel is an outer product,
+    # den[y, x] = (sum_i wh[y - i*sh]) * (sum_j ww[x - j*sw]) — two 1-D
+    # folds + outer product instead of a second 2-D F.fold.
+    den_h = _fold_window_1d(wh, h, num_h, sh)
+    den_w = _fold_window_1d(ww, w, num_w, sw)
+    den = den_h.unsqueeze(1) * den_w.unsqueeze(0)
 
-    # clamp(min=1e-6): absorbs float noise on covered pixels; geometry
-    # validation above guarantees no uncovered pixels, and all three windows
-    # are strictly positive, so the denominator is genuinely positive.
-    return (folded_num / folded_den.clamp(min=1e-6))[0].to(patches.dtype)
+    # clamp(min=1e-6): geometry validation guarantees coverage and all three
+    # windows are strictly positive, so the denominator is genuinely
+    # positive; the clamp is a defensive no-op kept from the fold version.
+    return (folded_num[0] / den.clamp(min=1e-6)).to(patches.dtype)

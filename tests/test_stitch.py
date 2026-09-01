@@ -1,8 +1,11 @@
 """Tests for `patchcraft.stitch`, contract from docs/THEORY.md §9.9."""
 from __future__ import annotations
 
+import math
+
 import pytest
 import torch
+import torch.nn.functional as F  # noqa: N812 (torch convention)
 
 from patchcraft import extract, reconstruct, stitch
 
@@ -281,3 +284,61 @@ class TestCoverageGuard:
         patches = extract(img, patch_size=4, stride=2)  # (4-1)*2+4 == 10
         out = stitch(patches, image_shape=img.shape, stride=2)
         assert torch.allclose(out, img)
+
+
+# --------------------------- characterization: pre-0.3.0 reference (Task 5) --
+
+
+def _stitch_reference(patches, image_shape, stride, weight):
+    """The pre-0.3.0 stitch implementation, as ground truth."""
+    from patchcraft.stitch import _window_kernel
+    n_patches, c, ph, pw = patches.shape
+    h, w = image_shape[1], image_shape[2]
+    sh, sw = (stride, stride) if isinstance(stride, int) else stride
+    accum_dtype = (
+        torch.float32
+        if patches.dtype in (torch.float16, torch.bfloat16)
+        else patches.dtype
+    )
+    kernel = _window_kernel(weight, ph, pw, accum_dtype, patches.device)
+    weighted = patches.to(accum_dtype) * kernel
+    num_flat = weighted.permute(1, 2, 3, 0).reshape(c * ph * pw, n_patches).unsqueeze(0)
+    folded_num = F.fold(num_flat, (h, w), (ph, pw), stride=(sh, sw))
+    kernel_flat = kernel.flatten().unsqueeze(1).repeat(1, n_patches).unsqueeze(0)
+    folded_den = F.fold(kernel_flat, (h, w), (ph, pw), stride=(sh, sw))
+    return (folded_num / folded_den.clamp(min=1e-6))[0].to(patches.dtype)
+
+
+@pytest.mark.parametrize("c,h,w", [(1, 8, 8), (3, 16, 16), (3, 32, 24)])
+@pytest.mark.parametrize(
+    "ph,pw,sh,sw",
+    [(2, 2, 2, 2), (4, 4, 2, 2), (3, 3, 1, 1), (4, 6, 2, 3)],
+)
+@pytest.mark.parametrize("weight", ["uniform", "hann", "gaussian"])
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
+def test_stitch_matches_reference(c, h, w, ph, pw, sh, sw, weight, dtype):
+    num_h = (h - ph) // sh + 1
+    num_w = (w - pw) // sw + 1
+    if (num_h - 1) * sh + ph != h or (num_w - 1) * sw + pw != w:
+        pytest.skip("geometry does not cover exactly")
+    img = torch.randn(c, h, w, dtype=dtype)
+    from patchcraft import extract
+    patches = extract(img, (ph, pw), (sh, sw))
+    got = stitch(patches, (c, h, w), (sh, sw), weight=weight)
+    ref = _stitch_reference(patches, (c, h, w), (sh, sw), weight)
+    assert got.shape == ref.shape and got.dtype == ref.dtype
+    if weight == "uniform":
+        assert torch.equal(got, ref)  # integer counts: bit-exact
+    else:
+        # denominator summation order differs from F.fold: ULP-level
+        torch.testing.assert_close(got, ref)
+
+
+@pytest.mark.parametrize("n", [2, 3, 8, 32, 128])
+def test_gaussian_kernel_stays_above_exp_minus_4(n):
+    """2-D gaussian kernel minimum is strictly above exp(-4): the 1-D profile
+    exceeds exp(-2) at both edges (exponent -2*((n-1)/n)^2 for n >= 4, closer
+    to 0 for n in {2, 3}), so the outer-product corner exceeds exp(-4)."""
+    from patchcraft.stitch import _window_kernel
+    k = _window_kernel("gaussian", n, n, torch.float64, torch.device("cpu"))
+    assert k.min().item() > math.exp(-4)
