@@ -1,5 +1,6 @@
 """PatchCraft: image patch extraction, pairing and reconstruction utilities."""
 
+from patchcraft._accel import accel_available
 from patchcraft.cache import Cache
 from patchcraft.extract import Patchify, extract
 from patchcraft.geometry import (
@@ -25,6 +26,7 @@ __all__ = [
     "Patchify",
     "TilingSpec",
     "WeightKind",
+    "accel_available",
     "extract",
     "num_patches",
     "pair",

@@ -38,6 +38,17 @@ pip install patchcraft
 pip install "patchcraft[cache]"     # adds zstandard, which compresses Cache payloads
 ```
 
+Or with the optional native accelerator (prebuilt wheels for Windows x64,
+Linux x86_64, macOS arm64 and macOS x86_64; the package stays pure-Python
+and fully functional without it):
+
+```bash
+pip install patchcraft[accel]
+```
+
+`patchcraft.accel_available()` reports at runtime whether the accelerator is
+active; `PATCHCRAFT_ACCEL=0` in the environment forces the pure path.
+
 The distribution name and the import name are both `patchcraft`. The extra is optional, because `Cache` works without `zstandard` as well and simply stores its payload uncompressed.
 
 ## Sixty seconds

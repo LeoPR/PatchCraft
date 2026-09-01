@@ -39,6 +39,17 @@ pip install patchcraft
 pip install "patchcraft[cache]"     # adds zstandard, which compresses Cache payloads
 ```
 
+Or with the optional native accelerator (prebuilt wheels for Windows x64,
+Linux x86_64, macOS arm64 and macOS x86_64; the package stays pure-Python
+and fully functional without it):
+
+```bash
+pip install patchcraft[accel]
+```
+
+`patchcraft.accel_available()` reports at runtime whether the accelerator is
+active; `PATCHCRAFT_ACCEL=0` in the environment forces the pure path.
+
 The distribution name and the import name are both `patchcraft`. The runtime dependencies are `torch>=2.6`, `numpy>=1.26` and `pillow>=10`, and the supported Python versions are in [the guide](docs/GUIDE.md#9-install-details-and-citation) together with the note you need before you install a GPU wheel.
 
 ## Sixty seconds

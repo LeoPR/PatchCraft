@@ -1,7 +1,8 @@
 """Reconstruction of an image from its patches.
 
-Non-overlapping grids are a pure rearrangement; overlapping grids use
-F.fold for the patches plus a closed-form O(H+W) count map.
+Non-overlapping grids are a pure rearrangement; overlapping grids sum the
+patches with a closed-form O(H+W) count map — via the optional native
+accelerator (patchcraft-accel) when available, otherwise F.fold.
 
 Contract: docs/THEORY.md §2 and §9.2.
 """
@@ -25,9 +26,10 @@ def reconstruct(
     """Inverse of `extract`: rebuild a ``(C, H, W)`` image from ``(L, C, ph, pw)``.
 
     On non-overlapping grids (``stride == patch_size``) this is a pure
-    rearrangement with no arithmetic; on overlapping grids it uses ``F.fold``
-    plus a closed-form overlap count map, and each pixel's reconstructed value
-    is the average of every patch covering it.
+    rearrangement with no arithmetic; on overlapping grids it folds the
+    patches (via the optional native accelerator when available, otherwise
+    ``F.fold``) plus a closed-form overlap count map, and each pixel's
+    reconstructed value is the average of every patch covering it.
 
     The round trip is bit-exact when every value in that count map is a power of
     two, because dividing a float by a power of two is the one division that

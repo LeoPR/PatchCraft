@@ -12,3 +12,9 @@ def test_weight_kind_is_public() -> None:
     from the public namespace (unreachable in 0.2.0)."""
     assert "WeightKind" in patchcraft.__all__
     assert patchcraft.WeightKind is not None
+
+
+def test_accel_available_is_public() -> None:
+    """Support/debug helper for the optional `patchcraft-accel` package."""
+    assert "accel_available" in patchcraft.__all__
+    assert isinstance(patchcraft.accel_available(), bool)

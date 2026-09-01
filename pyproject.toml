@@ -33,6 +33,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+accel = ["patchcraft-accel>=0.1.0"]
 cache = ["zstandard>=0.22"]
 dev = [
     "pytest>=8",
@@ -68,6 +69,7 @@ packages = ["src/patchcraft"]
 exclude = [
     "lab/",
     "**/.vscode/**",
+    "accel/",
 ]
 
 [tool.pytest.ini_options]
@@ -97,3 +99,10 @@ dev = [
     "setuptools>=82.0.1",
     "wheel>=0.47.0",
 ]
+
+# `patchcraft-accel` is published separately (built from the `accel/` crate by
+# the release workflow). The path source lets uv resolve the `accel` extra into
+# `uv.lock` before it exists on PyPI; CI syncs with `--locked` and never
+# requests the extra, so no Rust build happens outside the accel jobs.
+[tool.uv.sources]
+patchcraft-accel = { path = "accel" }
