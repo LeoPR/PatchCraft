@@ -6,37 +6,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Fixed
-
-- **`pair()`'s docstring double-applied the stride, and could silently
-  misplace every patch for a caller who trusted it.** It said patch `k` has
-  its top-left at LR pixel `(row * sh_lr, col * sw_lr)`, but `PatchMeta.row`
-  and `PatchMeta.col` already have the stride applied: they are built as
-  `(k // num_w_lr) * sh_lr` and `(k % num_w_lr) * sw_lr`. Following the
-  docstring multiplied by the stride a second time and landed on a different
-  patch. Only the text was wrong; the code, the tests and the runtime
-  behaviour were correct throughout, so no output of any released version
-  changes.
-
-  The failure mode was quiet, which is why it is worth a changelog entry: no
-  exception is raised, the patch exists, and only its recorded position is
-  wrong, so a consumer using patch position as a feature gets a worse model
-  rather than a crash. It is also invisible at `stride == 1`, where the grid
-  index and the pixel coordinate coincide, which is why it survived review.
-
-  Root cause was a name collision rather than a typo. `row`/`col` mean grid
-  indices in `THEORY.md` §1 (where `(row · sh, col · sw)` is the correct
-  pixel formula) and pixel coordinates in `PatchMeta`. The `pair()` docstring
-  took §1's formula and applied it to `PatchMeta`'s fields. `THEORY.md` §3
-  now flags the collision explicitly instead of carrying both meanings eight
-  lines apart, and `tests/test_pair.py` gains
-  `test_meta_coords_are_pixels_not_grid_indices`, which uses `stride != 1`
-  and asserts both that the stored coordinate indexes the right region and
-  that the discarded formula indexes a different one.
-
-  Reported from an API review done for the QSR prototype, which uses patch
-  position as a context feature.
-
 ## [0.3.0] - 2026-09-01
 
 ### Performance
@@ -75,7 +44,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `reconstruct`/`stitch` share one fold-geometry validator
   (`patchcraft._foldgeom.check_fold_geometry`); error messages unchanged.
 
-## [0.2.2] 2026-08-30
+## [0.2.2] - 2026-08-30
 
 Documentation release. No behaviour changes, so every call that worked on 0.2.1
 works identically here, and the only file under `src/` that changed is a
@@ -95,6 +64,34 @@ docstring.
   of two is the one division that never rounds. It also says that widening the
   dtype does not rescue it, since the deciding axis is the geometry rather than
   the precision.
+- **`pair()`'s docstring double-applied the stride, and could silently
+  misplace every patch for a caller who trusted it.** It said patch `k` has
+  its top-left at LR pixel `(row * sh_lr, col * sw_lr)`, but `PatchMeta.row`
+  and `PatchMeta.col` already have the stride applied: they are built as
+  `(k // num_w_lr) * sh_lr` and `(k % num_w_lr) * sw_lr`. Following the
+  docstring multiplied by the stride a second time and landed on a different
+  patch. Only the text was wrong; the code, the tests and the runtime
+  behaviour were correct throughout, so no output of any released version
+  changes.
+
+  The failure mode was quiet, which is why it is worth a changelog entry: no
+  exception is raised, the patch exists, and only its recorded position is
+  wrong, so a consumer using patch position as a feature gets a worse model
+  rather than a crash. It is also invisible at `stride == 1`, where the grid
+  index and the pixel coordinate coincide, which is why it survived review.
+
+  Root cause was a name collision rather than a typo. `row`/`col` mean grid
+  indices in `THEORY.md` §1 (where `(row · sh, col · sw)` is the correct
+  pixel formula) and pixel coordinates in `PatchMeta`. The `pair()` docstring
+  took §1's formula and applied it to `PatchMeta`'s fields. `THEORY.md` §3
+  now flags the collision explicitly instead of carrying both meanings eight
+  lines apart, and `tests/test_pair.py` gains
+  `test_meta_coords_are_pixels_not_grid_indices`, which uses `stride != 1`
+  and asserts both that the stored coordinate indexes the right region and
+  that the discarded formula indexes a different one.
+
+  Reported from an API review done for the QSR prototype, which uses patch
+  position as a context feature.
 
 ### Changed
 
