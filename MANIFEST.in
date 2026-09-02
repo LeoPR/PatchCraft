@@ -1,0 +1,25 @@
+# The sdist is the reproducible source snapshot: the product (`src/`, `accel/`)
+# plus the track that proves it works (`tests/`, `docs/`). `accel/` has to be
+# here, because an sdist build compiles it when a Rust toolchain is present.
+#
+# What must stay out: `lab/` is gitignored scratch work and cannot be
+# reproduced from any commit (patchcraft-0.2.0.tar.gz shipped three such files
+# to PyPI), `.superpowers/` is untracked agent tooling, and `.vscode/` is
+# machine-local editor config.
+
+include LICENSE
+include CHANGELOG.md CONTRIBUTING.md
+include README.md README.pt-BR.md README.pypi.md
+include pyproject.toml setup.py uv.lock .python-version
+
+recursive-include src *.py
+include src/patchcraft/py.typed
+recursive-include tests *.py
+recursive-include docs *.md
+recursive-include accel *.rs *.toml *.lock *.md
+prune accel/target
+
+prune lab
+prune archive
+prune .superpowers
+prune .github

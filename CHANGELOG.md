@@ -6,6 +6,56 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-02
+
+### Changed
+
+- **The native accelerator ships inside this wheel.** It was going to be a
+  second PyPI project, `patchcraft-accel`, reached through
+  `pip install patchcraft[accel]`. That project was never published and now
+  never will be. A release produces one sdist and six wheels for the single
+  `patchcraft` project: five tagged `cp312-abi3-<platform>` with the Rust
+  kernel compiled in as `patchcraft._accel_native`, and one `py3-none-any`
+  for every other platform. Installers prefer the most specific compatible
+  tag, so `pip install patchcraft` picks up the accelerator where one exists
+  and the pure wheel everywhere else, with no extra to remember. The pattern
+  and its universal fallback follow `coverage`, which publishes the same two
+  shapes for one version.
+- The `accel` extra is removed. Nothing depended on it, because it never
+  reached the index.
+- The accelerator is now on by default where a wheel carries it, rather than
+  opt-in. The two paths are bit-identical by test, and `PATCHCRAFT_ACCEL=0`
+  still forces the pure one at runtime.
+- Build backend moves from hatchling to setuptools with setuptools-rust, which
+  is what makes one project able to emit both shapes of wheel. `setup.py`
+  holds the single decision, driven by `PATCHCRAFT_PURE_PYTHON` and
+  `PATCHCRAFT_REQUIRE_EXTENSION`; everything else stays declarative in
+  `pyproject.toml`. Installing from the sdist compiles the extension when a
+  Rust toolchain is present and degrades to a pure install when it is not.
+- License metadata follows PEP 639: the SPDX expression `MIT` with
+  `license-files`, and the superseded `License :: OSI Approved` classifier is
+  gone. setuptools rejects carrying both.
+
+### Added
+
+- Linux aarch64 wheels, which the previous four-target matrix did not cover.
+- `tools/check_dist.py`, run before every upload. It fails the release if a
+  platform wheel lost its extension, which `optional=True` would otherwise
+  let through as a silently slow wheel, or if the universal wheel gained one.
+- `MANIFEST.in`, which puts `accel/` in the sdist so the source path can build
+  the extension, and keeps `lab/`, `.superpowers/` and cargo's `target/` out.
+
+### Notes
+
+- No signature, no name and no output value changed. The public surface is the
+  same 20 names, still pinned by `tests/test_public_api.py`.
+- Measured on torch 2.14, CPU, mean over the dev machine: `reconstruct` at
+  3x512x512 p=32 s=16 goes 11.4 ms to 2.5 ms (4.5x), at 3x2048x2048 p=64 s=32
+  477.9 ms to 31.8 ms (15.0x); `stitch[hann]` 21.6 ms to 7.0 ms (3.1x) and
+  488.7 ms to 38.8 ms (12.6x). The gain is algorithmic rather than a thread
+  count: the pure `F.fold` measured between 365 and 465 ms on that largest
+  case at 4, 8, 16 and 36 torch threads.
+
 ## [0.5.0] - 2026-09-02
 
 ### Added

@@ -11,7 +11,7 @@ pytest
 pytest -m "not gpu"        # skip GPU-requiring tests
 ```
 
-CI runs the full suite on every push and PR. See [`.github/workflows/test.yml`](.github/workflows/test.yml). Matrix is `{ubuntu-latest, windows-latest} × {python 3.12, 3.13, 3.14}`. To run the same checks locally before pushing:
+CI runs the full suite on every push and PR. See [`.github/workflows/test.yml`](.github/workflows/test.yml). Matrix is `{ubuntu-latest, windows-latest} × {python 3.12, 3.13, 3.14}` for the pure path, plus a second job on both operating systems for the accelerated one. To run the same checks locally before pushing:
 
 ```
 ruff check src tests
@@ -21,11 +21,54 @@ pytest -m "not gpu"
 
 ---
 
+## The two paths
+
+The overlapping fold in `reconstruct` and `stitch` has a Rust implementation
+in [`accel/`](accel/), compiled into the wheel on the platforms CI builds for.
+Everything else runs the same operation in torch. The two are bit-identical by
+test, so a contribution has to keep both green rather than pick one.
+
+Which one your checkout runs depends on whether the extension got built:
+
+```
+python -c "import patchcraft; print(patchcraft.accel_available())"
+```
+
+`uv sync` builds it when a Rust toolchain is on PATH. Two environment
+variables override that, and CI sets both explicitly rather than relying on
+what happens to be installed:
+
+| Variable | Effect |
+|---|---|
+| `PATCHCRAFT_PURE_PYTHON=1` | Skip the extension. How the universal wheel is built. |
+| `PATCHCRAFT_REQUIRE_EXTENSION=1` | Make a Rust build failure fatal instead of degrading to the pure path. |
+| `PATCHCRAFT_ACCEL=0` | Runtime only: ignore an extension that is already built. |
+
+The Rust kernel has its own tests, which need no Python at all:
+
+```
+cargo test --manifest-path accel/Cargo.toml
+```
+
+One local wrinkle worth knowing. If your checkout sits under a path with
+non-ASCII characters, `setuptools-rust` mis-decodes the artifact path that
+cargo reports and the copy step fails. Point the build at an ASCII directory
+and it works:
+
+```
+CARGO_TARGET_DIR=/tmp/pc-target uv sync
+```
+
+---
+
 ## Layout
 
 ```
 PatchCraft/
-├── pyproject.toml                  package metadata, build backend (hatchling)
+├── pyproject.toml                  package metadata, build backend, cibuildwheel targets
+├── setup.py                        the one build decision: with or without the Rust extension
+├── MANIFEST.in                     what the sdist carries
+├── tools/check_dist.py             gate: every platform wheel really has the extension
 ├── README.md                       the call page, canonical, English
 ├── README.pt-BR.md                 the same call page in Portuguese
 ├── README.pypi.md                  the PyPI page (long_description), links absolute
@@ -49,11 +92,11 @@ PatchCraft/
 │   ├── cache.py                    content-addressed disk cache
 │   ├── _accel.py                   bridge to the optional native accelerator, falls back silently
 │   └── _foldgeom.py                shared fold-geometry validation for reconstruct and stitch
-├── accel/                          patchcraft-accel, a separate distribution (Rust, pyo3/maturin)
-│   ├── Cargo.toml                  crate metadata, holds the accel version
+├── accel/                          the Rust crate compiled into this wheel (pyo3, setuptools-rust)
+│   ├── Cargo.toml                  crate metadata; the version there is internal
 │   ├── src/kernel.rs               the gather-fold kernel, pure Rust, cargo-tested
-│   ├── src/lib.rs                  pyo3 glue
-│   └── README.md                   how to build it from source
+│   ├── src/lib.rs                  pyo3 glue, exports patchcraft._accel_native
+│   └── README.md                   how to build it, and how to check it is active
 ├── tests/                          pytest suite (contract tests for src/)
 │   ├── test_extract.py             extract + Patchify
 │   ├── test_reconstruct.py
@@ -66,7 +109,7 @@ PatchCraft/
 │   ├── test_exactness.py           falsifies the count-map predicate over the legal space
 │   ├── test_reference.py           naive loop-based reference for the fast paths
 │   ├── test_public_api.py          freezes the 20 names, their signatures and carrier fields
-│   ├── test_accel.py               native path, skipped unless the accelerator is installed
+│   ├── test_accel.py               native path, skipped unless the extension was built
 │   ├── test_datasets_helper.py     label_subset
 │   ├── test_import.py
 │   ├── _rng.py                     audited round-trip helpers (data generation, bit equality)
@@ -138,9 +181,11 @@ After 1.0 the ordinary reading applies: breaking is major, additive is minor,
 fixed is patch. What 1.0 freezes is written in
 [`docs/FOCO-1.0.md`](docs/FOCO-1.0.md).
 
-The accelerator in [`accel/`](accel/) is a separate distribution with its own
-version in `accel/Cargo.toml`. It moves on its own schedule, and the two
-numbers are not meant to track each other.
+The accelerator in [`accel/`](accel/) has no version of its own to manage. It
+is compiled into this wheel, so it ships when `patchcraft` ships. The version
+in `accel/Cargo.toml` is internal and nothing reads it; what the Python side
+actually checks is `_ABI_VERSION` in `accel/src/lib.rs`, and a mismatch there
+means a silent fall back to the pure path rather than a crash.
 
 ---
 
@@ -155,7 +200,14 @@ numbers are not meant to track each other.
 4. Update [`docs/ROADMAP.md`](docs/ROADMAP.md) milestone checkboxes.
 5. Commit: `release: vX.Y.Z`.
 6. Tag + push: `git tag -a vX.Y.Z -m "..."` then `git push origin vX.Y.Z`.
-7. `release.yml` fires automatically: validates → builds → publishes to PyPI via Trusted Publishing → creates GitHub Release with `.whl` + `.tar.gz`.
+7. `release.yml` fires automatically: validates, builds, publishes to PyPI via Trusted Publishing, then creates the GitHub Release with every artifact attached.
 
 The tag must match `__version__`, and the `validate` job fails the run if it
 does not.
+
+One release produces one sdist and six wheels: five `cp312-abi3-<platform>`
+wheels with the Rust extension inside, and one `py3-none-any` wheel for
+everywhere else. `tools/check_dist.py` runs before the upload and fails the
+release if a platform wheel lost its extension or if the universal wheel
+gained one. Publishing is a single project, so there is nothing to register on
+PyPI beyond the publisher that already exists.

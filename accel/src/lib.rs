@@ -1,5 +1,7 @@
 //! Python bindings for the patchcraft native accelerator.
 //!
+//! Built into the `patchcraft` wheel itself as `patchcraft._accel_native`.
+//!
 //! Raw-pointer interface: the Python caller owns the buffers and guarantees
 //! they are contiguous, correctly sized, CPU-resident, correctly typed
 //! (`dtype`), and alive for the duration of the (synchronous) call. No torch
@@ -79,7 +81,7 @@ fn fold_add(
 }
 
 #[pymodule]
-fn patchcraft_accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _accel_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("_ABI_VERSION", ABI_VERSION)?;
     m.add_function(wrap_pyfunction!(fold_add, m)?)?;
     Ok(())

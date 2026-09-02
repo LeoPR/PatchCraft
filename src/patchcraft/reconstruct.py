@@ -2,7 +2,7 @@
 
 Non-overlapping grids are a pure rearrangement; overlapping grids sum the
 patches with a closed-form O(H+W) count map, or via the optional native
-accelerator (patchcraft-accel) when available, otherwise F.fold.
+accelerator (built into this wheel where available) or F.fold.
 
 Contract: docs/THEORY.md §2 and §9.2.
 """

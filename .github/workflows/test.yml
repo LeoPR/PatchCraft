@@ -25,6 +25,10 @@ jobs:
       # newest installed interpreter -- masking the matrix and leaking
       # the dev deps installed under a different version).
       UV_PYTHON: ${{ matrix.python }}
+      # This job is the PURE path. Runners ship a Rust toolchain, so without
+      # this the editable install would build the extension and these cells
+      # would silently stop covering the fallback that most platforms get.
+      PATCHCRAFT_PURE_PYTHON: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -47,6 +51,9 @@ jobs:
       - name: Mypy (strict, src only)
         run: uv run mypy --strict src
 
+      - name: The pure path is what is under test here
+        run: uv run python -c "import patchcraft; assert not patchcraft.accel_available()"
+
       - name: Pytest (skip GPU markers)
         run: uv run pytest -m "not gpu"
 
@@ -55,6 +62,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       UV_PYTHON: "3.12"
+      # A Rust failure must fail this job rather than degrade to the pure
+      # path, which would make the job pass while testing nothing new.
+      PATCHCRAFT_REQUIRE_EXTENSION: "1"
     strategy:
       fail-fast: false
       matrix:
@@ -74,17 +84,14 @@ jobs:
         run: uv python install
 
       - name: Install project with dev + cache extras
+        # setuptools-rust compiles `accel/` into the editable install here,
+        # because PATCHCRAFT_PURE_PYTHON is not set for this job.
         run: uv sync --locked --extra cache --extra dev
 
       - name: Rust unit tests
         # The venv's interpreter on PATH lets the pyo3 build script resolve
-        # libpython (extension-module is off outside maturin builds).
+        # libpython (extension-module is off outside a wheel build).
         run: uv run cargo test --manifest-path accel/Cargo.toml
-
-      - name: Build + install the accelerator
-        run: |
-          uv pip install maturin
-          uv run maturin develop --manifest-path accel/Cargo.toml --release
 
       - name: Accelerator is detected
         run: uv run python -c "import patchcraft; assert patchcraft.accel_available()"

@@ -1,12 +1,13 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=77", "setuptools-rust>=1.11"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "patchcraft"
 description = "Image patch extraction, reconstruction, pairing and seam-aware stitching for super-resolution and dataset pipelines."
 readme = "README.pypi.md"
 license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 authors = [{ name = "Leonardo Marques de Souza" }]
 keywords = ["image", "patches", "super-resolution", "dataset", "torch"]
@@ -14,13 +15,13 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Image Processing",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -34,7 +35,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-accel = ["patchcraft-accel>=0.1.0"]
 cache = ["zstandard>=0.22"]
 dev = [
     "pytest>=8",
@@ -52,29 +52,36 @@ Issues = "https://github.com/LeoPR/PatchCraft/issues"
 Changelog = "https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md"
 Documentation = "https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md"
 
-[tool.hatch.version]
-path = "src/patchcraft/__init__.py"
+[tool.setuptools.dynamic]
+# Read statically from the AST, so importing patchcraft (and torch with it) is
+# never part of a build.
+version = { attr = "patchcraft.__version__" }
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/patchcraft"]
+[tool.setuptools.packages.find]
+where = ["src"]
 
-[tool.hatch.build.targets.wheel.force-include]
-"src/patchcraft/py.typed" = "patchcraft/py.typed"
+[tool.setuptools.package-data]
+patchcraft = ["py.typed"]
 
-# The sdist is the reproducible source snapshot: product (`src/`) plus the
-# track that proves it works (`tests/`, `docs/`). It must NOT carry `lab/`,
-# whose contents are gitignored scratch work (`lab/.gitignore` is `*`) and so
-# cannot be reproduced from any commit -- patchcraft-0.2.0.tar.gz shipped three
-# such files to PyPI. `.vscode/` is machine-local editor config, `accel/`
-# is a separate distribution with its own sdist, and `.superpowers/` is
-# untracked agent tooling that hatchling would otherwise sweep in.
-[tool.hatch.build.targets.sdist]
-exclude = [
-    "lab/",
-    "**/.vscode/**",
-    "accel/",
-    ".superpowers/",
-]
+# The sdist contents are declared in MANIFEST.in, which must carry `accel/`:
+# it is the Rust source the sdist builds from when a toolchain is present.
+
+[tool.cibuildwheel]
+# pyo3 is pinned to abi3-py312 and `requires-python` is >=3.12, so one wheel
+# per platform covers every supported interpreter. Building only the cp312
+# identifier is therefore complete, not a shortcut.
+build = "cp312-*"
+# musllinux and 32-bit are skipped because torch publishes no wheels for them,
+# so a patchcraft wheel there could never be installed alongside its own
+# dependency.
+skip = "*-musllinux_* *-manylinux_i686 *-win32"
+build-frontend = "build"
+environment = { PATCHCRAFT_REQUIRE_EXTENSION = "1" }
+
+[tool.cibuildwheel.linux]
+# The manylinux container has no Rust; install it once before the builds.
+before-all = "curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable"
+environment = { PATH = "$HOME/.cargo/bin:$PATH", PATCHCRAFT_REQUIRE_EXTENSION = "1" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -101,12 +108,6 @@ warn_unused_configs = true
 dev = [
     "pip>=26.1.1",
     "setuptools>=82.0.1",
+    "setuptools-rust>=1.11",
     "wheel>=0.47.0",
 ]
-
-# `patchcraft-accel` is published separately (built from the `accel/` crate by
-# the release workflow). The path source lets uv resolve the `accel` extra into
-# `uv.lock` before it exists on PyPI; CI syncs with `--locked` and never
-# requests the extra, so no Rust build happens outside the accel jobs.
-[tool.uv.sources]
-patchcraft-accel = { path = "accel" }

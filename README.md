@@ -39,16 +39,14 @@ pip install patchcraft
 pip install "patchcraft[cache]"     # adds zstandard, which compresses Cache payloads
 ```
 
-Or with the optional native accelerator (prebuilt wheels for Windows x64,
-Linux x86_64, macOS arm64 and macOS x86_64; the package stays pure-Python
-and fully functional without it):
+There is nothing else to install for speed. On Windows x64, Linux x86_64 and
+aarch64, and both macOS architectures, the wheel carries a Rust accelerator for
+the overlapping fold, which is where `reconstruct` and `stitch` spend their
+time. Every other platform gets the universal wheel and runs the pure-torch
+paths, which return the same values.
 
-```bash
-pip install patchcraft[accel]
-```
-
-`patchcraft.accel_available()` reports at runtime whether the accelerator is
-active; `PATCHCRAFT_ACCEL=0` in the environment forces the pure path.
+`patchcraft.accel_available()` reports at runtime which one you got, and
+`PATCHCRAFT_ACCEL=0` in the environment forces the pure path.
 
 The distribution name and the import name are both `patchcraft`. The runtime dependencies are `torch>=2.6`, `numpy>=1.26` and `pillow>=10`, and the supported Python versions are in [the guide](docs/GUIDE.md#9-install-details-and-citation) together with the note you need before you install a GPU wheel.
 
@@ -144,7 +142,7 @@ The round trip is exact when every value in the count map is a power of two, whi
 
 ## Status
 
-**0.5.0, pre-1.0.** Output values can still change in a minor release, and [CHANGELOG.md](CHANGELOG.md) records each change with the measurement behind it.
+**0.6.0, pre-1.0.** Output values can still change in a minor release, and [CHANGELOG.md](CHANGELOG.md) records each change with the measurement behind it.
 
 1571 tests collected and CI is green on {Ubuntu, Windows} x {Python 3.12, 3.13, 3.14}, with `ruff check` and `mypy --strict` in the same run. The package is typed and ships `py.typed`.
 

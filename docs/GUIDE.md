@@ -6,7 +6,7 @@ This is the manual. [The README](../README.md) is the call page, and it answers 
 
 You do not have to read it from the top. Each section stands on its own, so jump into the one that matches the problem in front of you, and follow the links out to [THEORY.md](THEORY.md) when you want the contract rather than the demonstration.
 
-**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run against `patchcraft` 0.3.0 on CPU, with Python 3.13.13 and torch 2.13.0+cpu. Version 0.4.0 changes only how the overlap fold executes internally (the optional `patchcraft-accel` native path), which is bit-exact against these outputs; the section 7 block was re-run on 0.4.0 and again on 0.5.0, and the two `tilings` blocks in section 6 were re-run on 0.5.0, which is the one release that changed what the enumeration returns. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-what-this-project-does-not-claim), and the file and line references, which point at the repository as of 0.5.0.
+**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run against `patchcraft` 0.3.0 on CPU, with Python 3.13.13 and torch 2.13.0+cpu. Version 0.4.0 changes only how the overlap fold executes internally (the optional `patchcraft-accel` native path), which is bit-exact against these outputs; the section 7 block was re-run on 0.4.0 and again on 0.5.0, and the two `tilings` blocks in section 6 were re-run on 0.5.0, which is the one release that changed what the enumeration returns. Version 0.6.0 changes only how the package is built and shipped, and the accelerated path it now carries by default is bit-identical to the torch path these blocks were run on. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-what-this-project-does-not-claim), and the file and line references, which point at the repository as of 0.6.0.
 
 ## Contents
 
@@ -725,7 +725,7 @@ The public surface is 20 names, and `__all__` is what fixes it.
 ```python
 import patchcraft
 
-assert patchcraft.__version__ == "0.5.0"
+assert patchcraft.__version__ == "0.6.0"
 assert len(patchcraft.__all__) == 20
 assert all(hasattr(patchcraft, name) for name in patchcraft.__all__)
 print(patchcraft.__all__)
@@ -754,7 +754,7 @@ The table below is the one place that records what each call allocates, which is
 | `per_patch_mse`, `per_patch_psnr` | two `(L, C, h, w)` stacks | `(L,)` in float64 | one value per patch |
 | `resize` | one tensor or `PIL.Image`, `target_size`, `backend` | the type it received | one resized image |
 | `Cache` | `root`, `namespace`, `version` | a content-addressed store | files on disk, zstd payloads when installed |
-| `accel_available` | nothing | `bool`, true when the optional native path imports | nothing beyond a cached import probe on first call |
+| `accel_available` | nothing | `bool`, true when this install has the native extension | nothing beyond a cached import probe on first call |
 
 Four of those symbols sit off to the side of the main loop, and together they fit in one screen.
 
@@ -791,7 +791,7 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 ## 8. What this project does not claim
 
-**Version 0.5.0 is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
+**Version 0.6.0 is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
 
 What is verified is this. The full local run of `pytest -m "not gpu"` passes 1534 tests, skips 32 cases, and deselects 5 GPU tests, in about half a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
@@ -831,6 +831,10 @@ cd PatchCraft
 pip install -e ".[dev,cache]"
 ```
 
+**Wheels.** A release publishes one sdist and six wheels. Five of them are tagged `cp312-abi3-<platform>` and carry a Rust accelerator for the overlapping fold, covering Windows x64, Linux x86_64 and aarch64, and both macOS architectures; the sixth is `py3-none-any` and runs the torch paths. Installers prefer the most specific compatible tag, so `pip install patchcraft` picks the accelerated wheel where one exists and the universal wheel otherwise. The two return the same values, which [section 8](#8-what-this-project-does-not-claim) qualifies, and `patchcraft.accel_available()` says which one you are running. There is no extra to enable and nothing separate to install.
+
+Installing from the sdist compiles the accelerator when a Rust toolchain is present and falls back to a pure install when it is not, so the source path never fails for want of cargo.
+
 **Python versions.** CI tests 3.12, 3.13 and 3.14 on Ubuntu and Windows, which is also what the classifiers advertise. The floor is real rather than cautious: `cache.py` uses the PEP 695 generic syntax that arrived in 3.12, so the package does not parse on 3.11. `requires-python` is `>=3.12` with no ceiling, so pip will install this on a newer Python too, where nothing has been measured.
 
 **GPU.** Install a matching torch wheel first, following [pytorch.org/get-started/locally](https://pytorch.org/get-started/locally/). Read [section 8](#8-what-this-project-does-not-claim) before you do, because no CUDA path in this library has ever been executed.
@@ -844,7 +848,7 @@ pip install -e ".[dev,cache]"
   author  = {Souza, Leonardo Marques de},
   title   = {PatchCraft: image patch extraction, reconstruction, pairing
              and seam-aware stitching},
-  version = {0.5.0},
+  version = {0.6.0},
   year    = {2026},
   url     = {https://github.com/LeoPR/PatchCraft}
 }

@@ -1,29 +1,48 @@
-# patchcraft-accel
+# The patchcraft accelerator
 
-Optional native accelerator for [patchcraft](https://github.com/LeoPR/PatchCraft):
-a Rust/pyo3 kernel for the overlap fold in `reconstruct`/`stitch`.
+A Rust/pyo3 kernel for the overlapping fold in `reconstruct` and `stitch`,
+compiled into the `patchcraft` wheel as `patchcraft._accel_native`.
 
-## Install
+This is not a separate package. There is nothing to install for it and no
+extra to enable. `pip install patchcraft` brings it on Windows x64, Linux
+x86_64 and aarch64, and both macOS architectures; every other platform gets
+the universal wheel and runs the same operation in torch.
 
-```bash
-pip install patchcraft[accel]
-```
-
-Prebuilt abi3 wheels (one per OS, covering Python 3.12+): Windows x64,
-Linux x86_64 (manylinux), macOS arm64, macOS x86_64. Wheels are
-self-contained (statically linked Rust; no system dependencies) and the
-package never imports or links against torch.
-
-## Build from source
-
-Requires a Rust toolchain (https://rustup.rs) >= 1.82 and maturin:
+## Is it active here
 
 ```bash
-pip install maturin
-maturin develop --release   # from this directory, inside your virtualenv
+python -c "import patchcraft; print(patchcraft.accel_available())"
 ```
 
-## Debug
+`PATCHCRAFT_ACCEL=0` in the environment forces the pure path at runtime, which
+is the switch to reach for when comparing the two.
 
-`PATCHCRAFT_ACCEL=0` forces the pure-torch path;
-`patchcraft.accel_available()` reports whether the accelerator is active.
+## Build it in a checkout
+
+Requires a Rust toolchain (<https://rustup.rs>) at 1.82 or newer. An editable
+install compiles it automatically when cargo is on PATH:
+
+```bash
+uv sync                 # or: pip install -e .
+```
+
+Set `PATCHCRAFT_REQUIRE_EXTENSION=1` to make a build failure fatal rather than
+a silent fall back to the pure path, and `PATCHCRAFT_PURE_PYTHON=1` to skip the
+extension entirely. If your checkout sits under a path with non-ASCII
+characters, point cargo at an ASCII build directory with
+`CARGO_TARGET_DIR=/tmp/pc-target`, because setuptools-rust mis-decodes the
+artifact path otherwise.
+
+The kernel has its own tests, which need no Python:
+
+```bash
+cargo test --manifest-path accel/Cargo.toml
+```
+
+## What it may and may not do
+
+It returns `None` and lets torch handle the call for any tensor that is not
+CPU-resident, not float32 or float64, or attached to the autograd graph. It
+never raises for its own absence. Its summation order per output pixel matches
+ATen `col2im`, which is what makes the two paths bit-identical rather than
+merely close.

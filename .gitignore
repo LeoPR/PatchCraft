@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+# Built in place by an editable install (setuptools-rust).
+src/patchcraft/_accel_native*
 
 # Distribution / packaging
 build/

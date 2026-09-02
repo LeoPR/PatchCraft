@@ -1,15 +1,21 @@
 [package]
 name = "patchcraft-accel"
+# Internal crate version. Nothing publishes it: the crate is compiled into the
+# `patchcraft` wheel, and the version users see is the one in
+# `src/patchcraft/__init__.py`. `_ABI_VERSION` in `src/lib.rs` is what the
+# Python side actually checks.
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.82"
 license = "MIT"
-description = "Optional native fold accelerator for patchcraft (Rust/pyo3)."
+description = "Native fold accelerator built into the patchcraft wheel (Rust/pyo3)."
 repository = "https://github.com/LeoPR/PatchCraft"
 
 [lib]
 # rlib so `cargo test` can exercise the kernel; cdylib for the Python module.
-name = "patchcraft_accel"
+# The name must match the `#[pymodule]` function and the setuptools-rust
+# target, because pyo3 derives the module's init symbol from it.
+name = "_accel_native"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
@@ -18,7 +24,8 @@ rayon = "1.10"
 
 [features]
 # Off by default so `cargo test` links libpython (extension-module leaves
-# Python symbols unresolved on purpose). maturin enables it via pyproject.toml.
+# Python symbols unresolved on purpose). setuptools-rust enables it for
+# wheel builds via Binding.PyO3.
 default = []
 extension-module = ["pyo3/extension-module"]
 

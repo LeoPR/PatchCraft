@@ -1,8 +1,8 @@
 """Tests for the optional native accelerator bridge (`patchcraft._accel`).
 
 Two layers: import/ABI/env behavior with fake modules (always runs), and
-numerical checks against `F.fold` (require the real `patchcraft-accel`
-installed with `maturin develop`, and are skipped otherwise).
+numerical checks against `F.fold` (require the real native extension
+compiled into the install, and are skipped otherwise).
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ import torch.nn.functional as F  # noqa: N812 (torch convention)
 from patchcraft import _accel, reconstruct, stitch
 
 real_accel = pytest.mark.skipif(
-    not _accel.accel_available(), reason="patchcraft-accel not installed"
+    not _accel.accel_available(), reason="native accelerator not built into this install"
 )
 
 
@@ -37,7 +37,7 @@ def test_accel_available_returns_bool() -> None:
 
 def test_absent_package_means_unavailable(fresh_accel, monkeypatch: pytest.MonkeyPatch) -> None:
     # `None` in sys.modules makes importlib raise ImportError.
-    monkeypatch.setitem(sys.modules, "patchcraft_accel", None)
+    monkeypatch.setitem(sys.modules, "patchcraft._accel_native", None)
     assert _accel.accel_available() is False
 
 
@@ -45,7 +45,7 @@ def test_wrong_abi_version_means_unavailable(
     fresh_accel, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake = types.SimpleNamespace(_ABI_VERSION=2)
-    monkeypatch.setitem(sys.modules, "patchcraft_accel", fake)
+    monkeypatch.setitem(sys.modules, "patchcraft._accel_native", fake)
     assert _accel.accel_available() is False
 
 
@@ -53,13 +53,13 @@ def test_matching_abi_version_means_available(
     fresh_accel, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake = types.SimpleNamespace(_ABI_VERSION=1)
-    monkeypatch.setitem(sys.modules, "patchcraft_accel", fake)
+    monkeypatch.setitem(sys.modules, "patchcraft._accel_native", fake)
     assert _accel.accel_available() is True
 
 
 def test_env_override_disables(fresh_accel, monkeypatch: pytest.MonkeyPatch) -> None:
     fake = types.SimpleNamespace(_ABI_VERSION=1)
-    monkeypatch.setitem(sys.modules, "patchcraft_accel", fake)
+    monkeypatch.setitem(sys.modules, "patchcraft._accel_native", fake)
     monkeypatch.setenv("PATCHCRAFT_ACCEL", "0")
     assert _accel.accel_available() is False
 
@@ -67,7 +67,7 @@ def test_env_override_disables(fresh_accel, monkeypatch: pytest.MonkeyPatch) -> 
 def test_fold_weighted_none_when_unavailable(
     fresh_accel, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setitem(sys.modules, "patchcraft_accel", None)
+    monkeypatch.setitem(sys.modules, "patchcraft._accel_native", None)
     patches = torch.rand(49, 3, 4, 4)
     assert _accel.fold_weighted(patches, (3, 16, 16), (2, 2), None) is None
 
@@ -76,7 +76,7 @@ def test_fold_weighted_none_when_env_disabled(
     fresh_accel, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake = types.SimpleNamespace(_ABI_VERSION=1, fold_add=lambda *a: None)
-    monkeypatch.setitem(sys.modules, "patchcraft_accel", fake)
+    monkeypatch.setitem(sys.modules, "patchcraft._accel_native", fake)
     monkeypatch.setenv("PATCHCRAFT_ACCEL", "0")
     patches = torch.rand(49, 3, 4, 4)
     assert _accel.fold_weighted(patches, (3, 16, 16), (2, 2), None) is None
@@ -86,7 +86,7 @@ def test_fold_weighted_rejects_ineligible_dtype(
     fresh_accel, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake = types.SimpleNamespace(_ABI_VERSION=1, fold_add=lambda *a: None)
-    monkeypatch.setitem(sys.modules, "patchcraft_accel", fake)
+    monkeypatch.setitem(sys.modules, "patchcraft._accel_native", fake)
     patches = torch.rand(49, 3, 4, 4).half()
     assert _accel.fold_weighted(patches, (3, 16, 16), (2, 2), None) is None
 

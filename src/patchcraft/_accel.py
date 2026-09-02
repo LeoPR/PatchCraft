@@ -1,12 +1,13 @@
-"""Bridge to the optional Rust accelerator (``patchcraft-accel``).
+"""Bridge to the optional Rust accelerator (``patchcraft._accel_native``).
 
-The accelerator is a separate PyPI package (a pyo3/Rust extension module).
-This module detects it at runtime and exposes a single primitive,
-:func:`fold_weighted`, for the overlap paths of ``reconstruct`` and
-``stitch``. Any failure at all, whether the package is absent, the ABI
-mismatches, ``PATCHCRAFT_ACCEL=0`` is set in the environment or the tensor is
-ineligible, yields ``None``/``False`` and
-the caller falls back to the pure-torch path. Nothing here raises for an
+The accelerator is a pyo3/Rust extension module compiled into this wheel on
+the platforms that have one. Where it is absent the wheel is pure Python and
+every path here reports unavailable. This module detects it at runtime and
+exposes a single primitive, :func:`fold_weighted`, for the overlap paths of
+``reconstruct`` and ``stitch``. Any failure at all, whether the extension was
+never built, the ABI mismatches, ``PATCHCRAFT_ACCEL=0`` is set in the
+environment or the tensor is ineligible, yields ``None``/``False`` and the
+caller falls back to the pure-torch path. Nothing here raises for an
 unavailable accelerator.
 """
 from __future__ import annotations
@@ -26,12 +27,12 @@ _checked = False
 
 
 def _load() -> ModuleType | None:
-    """Import ``patchcraft_accel`` once, cache the outcome, return it or None."""
+    """Import the native module once, cache the outcome, return it or None."""
     global _checked, _module
     if not _checked:
         _checked = True
         try:
-            mod = importlib.import_module("patchcraft_accel")
+            mod = importlib.import_module("patchcraft._accel_native")
         except ImportError:
             pass
         else:
