@@ -168,18 +168,43 @@ seen, so a version that shipped can only be superseded, never edited. That is
 also why a failed pipeline never costs a number: `skip-existing` makes the
 upload a no-op and the same tag can be re-run.
 
-Which component moves, while the project is pre-1.0 and SemVer leaves `0.y.z`
-open:
+**While the project is pre-1.0, the middle digit is the compatibility
+boundary.** SemVer itself leaves `0.y.z` open, saying only that "anything MAY
+change at any time", so the meaning comes from the resolvers instead, and they
+agree: Cargo expands `^0.2.3` to `>=0.2.3, <0.3.0`, npm does the same, and
+PEP 440's `~=0.5.0` means `>=0.5.0, <0.6.0`. In every one of them a `0.y` bump
+is the announcement that something may break, and a `0.y.z` bump is the
+promise that nothing does.
 
-| Change | Bump |
-|---|---|
-| Any output value, signature, name or documented behaviour changes | minor, `0.Y.0` |
-| A fix that changes no documented behaviour and no signature | patch, `0.y.Z` |
-| Documentation, tests, CI or tooling only | nothing |
+That fixes what each digit is for here:
+
+| Change | Bump | Why |
+|---|---|---|
+| An output value, a signature, a name or documented behaviour changes | `0.Y.0` | Resolvers stop at the y boundary, so this is where a break belongs |
+| New functionality that breaks nothing, or a fix | `0.y.Z` | Anyone pinned to the y-series should get it |
+| Documentation, tests, CI, packaging or tooling only | `0.y.Z` | Still a release if it is published, still no break |
+| Nothing published | nothing | Accumulate under `[Unreleased]` |
 
 After 1.0 the ordinary reading applies: breaking is major, additive is minor,
 fixed is patch. What 1.0 freezes is written in
 [`docs/FOCO-1.0.md`](docs/FOCO-1.0.md).
+
+### Errata
+
+The rule above was written after the fact, and two releases predate it.
+
+`0.4.0` should have been `0.3.1`. It added `accel_available()` and nothing
+else: no signature changed, and the accelerated path was bit-exact against the
+pure one. Additive and non-breaking is a z-bump under the boundary rule, and
+minting a y announced a break that never happened.
+
+`0.5.1` was briefly numbered `0.6.0` before release. It changes only how the
+package is built and shipped, so it is a z-bump.
+
+Two others were right and are worth recording as the shape to copy. `0.3.0`
+moved `stitch` output by ULPs through a different summation order, which is an
+output change and belongs at a y boundary. `0.5.0` made `tilings` return 73
+specs where it returned 100, which is squarely a break.
 
 The accelerator in [`accel/`](accel/) has no version of its own to manage. It
 is compiled into this wheel, so it ships when `patchcraft` ships. The version

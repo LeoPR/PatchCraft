@@ -142,7 +142,7 @@ The round trip is exact when every value in the count map is a power of two, whi
 
 ## Status
 
-**0.6.0, pre-1.0.** Output values can still change in a minor release, and [CHANGELOG.md](CHANGELOG.md) records each change with the measurement behind it.
+**Pre-1.0**, and the badge above is the current release. While the leading digit is zero the middle one is the compatibility boundary, so `0.y.z` is safe to take and a new `0.y` is where an output value or a signature is allowed to move. [CHANGELOG.md](CHANGELOG.md) records every such change with the measurement behind it.
 
 1571 tests collected and CI is green on {Ubuntu, Windows} x {Python 3.12, 3.13, 3.14}, with `ruff check` and `mypy --strict` in the same run. The package is typed and ships `py.typed`.
 

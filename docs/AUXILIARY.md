@@ -136,7 +136,7 @@ about it; that doc is operator-facing.
 
 ## 4. What the wheel ships vs. what stays local
 
-| In `dist/patchcraft-0.2.0-py3-none-any.whl` | NOT in the wheel |
+| In the built wheel | NOT in the wheel |
 |---|---|
 | `src/patchcraft/*.py` | `tests/` (including `_datasets.py`) |
 | `src/patchcraft/py.typed` | `lab/` |
@@ -148,7 +148,7 @@ about it; that doc is operator-facing.
 If you want to confirm the boundary, after a build:
 
 ```
-python -m zipfile -l dist/patchcraft-0.2.0-py3-none-any.whl
+python -m zipfile -l dist/patchcraft-*.whl
 ```
 
 You should see only `patchcraft/` (the eight primitive modules

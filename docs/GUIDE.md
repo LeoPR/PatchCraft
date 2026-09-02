@@ -6,7 +6,7 @@ This is the manual. [The README](../README.md) is the call page, and it answers 
 
 You do not have to read it from the top. Each section stands on its own, so jump into the one that matches the problem in front of you, and follow the links out to [THEORY.md](THEORY.md) when you want the contract rather than the demonstration.
 
-**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run against `patchcraft` 0.3.0 on CPU, with Python 3.13.13 and torch 2.13.0+cpu. Version 0.4.0 changes only how the overlap fold executes internally (the optional `patchcraft-accel` native path), which is bit-exact against these outputs; the section 7 block was re-run on 0.4.0 and again on 0.5.0, and the two `tilings` blocks in section 6 were re-run on 0.5.0, which is the one release that changed what the enumeration returns. Version 0.6.0 changes only how the package is built and shipped, and the accelerated path it now carries by default is bit-identical to the torch path these blocks were run on. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-what-this-project-does-not-claim), and the file and line references, which point at the repository as of 0.6.0.
+**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run on CPU against the release named in [CHANGELOG.md](../CHANGELOG.md) as the most recent one, with Python 3.13 and torch 2.x. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-what-this-project-does-not-claim), and the file and line references, which point at the repository head.
 
 ## Contents
 
@@ -191,7 +191,7 @@ The by-hand version above is also the correct one, since it already has the cove
 
 PatchCraft computes nothing that torch cannot. It is the same `unfold`, the same `fold` and the same count map underneath, and it is not faster. What you are buying is that the geometry is checked before the arithmetic runs, in one place, with tests around it.
 
-The second caveat is that the coverage defect shown above shipped inside PatchCraft itself. Version 0.2.0 validated the patch count and never the coverage, so it returned partly black images until 0.2.1 added the guard, which [CHANGELOG.md](../CHANGELOG.md) records with the measurements that found it. The argument for the library is that the guard is written once and regression tested, and not that it was ever obvious.
+The second caveat is that the coverage defect shown above once shipped inside PatchCraft itself, which validated the patch count and never the coverage, and so returned partly black images until a later release added the guard. [CHANGELOG.md](../CHANGELOG.md) carries that entry with the measurements that found it. The argument for the library is that the guard is written once and regression tested, and not that it was ever obvious.
 
 ## 2. The patch stack and the count map
 
@@ -301,7 +301,7 @@ extract: NotImplementedError: "im2col_out_cpu" not implemented for 'Byte'
 reconstruct: ValueError: reconstruct requires floating-point patches, got dtype=torch.uint8. F.fold is not implemented for integer dtypes; convert with patches.float() first.
 ```
 
-The two messages are not equally good, and the asymmetry is a rough edge rather than a design. Since 0.2.1 `reconstruct` and `stitch` carry a dtype guard that raises a framed `ValueError` naming the conversion, while `extract` still lets torch's raw `NotImplementedError` through.
+The two messages are not equally good, and the asymmetry is a rough edge rather than a design. `reconstruct` and `stitch` carry a dtype guard that raises a framed `ValueError` naming the conversion, while `extract` still lets torch's raw `NotImplementedError` through.
 
 The accepted dtypes are `float16`, `float32`, `float64` and `bfloat16`, and they are contract text in [THEORY.md](THEORY.md) §9.1 and §9.2.
 
@@ -434,11 +434,11 @@ The maximum is 4, the geometry is legal and fully covering, and the round trip s
 
 **float64 is not a safe harbour.** The deciding axis is the count map and not the dtype, so float64 misses the round trip at exactly the geometry where float32 misses it. Reaching for a wider float buys you a smaller error, and it never buys you exactness.
 
-**Half precision comes back exact here for a reason worth knowing, and not because of a stronger guarantee.** Version 0.2.1 accumulates `float16` and `bfloat16` in a float32 buffer and rounds once on return, and that final rounding is far coarser than the float32 error, so those rows land back on the value they started from. The promotion exists for a different reason entirely, which is that the folded sum overflows the fp16 finite range before the division ever happens. [THEORY.md](THEORY.md) §9.2 records the measurement that forced it, where a constant fp16 image at value 10000.0 came back as `inf` in 144 of 256 pixels before the fix.
+**Half precision comes back exact here for a reason worth knowing, and not because of a stronger guarantee.** PatchCraft accumulates `float16` and `bfloat16` in a float32 buffer and rounds once on return, and that final rounding is far coarser than the float32 error, so those rows land back on the value they started from. The promotion exists for a different reason entirely, which is that the folded sum overflows the fp16 finite range before the division ever happens. [THEORY.md](THEORY.md) §9.2 records the measurement that forced it, where a constant fp16 image at value 10000.0 came back as `inf` in 144 of 256 pixels before the fix.
 
 ### Where this rule is written down
 
-[ADR 0003](ADR/0003-reversibility-classes.md) is where the exactness boundary is being turned into contract, and it is still **Proposed** (acceptance is part of the 1.0 freeze). The wording itself landed across the project in 0.5.0, where docstrings, SCOPE, THEORY, USAGE and the READMEs all came to state the count-map rule with the per-pixel bound, closing blocker B1 in [FOCO-1.0.md](FOCO-1.0.md).
+[ADR 0003](ADR/0003-reversibility-classes.md) is where the exactness boundary is being turned into contract, and it is still **Proposed** (acceptance is part of the 1.0 freeze). The wording itself has since landed across the project, where docstrings, SCOPE, THEORY, USAGE and the READMEs all came to state the count-map rule with the per-pixel bound, closing blocker B1 in [FOCO-1.0.md](FOCO-1.0.md).
 
 Treat this section as the measured truth, and the ADR as the formal statement of the same rule.
 
@@ -565,7 +565,7 @@ The reason is visible in the uniform column, which does not move at all. Uniform
 ### The three windows, and what each costs
 
 - **`"uniform"`** is the default. Every covering patch contributes equally, which is exactly `reconstruct`'s arithmetic, and it puts the whole disagreement on the grid lines.
-- **`"hann"`** is the strong seam suppressor and the cheapest to compute. Since 0.2.1 it is the interior of a longer symmetric Hann window, `hann_window(n + 2, periodic=False)[1:-1]`, so it is strictly positive on every sample and never zeroes a pixel. The plain symmetric window, which is exactly zero at both endpoints, was the largest defect the 0.2.0 audit found, and [THEORY.md](THEORY.md) §2.5 records what it did to real images.
+- **`"hann"`** is the strong seam suppressor and the cheapest to compute. It is the interior of a longer symmetric Hann window, `hann_window(n + 2, periodic=False)[1:-1]`, so it is strictly positive on every sample and never zeroes a pixel. The plain symmetric window, which is exactly zero at both endpoints, was the largest defect the first audit of this library found, and [THEORY.md](THEORY.md) §2.5 records what it did to real images.
 - **`"gaussian"`** keeps far more weight at the patch edge than hann does, so it suppresses seams less at the larger patch sizes in the sweep, and it wins at the smallest one. THEORY §2.5 states the tradeoff as weaker seam suppression than Hann in exchange for a flatter window.
 
 **Hann costs fidelity, and the cost is already in the numbers above.** Measured against the model's own patches, uniform keeps 29.60 dB mean and hann keeps 27.14 dB. Hann is trading exactness for smoothness on purpose, so if what you want back is the model's output rather than a pleasant image, uniform is the honest choice.
@@ -698,9 +698,9 @@ round trip exact: True
 
 ### A wart the enumeration used to have
 
-Up to 0.4.0 the enumeration emitted one spec per stride value wherever the grid collapsed to a single patch, and it labelled almost all of them as overlapping. On a 28 by 28 image that was 28 specs for the same whole-image tiling, 27 of them carrying `overlap=True`, where a single patch has nothing to overlap with.
+The enumeration used to emit one spec per stride value wherever the grid collapsed to a single patch, and it labelled almost all of them as overlapping. On a 28 by 28 image that was 28 specs for the same whole-image tiling, 27 of them carrying `overlap=True`, where a single patch has nothing to overlap with.
 
-Version 0.5.0 removed them, because with one patch the stride is unobservable and each of those specs was a duplicate of the exact tile. The output of the block above already reflects the change: the overlap-allowed count for that shape fell from 100 to 73, and only one spec now describes the whole-image tiling.
+They were removed, because with one patch the stride is unobservable and each of those specs was a duplicate of the exact tile. The output of the block above already reflects the change: the overlap-allowed count for that shape fell from 100 to 73, and only one spec now describes the whole-image tiling.
 
 ```python
 from patchcraft import tilings
@@ -725,7 +725,7 @@ The public surface is 20 names, and `__all__` is what fixes it.
 ```python
 import patchcraft
 
-assert patchcraft.__version__ == "0.6.0"
+assert isinstance(patchcraft.__version__, str)  # the number lives in the changelog
 assert len(patchcraft.__all__) == 20
 assert all(hasattr(patchcraft, name) for name in patchcraft.__all__)
 print(patchcraft.__all__)
@@ -791,7 +791,7 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 ## 8. What this project does not claim
 
-**Version 0.6.0 is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
+**This is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
 
 What is verified is this. The full local run of `pytest -m "not gpu"` passes 1534 tests, skips 32 cases, and deselects 5 GPU tests, in about half a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
@@ -803,9 +803,9 @@ Five things this project does not claim.
 
 **3. The no-zstandard cache path runs in no environment.** `Cache` falls back to uncompressed payloads when `zstandard` is absent, and every configuration here and in CI installs the extra. So a plain `pip install patchcraft` takes precisely the branch that nothing exercises.
 
-**4. Nothing executes the examples on this page.** They were run by hand and pasted verbatim, against the releases the provenance note at the top names, and no test in the suite runs them. A test that executes every fenced block and checks the figures quoted in prose is the next piece of work on this file, and [USAGE.md](USAGE.md) is in the same position while still being captured against 0.2.0.
+**4. Nothing executes the examples on this page.** They were run by hand and pasted verbatim, against the release the provenance note at the top names, and no test in the suite runs them. A test that executes every fenced block and checks the figures quoted in prose is the next piece of work on this file, and [USAGE.md](USAGE.md) is in the same position, on top of being captured against a much older release, which its own banner says.
 
-**5. Pre-1.0 means output values can change in a minor release.** Version 0.2.1 rewrote the hann window, so `stitch(..., weight="hann")` returns different values than 0.2.0 does for every geometry. The round-trip contract did not change. [CHANGELOG.md](../CHANGELOG.md) records each change together with the measurement that motivated it.
+**5. Pre-1.0 means output values can change when the middle digit moves.** One release rewrote the hann window, so `stitch(..., weight="hann")` returns different values than the release before it did for every geometry, and the round-trip contract did not change. That is the kind of change a new `0.y` is allowed to carry and a new `0.y.z` is not. [CHANGELOG.md](../CHANGELOG.md) records each one together with the measurement that motivated it.
 
 The backlog that closes these, along with the wording corrections named in [section 4](#4-when-the-round-trip-is-bit-for-bit) and the label wart in [section 6](#6-planning-the-geometry-before-you-allocate), is [FOCO-1.0.md](FOCO-1.0.md).
 
@@ -848,7 +848,7 @@ Installing from the sdist compiles the accelerator when a Rust toolchain is pres
   author  = {Souza, Leonardo Marques de},
   title   = {PatchCraft: image patch extraction, reconstruction, pairing
              and seam-aware stitching},
-  version = {0.6.0},
+  version = {0.5.1},   % check CHANGELOG.md for the release you used
   year    = {2026},
   url     = {https://github.com/LeoPR/PatchCraft}
 }

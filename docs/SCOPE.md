@@ -240,10 +240,10 @@ We rejected that for two reasons.
   `stitch` rejects non-float patches explicitly, with a message telling the
   caller to use `patches.float()`.
 
-  The asymmetry above is historical. Since 0.2.1, `reconstruct` and `stitch`
+  The asymmetry above is historical. `reconstruct` and `stitch` now
   alike reject non-floating-point patches with a framed `ValueError` telling
   the caller to convert with `patches.float()` (THEORY §9.2 and §9.9). In
-  0.2.0 `reconstruct` had no dtype guard, and integer patches failed with a
+  An earlier `reconstruct` had no dtype guard, and integer patches failed with a
   raw `NotImplementedError` from torch instead of a PatchCraft `ValueError`,
   because `F.fold` has no integer kernel on CPU (`col2im_out_cpu` is not
   implemented for `Byte`/`Int`/`Long`; `extract` fails symmetrically on

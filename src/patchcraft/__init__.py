@@ -17,7 +17,7 @@ from patchcraft.reconstruct import reconstruct
 from patchcraft.resize import resize
 from patchcraft.stitch import WeightKind, stitch
 
-__version__ = "0.6.0"
+__version__ = "0.5.1"
 __all__ = [
     "Cache",
     "PairedTilingSpec",

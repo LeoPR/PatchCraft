@@ -6,7 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-09-02
+## [0.5.1] - 2026-09-02
+
+> Numbered `0.6.0` while it was being built. Corrected before release: the
+> middle digit is the compatibility boundary, and this release changes no
+> signature, no name and no output value. See the versioning policy and its
+> errata in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ### Changed
 
@@ -42,6 +47,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `tools/check_dist.py`, run before every upload. It fails the release if a
   platform wheel lost its extension, which `optional=True` would otherwise
   let through as a silently slow wheel, or if the universal wheel gained one.
+- The versioning policy now names the resolver rule it follows, which is that
+  `0.y` is the compatibility boundary in Cargo, npm and PEP 440 alike, and it
+  carries an errata for the two releases numbered before the rule was written.
+- Version numbers are gone from the documentation surface. The three cover
+  pages carry none at all, since the PyPI badge already shows the current
+  release, and the manual keeps only the one the citation entry needs. The
+  release archaeology those pages used to recite lives here, and the rest is
+  in the git history.
 - `MANIFEST.in`, which puts `accel/` in the sdist so the source path can build
   the extension, and keeps `lab/`, `.superpowers/` and cargo's `target/` out.
 
