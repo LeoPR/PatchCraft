@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=77", "setuptools-rust>=1.11"]
+requires = ["setuptools>=77", "setuptools-rust>=1.11", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -52,10 +52,12 @@ Issues = "https://github.com/LeoPR/PatchCraft/issues"
 Changelog = "https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md"
 Documentation = "https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md"
 
-[tool.setuptools.dynamic]
-# Read statically from the AST, so importing patchcraft (and torch with it) is
-# never part of a build.
-version = { attr = "patchcraft.__version__" }
+[tool.setuptools_scm]
+# The git tag is the version. Nothing in the source states it, so there is no
+# literal to forget to bump and no way for a tag and a release to disagree.
+# `_version.py` is generated at build time and gitignored; the fallback in
+# `__init__.py` covers a source tree that was never built.
+version_file = "src/patchcraft/_version.py"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -80,7 +82,13 @@ environment = { PATCHCRAFT_REQUIRE_EXTENSION = "1" }
 
 [tool.cibuildwheel.linux]
 # The manylinux container has no Rust; install it once before the builds.
-before-all = "curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable"
+# The container mounts the checkout under a different uid, and git then
+# refuses to read it ("dubious ownership"), which would send setuptools-scm
+# down its silent 0.1.dev1 fallback. Rust is not in the image either.
+before-all = [
+  "git config --global --add safe.directory '*'",
+  "curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable",
+]
 environment = { PATH = "$HOME/.cargo/bin:$PATH", PATCHCRAFT_REQUIRE_EXTENSION = "1" }
 
 [tool.pytest.ini_options]

@@ -17,7 +17,19 @@ from patchcraft.reconstruct import reconstruct
 from patchcraft.resize import resize
 from patchcraft.stitch import WeightKind, stitch
 
-__version__ = "0.5.1"
+try:
+    from patchcraft._version import __version__
+except ImportError:  # pragma: no cover - source tree that was never built
+    # importlib.metadata is the slow path and is only reached in a checkout
+    # with no build behind it, so the import cost never lands on real users.
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as _installed_version
+
+    try:
+        __version__ = _installed_version("patchcraft")
+    except PackageNotFoundError:
+        __version__ = "0+unknown"
+
 __all__ = [
     "Cache",
     "PairedTilingSpec",

@@ -6,6 +6,11 @@
 # reproduced from any commit (patchcraft-0.2.0.tar.gz shipped three such files
 # to PyPI), `.superpowers/` is untracked agent tooling, and `.vscode/` is
 # machine-local editor config.
+#
+# The `prune` lines are load-bearing rather than decorative. setuptools-scm
+# installs a file finder that offers every git-tracked file to the sdist, so
+# anything tracked and unwanted has to be pruned here by name. Measured: with
+# no prune for it, `.vscode/settings.json` reached the sdist.
 
 include LICENSE
 include CHANGELOG.md CONTRIBUTING.md
@@ -18,8 +23,10 @@ recursive-include tests *.py
 recursive-include docs *.md
 recursive-include accel *.rs *.toml *.lock *.md
 prune accel/target
+recursive-include tools *.py
 
 prune lab
 prune archive
 prune .superpowers
 prune .github
+prune .vscode

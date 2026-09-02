@@ -43,6 +43,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The version comes from the git tag.** `setuptools-scm` derives it at build
+  time, so no file in the source states a version, the release procedure loses
+  its bump step, and a tag and a release can no longer disagree.
+  `patchcraft.__version__` still works: the build writes a generated
+  `_version.py` that `__init__.py` imports, which costs nothing at import time,
+  with `importlib.metadata` as a fallback for a tree that was never built.
+  Measured before choosing: `importlib.metadata` alone was the wrong default,
+  because it took 56 ms on first call and reported a stale version in an
+  editable install.
+- Every build checkout uses `fetch-depth: 0`. The default shallow clone hides
+  the tags, and setuptools-scm's fallback for that is a silent
+  `0.1.dev1+g<sha>`, a version that walks backwards rather than an error.
+- `tools/check_dist.py` grew `--expect-version` and `--require-universal`, and
+  it now rejects any artifact carrying a local version segment. PyPI refuses
+  those on upload, so this turns a late and confusing server-side rejection
+  into an early local one. It also fixes a bug in the job that checks the
+  native wheels, which demanded a universal wheel that job never has.
 - Linux aarch64 wheels, which the previous four-target matrix did not cover.
 - `tools/check_dist.py`, run before every upload. It fails the release if a
   platform wheel lost its extension, which `optional=True` would otherwise

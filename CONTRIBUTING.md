@@ -67,8 +67,8 @@ CARGO_TARGET_DIR=/tmp/pc-target uv sync
 PatchCraft/
 ├── pyproject.toml                  package metadata, build backend, cibuildwheel targets
 ├── setup.py                        the one build decision: with or without the Rust extension
+├── tools/check_dist.py             gate: extension present, versions agree, tag respected
 ├── MANIFEST.in                     what the sdist carries
-├── tools/check_dist.py             gate: every platform wheel really has the extension
 ├── README.md                       the call page, canonical, English
 ├── README.pt-BR.md                 the same call page in Portuguese
 ├── README.pypi.md                  the PyPI page (long_description), links absolute
@@ -214,25 +214,49 @@ means a silent fall back to the pure path rather than a crash.
 
 ---
 
+## Where the version comes from
+
+The git tag, and nowhere else. `setuptools-scm` derives it at build time, so
+no file in the source states a version and there is no literal to forget.
+`v0.5.1` produces `0.5.1`; the leading `v` is stripped for you.
+
+At build time setuptools-scm writes `src/patchcraft/_version.py`, which
+`__init__.py` imports and re-exports as `patchcraft.__version__`. That file is
+generated and gitignored, so a checkout that was never built falls back to
+`importlib.metadata` and then to `0+unknown`. The fallback exists so an
+un-built tree still imports; it is not a supported way to learn the version.
+
+Anything other than a clean tree sitting exactly on a tag produces a version
+with a local segment, like `0.5.2.dev0+gb4edfd81.d20260902` from a dirty tree
+or `0.1.dev1+gb4edfd81` from a checkout whose tags were never fetched. PyPI
+refuses local segments outright, so such a build can never be published by
+accident, and `tools/check_dist.py` rejects it before the upload rather than
+letting the upload fail.
+
+That last point is why every `actions/checkout` that builds uses
+`fetch-depth: 0`. The default shallow clone hides the tags, and the failure is
+silent: a version that walks backwards rather than an error.
+
+---
+
 ## Releasing (maintainer only)
 
-1. Bump `__version__` in [`src/patchcraft/__init__.py`](src/patchcraft/__init__.py).
-2. Close the `[Unreleased]` section in [`CHANGELOG.md`](CHANGELOG.md) as `[X.Y.Z] YYYY-MM-DD`.
-3. Sweep the version strings the docs quote, which live in
-   [`docs/GUIDE.md`](docs/GUIDE.md) (the provenance note, the section 7
-   assertion, section 8 and the BibTeX entry) and in the Status block of the
-   three cover pages.
-4. Update [`docs/ROADMAP.md`](docs/ROADMAP.md) milestone checkboxes.
-5. Commit: `release: vX.Y.Z`.
-6. Tag + push: `git tag -a vX.Y.Z -m "..."` then `git push origin vX.Y.Z`.
-7. `release.yml` fires automatically: validates, builds, publishes to PyPI via Trusted Publishing, then creates the GitHub Release with every artifact attached.
+1. Close the `[Unreleased]` section in [`CHANGELOG.md`](CHANGELOG.md) as `[X.Y.Z] YYYY-MM-DD`.
+2. Update the `version` field of the BibTeX entry in [`docs/GUIDE.md`](docs/GUIDE.md) section 9. It is the one version string left in the documentation, because a citation needs a concrete one.
+3. Update [`docs/ROADMAP.md`](docs/ROADMAP.md) milestone checkboxes.
+4. Commit: `release: vX.Y.Z`.
+5. Tag + push: `git tag -a vX.Y.Z -m "..."` then `git push origin vX.Y.Z`.
+6. `release.yml` fires automatically: validates, builds, publishes to PyPI via Trusted Publishing, then creates the GitHub Release with every artifact attached.
 
-The tag must match `__version__`, and the `validate` job fails the run if it
-does not.
+There is no version to bump in step 4, and no way for a tag and a release to
+disagree. The `validate` job still cross-checks that setuptools-scm derived
+exactly what the tag says, which catches a dirty or shallow checkout before
+anything is built.
 
 One release produces one sdist and six wheels: five `cp312-abi3-<platform>`
 wheels with the Rust extension inside, and one `py3-none-any` wheel for
 everywhere else. `tools/check_dist.py` runs before the upload and fails the
-release if a platform wheel lost its extension or if the universal wheel
-gained one. Publishing is a single project, so there is nothing to register on
-PyPI beyond the publisher that already exists.
+release if a platform wheel lost its extension, if the universal wheel gained
+one, if the artifacts disagree about the version, or if any of them is not the
+version the tag names. Publishing is a single project, so there is nothing to
+register on PyPI beyond the publisher that already exists.

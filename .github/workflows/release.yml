@@ -38,20 +38,24 @@ jobs:
       PATCHCRAFT_PURE_PYTHON: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          # setuptools-scm derives the version from the tag. A shallow
+          # checkout hides it and the fallback is a silent 0.1.dev1.
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
       - run: uv python install
       - run: uv sync --locked --extra cache --extra dev
-      - name: Tag must match __version__
+      - name: The tag is the version, so check git agrees with it
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          pkg="$(uv run python -c 'import patchcraft; print(patchcraft.__version__)')"
-          if [ "$tag" != "$pkg" ]; then
-            echo "::error::tag ${GITHUB_REF_NAME} implies version '${tag}' but patchcraft.__version__ is '${pkg}'"
+          scm="$(uv run python -c 'import patchcraft; print(patchcraft.__version__)')"
+          if [ "$tag" != "$scm" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} implies version '${tag}' but setuptools-scm derived '${scm}'. A dirty tree or a missing tag causes this."
             exit 1
           fi
-          echo "tag ${GITHUB_REF_NAME} matches __version__ ${pkg}"
+          echo "tag ${GITHUB_REF_NAME} and setuptools-scm agree on ${scm}"
       - run: uv run ruff check src tests
       - run: uv run mypy --strict src
       - run: uv run pytest -m "not gpu"
@@ -64,12 +68,16 @@ jobs:
       PATCHCRAFT_PURE_PYTHON: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          # setuptools-scm derives the version from the tag. A shallow
+          # checkout hides it and the fallback is a silent 0.1.dev1.
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v3
       - run: uv build
       - name: Inspect dist metadata
         run: |
           uv run --with twine twine check dist/*
-          uv run python tools/check_dist.py dist
+          uv run python tools/check_dist.py dist --expect-version "${GITHUB_REF_NAME#v}" --require-universal
       - uses: actions/upload-artifact@v4
         with:
           name: dist-pure
@@ -91,6 +99,10 @@ jobs:
           - { os: macos-13, name: macosx_x86_64, archs: x86_64 }
     steps:
       - uses: actions/checkout@v4
+        with:
+          # setuptools-scm derives the version from the tag. A shallow
+          # checkout hides it and the fallback is a silent 0.1.dev1.
+          fetch-depth: 0
 
       - name: Install Rust
         # cibuildwheel installs its own toolchain inside the manylinux
@@ -103,8 +115,8 @@ jobs:
         env:
           CIBW_ARCHS: ${{ matrix.archs }}
 
-      - name: Every platform wheel must carry the extension
-        run: python tools/check_dist.py wheelhouse
+      - name: Every platform wheel must carry the extension, at the tag version
+        run: python tools/check_dist.py wheelhouse --expect-version "${GITHUB_REF_NAME#v}"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -121,14 +133,15 @@ jobs:
     permissions:
       id-token: write  # required for OIDC token exchange with PyPI
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4  # for tools/check_dist.py only
       - uses: actions/download-artifact@v4
         with:
           pattern: "{dist-pure,native-*}"
           path: dist
           merge-multiple: true
       - name: The full artifact set is what gets published
-        run: python tools/check_dist.py dist
+        run: |
+          python tools/check_dist.py dist --expect-version "${GITHUB_REF_NAME#v}" --require-universal
       - name: Publish via Trusted Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -151,7 +164,7 @@ jobs:
     permissions:
       contents: write  # required to create a Release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4  # for tools/check_dist.py only
       - uses: actions/download-artifact@v4
         with:
           pattern: "{dist-pure,native-*}"
