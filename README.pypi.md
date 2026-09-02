@@ -121,7 +121,7 @@ It helps when you tile one image for an inference pass too large to run in a sin
 
 The round trip is exact when every value in the count map is a power of two. The reason is that reconstruction divides each pixel by the number of patches that covered it, and dividing a float by a power of two is the one division that never rounds.
 
-That makes the geometry the deciding axis rather than the dtype, so `float64` is not a safe harbour: outside the rule `float32` misses by roughly `1e-7`, and `float64` misses too, by roughly `1e-16`.
+That makes the geometry the deciding axis rather than the dtype, so `float64` is not a safe harbour: outside the rule the per-pixel error is bounded by `(k+1)·eps·|v|`, with `k` the pixel's coverage count — a wider float buys a smaller miss, never exactness.
 
 The everyday shorthand is that `stride == patch_size` and `stride == patch_size / 2` always satisfy the rule. Both are sufficient conditions rather than necessary ones, so a geometry outside them can still be exact, and the [guide](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit) carries the sweep that measures it.
 

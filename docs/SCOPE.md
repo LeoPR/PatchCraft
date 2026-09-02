@@ -227,7 +227,9 @@ deliver the same code on fewer symbols.
 We rejected that for two reasons.
 
 - **Contract divergence.** `reconstruct` is bit-exact for unmodified
-  patches; `stitch` is explicitly an interpolated blend that assumes
+  patches under the count-map rule (exact iff every coverage count is a
+  power of two — always true at `stride == patch_size`; THEORY §2);
+  `stitch` is explicitly an interpolated blend that assumes
   patches were modified. A user who calls `reconstruct(...)` expecting
   an inverse and gets back something close-but-not-equal because they
   forgot a kwarg has a confusing bug. Two functions, two charters,

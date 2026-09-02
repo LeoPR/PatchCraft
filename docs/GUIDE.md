@@ -430,7 +430,7 @@ The maximum is 4, the geometry is legal and fully covering, and the round trip s
 
 ### Three honest details
 
-**Outside the predicate, exactness is a property of the data rather than of the geometry.** The guarantee runs one way only: all powers of two means exact, and anything else means not guaranteed. Some inputs do come back exact on a mixed map by luck of rounding, so a geometry that survived one image tells you nothing about the next. What does hold either way is the size of the miss, which was `2.384e-07` in float32 and `4.441e-16` in float64 on the geometries above, and that is one ULP territory.
+**Outside the predicate, exactness is a property of the data rather than of the geometry.** The guarantee runs one way only: all powers of two means exact, and anything else means not guaranteed. Some inputs do come back exact on a mixed map by luck of rounding, so a geometry that survived one image tells you nothing about the next. What does hold either way is the size of the miss: bounded per pixel by `(k+1)·eps·|v|`, with `k` the pixel's coverage count — `2.384e-07` in float32 and `4.441e-16` in float64 on the geometries above, and larger where the count map reaches higher, so there is no fixed ULP figure.
 
 **float64 is not a safe harbour.** The deciding axis is the count map and not the dtype, so float64 misses the round trip at exactly the geometry where float32 misses it. Reaching for a wider float buys you a smaller error, and it never buys you exactness.
 
@@ -438,9 +438,9 @@ The maximum is 4, the geometry is legal and fully covering, and the round trip s
 
 ### Where this rule is written down
 
-[ADR 0003](ADR/0003-reversibility-classes.md) is where the exactness boundary is being turned into contract, and it is still **Proposed**, so the wording has not landed across the project yet. Several docstrings and documents still state the overlap round trip as exact with no condition on the count map, and the audit that lists each of them is blocker B1 in [FOCO-1.0.md](FOCO-1.0.md).
+[ADR 0003](ADR/0003-reversibility-classes.md) is where the exactness boundary is being turned into contract, and it is still **Proposed** (acceptance is part of the 1.0 freeze). The wording itself landed across the project in 0.5.0 — docstrings, SCOPE, THEORY, USAGE and the READMEs all state the count-map rule with the per-pixel bound — closing blocker B1 in [FOCO-1.0.md](FOCO-1.0.md).
 
-Treat this section as the measured truth and treat those other statements as pending corrections, in that order, until ADR 0003 is accepted.
+Treat this section as the measured truth, and the ADR as the formal statement of the same rule.
 
 ## 5. Seams: `reconstruct` against `stitch`, measured
 

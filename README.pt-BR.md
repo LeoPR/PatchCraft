@@ -83,7 +83,7 @@ O `stitch` é para patches que um modelo reescreveu. Nesse caso os patches vizin
 
 | Você quer | Chame | Porque |
 |---|---|---|
-| Os patches de volta como imagem, intocados | `reconstruct` | Ele é o inverso exato do `extract` |
+| Os patches de volta como imagem, intocados | `reconstruct` | Inverso exato do `extract` quando toda contagem de sobreposição é potência de dois — sempre vale com `stride == patch_size` |
 | A saída de um modelo de volta como imagem | `stitch` | Patches sobrepostos discordam, e a janela esconde a grade |
 
 ## Por que não usar `unfold` e `fold` direto
@@ -140,7 +140,7 @@ O PatchCraft não ajuda quando você quer uma operação em lote sobre N imagens
 
 ## Quando o round-trip é bit a bit
 
-O round-trip é exato quando todo valor do mapa de cobertura é potência de dois, e isso acontece porque dividir um float por uma potência de dois é a única divisão que nunca arredonda. Fora dessa regra, o float32 erra por cerca de 1e-7 e o float64 por cerca de 1e-16, então o float64 não é um porto seguro. Quem decide a resposta é a geometria, e não o dtype. [O manual](docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit) traz a varredura que mede isso.
+O round-trip é exato quando todo valor do mapa de cobertura é potência de dois, e isso acontece porque dividir um float por uma potência de dois é a única divisão que nunca arredonda. Fora dessa regra, o erro por pixel é limitado por (k+1)·eps·|v|, com k a contagem de cobertura do pixel — um float mais largo compra um erro menor, nunca a exatidão, então o float64 não é um porto seguro. Quem decide a resposta é a geometria, e não o dtype. [O manual](docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit) traz a varredura que mede isso.
 
 ## Estado
 

@@ -147,7 +147,7 @@ True
 `stride == patch_size` every pixel is covered exactly once and
 reconstruction is a cheap copy (count is all-ones; division is no-op).
 
-### Overlap: weighted, still exact
+### Overlap: weighted, exact under the count-map rule
 
 ```python
 >>> ps_overlap = extract(img, patch_size=4, stride=2)  # 169 overlapping patches
@@ -160,8 +160,9 @@ Each pixel covered by *k* patches; each contribution is the original
 value; sum is `k * value`; division by the count map gives back
 `value`. Bit-exact when every count in the map is a power of two —
 `stride == patch_size` always, `stride == patch_size / 2` (counts 1,
-2, 4, as above) — and within ~1 ULP otherwise, whatever the dtype:
-the deciding axis is the geometry, not the precision.
+2, 4, as above) — and otherwise bounded per pixel by `(k+1)·eps·|v|`,
+whatever the dtype: the deciding axis is the geometry, not the
+precision.
 
 `reconstruct` rejects `dilation != 1` and `stride > patch_size`
 (partial coverage forbidden, see [`THEORY.md`](THEORY.md) §9.2).
@@ -170,8 +171,10 @@ the deciding axis is the geometry, not the precision.
 
 ## 6. `stitch`: blend modified patches back with a window kernel
 
-`reconstruct` is the bit-exact inverse of `extract`. When patches
-have been *modified* (model output, denoised, super-resolved)
+`reconstruct` is the exact inverse of `extract` under the
+count-map rule of §5 — bit-exact when every count is a power of
+two. When patches have been *modified* (model output, denoised,
+super-resolved)
 uniform averaging makes the disagreement between adjacent patches
 show up as visible seams. `stitch` weights each patch by a 2-D
 window kernel (`uniform`, `hann`, `gaussian`) so each pixel "trusts"
