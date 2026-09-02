@@ -126,6 +126,23 @@ class TestTilingsOverlap:
         with_keys = {(t.patch_size, t.stride) for t in with_overlap}
         assert without_keys.issubset(with_keys)
 
+    def test_28x28_overlap_count_after_degenerate_removal(self) -> None:
+        """0.5.0 (D1): single-patch overlap specs (27 of the old 100) had no
+        observable stride and duplicated the exact tile; no longer emitted."""
+        assert len(tilings((28, 28), allow_overlap=True)) == 73
+
+    def test_no_single_patch_overlap_specs(self) -> None:
+        for shape in [(28, 28), (20, 30), (7, 7), (9, 12)]:
+            for t in tilings(shape, allow_overlap=True):
+                assert not (t.total_patches == 1 and t.overlap)
+
+    def test_every_spec_covers_exactly(self) -> None:
+        for t in tilings((28, 28), allow_overlap=True):
+            (ph, pw), (sh, sw) = t.patch_size, t.stride
+            nh, nw = t.num_patches
+            assert (nh - 1) * sh + ph == 28
+            assert (nw - 1) * sw + pw == 28
+
 
 class TestTilingsRejects:
     @pytest.mark.parametrize("bad", [(28,), (28, 28, 28, 28), 28, [28, 28]])
@@ -279,6 +296,11 @@ class TestPairedTilingsAccepts:
         without_keys = {(p.lr.patch_size, p.lr.stride) for p in without}
         with_keys = {(p.lr.patch_size, p.lr.stride) for p in with_ov}
         assert without_keys.issubset(with_keys)
+
+    def test_overlap_count_after_degenerate_removal(self) -> None:
+        """LR side carried 13 degenerate single-patch specs (p == 14, s < 14):
+        40 -> 27 pairs with overlap enabled (inherits the tilings fix)."""
+        assert len(paired_tilings((14, 14), (28, 28), allow_overlap=True)) == 27
 
 
 class TestPairedTilingsAlignment:

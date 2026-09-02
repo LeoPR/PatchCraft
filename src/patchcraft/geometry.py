@@ -28,8 +28,10 @@ class TilingSpec(NamedTuple):
 
     ``overlap=False`` means an *exact tile*: ``patch_size == stride`` and the
     image is divided into a clean grid with no overlap and no waste.
-    ``overlap=True`` means ``stride < patch_size`` and full coverage is still
-    achieved, so adjacent patches share pixels.
+    ``overlap=True`` means ``stride < patch_size`` **with more than one
+    patch**, so adjacent patches share pixels while the grid still covers the
+    image exactly. (A single-patch grid has no observable stride; emitting it
+    as ``overlap=True`` duplicated the exact tile, so it is skipped.)
     """
 
     patch_size: tuple[int, int]
@@ -180,6 +182,12 @@ def tilings(
                 if (h - p) % s == 0 and (w - p) % s == 0:
                     nh = (h - p) // s + 1
                     nw = (w - p) // s + 1
+                    if nh == 1 and nw == 1:
+                        # Degenerate single-patch geometry: with one patch the
+                        # stride is unobservable and the spec is a semantic
+                        # duplicate of the exact tile (p, p)/(p, p), always
+                        # emitted for the same p. Skip it (0.5.0, D1).
+                        continue
                     results.append(TilingSpec(
                         patch_size=(p, p),
                         stride=(s, s),

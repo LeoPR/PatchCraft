@@ -260,6 +260,8 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 - Layout channels-last `(H, W, C)`: converter antes.
 - Devices não-CUDA acelerados (MPS, XPU): provavelmente funcionam via torch, mas não testados.
 
+**Assimetria ida/volta (extract trunca, reconstruct recusa).** Na ida, uma geometria que não cobre a imagem inteira **trunca**: as linhas/colunas finais que não fecham um patch são descartadas sem aviso — é a política de borda do ADR 0001, e o caso de uso principal (extração para treino sobre imagens de tamanho arbitrário) depende dela. Na volta, a mesma situação é `ValueError` (§9.2): remontar com cobertura parcial sintetizaria pixels, que é o que a biblioteca recusa por princípio. Quem precisa de cobertura exata confere antes com `num_patches`/`tilings` (§9.6); quem precisa de tamanho arbitrário com round-trip faz padding explícito no caller (o helper `pad` é candidata nomeada da 1.1, FOCO §3).
+
 ### 9.2 `reconstruct(patches, image_shape, stride, dilation=1)`
 
 **Aceita:**

@@ -82,13 +82,14 @@ round-trip (see §5).
 
 ```python
 >>> len(tilings((28, 28), allow_overlap=True))
-100
+73
 ```
 
 With `allow_overlap=True` the function also emits `stride < patch_size`
-geometries where `(H - p) % s == 0` (clean-edge overlap). Useful when
-you want training data with stride < ph but reconstruction must still
-be exact.
+geometries where `(H - p) % s == 0` (clean-edge overlap; single-patch
+grids are skipped, since one patch makes the stride unobservable).
+Useful when you want training data with stride < ph; whether the
+round-trip stays bit-exact then depends on the count map (see §5).
 
 ---
 
