@@ -58,9 +58,35 @@ predicado (todo valor do count map é potência de dois), `reconstruct` devolve
 os mesmos bits: verificável por `torch.equal` para entradas sem NaN e por
 comparação da view inteira (`view(torch.int32/int64)`) em qualquer caso —
 `torch.equal` não é reflexivo em NaN mesmo quando os bits voltam idênticos.
-Fora do predicado, o erro é limitado a 1 ULP. Essa frase já vive em
-`reconstruct.py:34-42` e ADR 0003; B1 estende a forma qualificada aos pontos
-restantes e a suíte passa a escrevê-la em código.
+Fora do predicado, o erro por pixel é limitado por `k·eps·|v|`, onde `k` é a
+contagem daquele pixel no count map, `eps` o epsilon do dtype e `|v|` o valor
+original — ver **Amendment A** abaixo: a frase "1 ULP" do FOCO foi medida como
+falsa fora de contagens pequenas e é corrigida aqui. A forma qualificada do
+predicado já vive em `reconstruct.py:34-42` e ADR 0003; B1 estende a forma
+qualificada aos pontos restantes e a suíte passa a escrevê-la em código.
+
+## Amendment A (2026-09-01, medição de plano) — o bound "1 ULP" é falso
+
+O FOCO §1(4) e §4 congelam "fora do predicado, o erro é limitado a 1 ULP",
+medido só na geometria `(1,4,14)` p=(4,4) s=(1,1) (k_max=4). Medição nova
+sobre 400 geometrias legais amostradas do espaço (seed 123, float32, 5 seeds
+por geometria fora do predicado):
+
+| k_max | erro máx medido |
+|---:|---:|
+| 3–6 | 1 ULP |
+| 16 | 4 ULP |
+| 49 | 11 ULP |
+| 81 | 19 ULP |
+
+O erro cresce com a contagem (~k/4 ULP medido). O bound provável da soma
+sequencial de `k` parcelas idênticas seguida de divisão é `k·eps·|v|` por
+pixel; o teste usa `(k+1)·eps·|v|` e obteve **zero violações em 2000 casos**.
+A receita por eixo ≡ predicado do count map: **zero divergências em 400**
+geometrias. Consequência: a frase congelada correta é "dentro do predicado,
+bit-exato; fora, erro por pixel ≤ k·eps·|v|" — nunca "1 ULP" sem qualificação.
+O FOCO manda não prometer mais do que a medição sustenta ("A contract may
+under-promise. It may not over-promise."); "1 ULP" prometia demais.
 
 **D6 — `hand.py`×`pc.py` reimplementado, não recuperado.** Os scripts citados
 no FOCO §2 ("o substituto fechável já está medido") não estão no git
@@ -68,7 +94,7 @@ no FOCO §2 ("o substituto fechável já está medido") não estão no git
 substituto do consumer gate entra como `tests/test_reference.py`: uma
 referência naive de extract+reconstruct (loops puros, sem `F.fold`, acumulação
 no dtype de entrada) comparada bit a bit com os caminhos rápidos dentro do
-predicado, e a ≤1 ULP fora dele.
+predicado, e dentro do bound por pixel `(k+1)·eps·|v|` fora dele.
 
 ## 2. Componentes
 
@@ -98,8 +124,8 @@ Os treze casos de round-trip que hoje usam rampa inteira (`_ramp` /
 regime axis") passam a usar `rand_image`. A rampa continua onde o que se testa
 é **ordem/posição** (row-major, count map com imagem de uns, mismatch de
 grade) — lá o valor não importa. `test_reconstruct.py:78`: `rtol=1e-5` (três
-ordens acima do erro medido de 2.4e-07) é substituído pela asserção de ≤1 ULP
-via helper. Os testes de caracterização 0.3.0 contra `_fold_reference`
+ordens acima do erro medido de 2.4e-07) é substituído pela asserção do bound
+por pixel `(k+1)·eps·|v|` (Amendment A) via helper. Os testes de caracterização 0.3.0 contra `_fold_reference`
 (`test_reconstruct_matches_fold_reference`) já usam `torch.randn` no dtype alvo
 — ficam como estão.
 
@@ -116,11 +142,13 @@ o espaço legal independentemente do predicado e rodar para quebrá-lo.
 - **Metade positiva**: geometria dentro do predicado ⇒ `bit_equal` True para
   toda seed de um conjunto fixo.
 - **Metade negativa**: geometria fora do predicado ⇒ **pelo menos uma de N=50
-  seeds é inexata** E toda seed tem erro ≤ 1 ULP. Forma de conjunto, não de
-  execução única: medido no FOCO, na geometria `(1,4,14)` p=(4,4) s=(1,1),
-  `torch.equal` é True em 63 de 300 seeds float32 — exatidão fora do predicado
-  é propriedade da amostra, não da geometria. Com N=50, a chance de falso
-  verde é (63/300)^50 ≈ 0 — sem flake.
+  seeds é inexata** E toda seed tem erro por pixel dentro do bound
+  `(k+1)·eps·|v|` (k = contagem do pixel; ver Amendment A — o bound é por
+  pixel e cresce com a contagem, **não** é "1 ULP" absoluto). Forma de
+  conjunto, não de execução única: medido no FOCO, na geometria `(1,4,14)`
+  p=(4,4) s=(1,1), `torch.equal` é True em 63 de 300 seeds float32 — exatidão
+  fora do predicado é propriedade da amostra, não da geometria. Com N=50, a
+  chance de falso verde é (63/300)^50 ≈ 0 — sem flake.
 - **Receita × predicado**: `exact_axes_pow2 == count_map_pow2` em toda a
   amostra (zero divergências, como no FOCO §0).
 - **Caso NaN**: imagem com NaNs dentro do predicado ⇒ `bit_equal` True mesmo
