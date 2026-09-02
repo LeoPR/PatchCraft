@@ -2,15 +2,20 @@
 # plus the track that proves it works (`tests/`, `docs/`). `accel/` has to be
 # here, because an sdist build compiles it when a Rust toolchain is present.
 #
-# What must stay out: `lab/` is gitignored scratch work and cannot be
-# reproduced from any commit (patchcraft-0.2.0.tar.gz shipped three such files
-# to PyPI), `.superpowers/` is untracked agent tooling, and `.vscode/` is
-# machine-local editor config.
+# The `prune` lines below are load-bearing rather than decorative, and the
+# reason changed with setuptools-scm. Its file finder offers every git-tracked
+# file to the sdist, so this file stopped being an allowlist and became a
+# blocklist over everything git knows about. Measured: with no prune for it,
+# `.vscode/settings.json` reached the sdist.
 #
-# The `prune` lines are load-bearing rather than decorative. setuptools-scm
-# installs a file finder that offers every git-tracked file to the sdist, so
-# anything tracked and unwanted has to be pruned here by name. Measured: with
-# no prune for it, `.vscode/settings.json` reached the sdist.
+# Note that `lab/` is only *mostly* ignored: `lab/README.md` and
+# `lab/.gitignore` are tracked, so the finder offers them and the prune is what
+# stops them. The rest of `lab/` is scratch work that no commit can reproduce,
+# and patchcraft-0.2.0.tar.gz shipped three such files to PyPI.
+#
+# Adding a tracked directory to this repository ships it to PyPI by default.
+# `tools/check_dist.py` holds the matching allowlist and will fail the release
+# for anything unexpected, which is the reminder to come back here.
 
 include LICENSE
 include CHANGELOG.md CONTRIBUTING.md

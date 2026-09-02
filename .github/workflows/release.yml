@@ -48,14 +48,25 @@ jobs:
       - run: uv python install
       - run: uv sync --locked --extra cache --extra dev
       - name: The tag is the version, so check git agrees with it
+        # Compared through PEP 440 normalisation, because a tag reads
+        # `v0.5.2.rc1` while everything downstream says `0.5.2rc1`.
         run: |
-          tag="${GITHUB_REF_NAME#v}"
-          scm="$(uv run python -c 'import patchcraft; print(patchcraft.__version__)')"
-          if [ "$tag" != "$scm" ]; then
-            echo "::error::tag ${GITHUB_REF_NAME} implies version '${tag}' but setuptools-scm derived '${scm}'. A dirty tree or a missing tag causes this."
-            exit 1
-          fi
-          echo "tag ${GITHUB_REF_NAME} and setuptools-scm agree on ${scm}"
+          uv run python - <<'PY'
+          import os, sys
+          sys.path.insert(0, "tools")
+          from check_dist import normalize_version
+          import patchcraft
+
+          tag = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          scm = patchcraft.__version__
+          if normalize_version(tag) != normalize_version(scm):
+              print(
+                  f"::error::tag implies version {tag!r} but setuptools-scm "
+                  f"derived {scm!r}. A dirty tree or a missing tag causes this."
+              )
+              raise SystemExit(1)
+          print(f"tag and setuptools-scm agree on {scm}")
+          PY
       - run: uv run ruff check src tests
       - run: uv run mypy --strict src
       - run: uv run pytest -m "not gpu"

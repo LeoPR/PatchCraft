@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=77", "setuptools-rust>=1.11", "setuptools-scm>=8"]
+requires = ["setuptools>=77", "setuptools-rust>=1.11", "setuptools-scm>=8,<11"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -58,6 +58,15 @@ Documentation = "https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md"
 # `_version.py` is generated at build time and gitignored; the fallback in
 # `__init__.py` covers a source tree that was never built.
 version_file = "src/patchcraft/_version.py"
+# A shallow checkout has no tag in reach, and the default behaviour is to warn
+# and fall back to `0.1.dev1+g<sha>`, a version that walks backwards from
+# 0.5.x. Fail instead. Every CI checkout that builds uses `fetch-depth: 0`,
+# so this only fires when something is genuinely wrong.
+scm.git.pre_parse = "fail_on_shallow"
+# Do NOT add `local_scheme = "no-local-version"` to make versions look tidier.
+# The local `+g<sha>` segment is what makes an accidental build unpublishable,
+# because PyPI refuses local segments. Removing it would turn a build from an
+# untagged or dirty tree into a clean, uploadable, wrong version.
 
 [tool.setuptools.packages.find]
 where = ["src"]

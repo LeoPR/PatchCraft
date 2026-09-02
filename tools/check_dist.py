@@ -42,6 +42,40 @@ EXT_STEM = "patchcraft/_accel_native"
 _VERSION_RE = re.compile(r"^patchcraft-(?P<v>[^-]+?)(?:-.*)?\.(?:whl|tar\.gz)$")
 SDIST_MUST_CARRY = ("accel/src/lib.rs", "accel/src/kernel.rs", "accel/Cargo.toml")
 
+# The sdist is an allowlist, not a blocklist. setuptools-scm's file finder
+# offers every git-tracked file, so anything newly tracked ships by default
+# unless MANIFEST.in prunes it. Listing what belongs catches the next
+# benchmarks/ or .pre-commit-config.yaml the way a prefix blocklist cannot.
+SDIST_TOP_DIRS = {"src", "tests", "docs", "accel", "tools"}
+SDIST_TOP_FILES = {
+    "PKG-INFO", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md", "MANIFEST.in",
+    "README.md", "README.pt-BR.md", "README.pypi.md",
+    "pyproject.toml", "setup.py", "setup.cfg", "uv.lock", ".python-version",
+    ".gitignore",
+}
+_PRE_SEP = re.compile(r"[-_.]?(a|b|c|rc|alpha|beta|pre|preview|post|rev|r|dev)[-_.]?", re.I)
+
+
+def normalize_version(raw: str) -> str:
+    """PEP 440 normal form, so `0.5.2.rc1` and `0.5.2rc1` compare equal.
+
+    A tag reads `v0.5.2.rc1` but every artifact filename carries the
+    normalised `0.5.2rc1`, so comparing the raw strings rejects every
+    prerelease. `packaging` does this properly and is present wherever a
+    build ran; the regex is the fallback for a bare interpreter and covers
+    the separator forms the release workflow's tag patterns admit.
+    """
+    try:
+        from packaging.version import InvalidVersion, Version
+    except ImportError:
+        pass
+    else:
+        try:
+            return str(Version(raw))
+        except InvalidVersion:
+            return raw.strip().lower()
+    return _PRE_SEP.sub(lambda m: m.group(1).lower(), raw.strip().lower())
+
 
 def _artifact_version(path: Path) -> str | None:
     name = path.name
@@ -70,9 +104,13 @@ def _check_versions(paths: list[Path], expected: str | None, problems: list[str]
     if len(seen) > 1:
         problems.append(f"artifacts disagree about the version: {dict(seen)}")
     if expected is not None:
-        wrong = sorted(v for v in seen if v != expected)
+        want = normalize_version(expected)
+        wrong = sorted(v for v in seen if normalize_version(v) != want)
         if wrong:
-            problems.append(f"expected version {expected!r} but the artifacts say {wrong}")
+            problems.append(
+                f"expected version {expected!r} (normalised {want!r}) but the "
+                f"artifacts say {wrong}"
+            )
 
 
 def _wheel_has_extension(path: Path) -> bool:
@@ -95,16 +133,22 @@ def _check_wheel(path: Path, problems: list[str]) -> str:
 
 def _check_sdist(path: Path, problems: list[str]) -> str:
     with tarfile.open(path) as tf:
-        names = {n.split("/", 1)[-1] for n in tf.getnames()}
+        # Every entry is under a `patchcraft-<version>/` root; drop it, and
+        # drop the root entry itself, which has no separator to split on.
+        names = {n.split("/", 1)[1] for n in tf.getnames() if "/" in n}
     missing = [w for w in SDIST_MUST_CARRY if w not in names]
     if missing:
         problems.append(f"{path.name}: sdist cannot build the extension, missing {missing}")
-    leaked = sorted(n for n in names if n.startswith(("accel/target/", "lab/", ".superpowers/")))
-    if leaked:
+    tops = {n.split("/", 1)[0] for n in names if n}
+    stray = sorted(tops - SDIST_TOP_DIRS - SDIST_TOP_FILES)
+    if stray:
         problems.append(
-            f"{path.name}: sdist carries {len(leaked)} file(s) it should not, "
-            f"e.g. {leaked[0]}"
+            f"{path.name}: sdist carries unexpected top-level entries {stray}. "
+            "Either prune them in MANIFEST.in or add them to SDIST_TOP_DIRS/FILES here"
         )
+    inner = sorted(n for n in names if n.startswith("accel/target/"))
+    if inner:
+        problems.append(f"{path.name}: sdist carries cargo build output, e.g. {inner[0]}")
     return f"sdist, {len(names)} entries"
 
 
