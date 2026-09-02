@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python: ["3.12", "3.13"]
+        python: ["3.12", "3.13", "3.14"]
     env:
       # Force uv to use the matrix Python in every uv* invocation
       # (otherwise `uv run` re-resolves to its default, which is the

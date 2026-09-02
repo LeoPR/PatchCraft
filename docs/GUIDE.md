@@ -793,7 +793,7 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 **Version 0.5.0 is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 1534 tests, skips 32 cases, and deselects 5 GPU tests, in about half a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12 and 3.13, and all four cells are green. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 1534 tests, skips 32 cases, and deselects 5 GPU tests, in about half a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Five things this project does not claim.
 
@@ -803,7 +803,7 @@ Five things this project does not claim.
 
 **3. The no-zstandard cache path runs in no environment.** `Cache` falls back to uncompressed payloads when `zstandard` is absent, and every configuration here and in CI installs the extra. So a plain `pip install patchcraft` takes precisely the branch that nothing exercises.
 
-**4. Nothing executes the examples on this page.** They were run by hand against 0.3.0 and pasted verbatim, and no test in the suite runs them. A test that executes every fenced block and checks the figures quoted in prose is the next piece of work on this file, and [USAGE.md](USAGE.md) is in the same position while still being captured against 0.2.0.
+**4. Nothing executes the examples on this page.** They were run by hand and pasted verbatim, against the releases the provenance note at the top names, and no test in the suite runs them. A test that executes every fenced block and checks the figures quoted in prose is the next piece of work on this file, and [USAGE.md](USAGE.md) is in the same position while still being captured against 0.2.0.
 
 **5. Pre-1.0 means output values can change in a minor release.** Version 0.2.1 rewrote the hann window, so `stitch(..., weight="hann")` returns different values than 0.2.0 does for every geometry. The round-trip contract did not change. [CHANGELOG.md](../CHANGELOG.md) records each change together with the measurement that motivated it.
 
@@ -831,7 +831,7 @@ cd PatchCraft
 pip install -e ".[dev,cache]"
 ```
 
-**Python versions.** CI tests 3.12 and 3.13 on Ubuntu and Windows, which is also what the classifiers advertise. `requires-python` is `>=3.12` with no ceiling, so pip will install this on 3.14 as well, where nothing has been measured.
+**Python versions.** CI tests 3.12, 3.13 and 3.14 on Ubuntu and Windows, which is also what the classifiers advertise. The floor is real rather than cautious: `cache.py` uses the PEP 695 generic syntax that arrived in 3.12, so the package does not parse on 3.11. `requires-python` is `>=3.12` with no ceiling, so pip will install this on a newer Python too, where nothing has been measured.
 
 **GPU.** Install a matching torch wheel first, following [pytorch.org/get-started/locally](https://pytorch.org/get-started/locally/). Read [section 8](#8-what-this-project-does-not-claim) before you do, because no CUDA path in this library has ever been executed.
 

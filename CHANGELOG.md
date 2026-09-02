@@ -6,7 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.5.0] - 2026-09-01
+## [0.5.0] - 2026-09-02
+
+### Added
+
+- Python 3.14 is supported and declared. The classifiers list it, the CI
+  matrix runs the full suite plus `ruff check` and `mypy --strict` against it
+  on Ubuntu and Windows, and all six cells are green. The floor stays at 3.12
+  because `cache.py` uses PEP 695 generic syntax, which 3.11 cannot parse.
 
 ### Changed
 
@@ -15,6 +22,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the exact tile. `tilings((28, 28), allow_overlap=True)` now returns 73
   specs instead of 100; `paired_tilings((14, 14), (28, 28), allow_overlap=True)`
   returns 27 instead of 40.
+- The development lock moved to torch 2.14.0 and torchvision 0.29.0, with the
+  linters and the rest of the toolchain along with it. The full
+  126,736-geometry exactness sweep passes on torch 2.14, so the count-map
+  contract is unchanged by the upgrade. Runtime requirements are untouched and
+  stay at `torch>=2.6`.
 
 ### Fixed
 
@@ -55,6 +67,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.4.0] - 2026-09-01
 
+> Source milestone, never uploaded to PyPI. Its contents reached
+> users inside 0.5.0. See the versioning policy in
+> [`CONTRIBUTING.md`](CONTRIBUTING.md) for why the number was minted
+> early and why that no longer happens.
+
+
 ### Added
 
 - Optional native accelerator `patchcraft-accel` (`pip install patchcraft[accel]`):
@@ -84,6 +102,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   built via the manylinux maturin container.
 
 ## [0.3.0] - 2026-09-01
+
+> Source milestone, never uploaded to PyPI. Its contents reached
+> users inside 0.5.0. See the versioning policy in
+> [`CONTRIBUTING.md`](CONTRIBUTING.md) for why the number was minted
+> early and why that no longer happens.
+
 
 ### Performance
 
