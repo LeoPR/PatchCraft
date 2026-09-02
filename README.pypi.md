@@ -107,7 +107,7 @@ The saving is real on the other side too. Tiling an image, running a per-patch m
 
 `extract` follows whatever grid you hand it, but `reconstruct` and `stitch` refuse a grid that does not cover the image exactly, rather than returning a plausible tensor built on missing pixels. On a 128x128 image with `patch_size=32` and `stride=20` the grid reaches only 112x112, which leaves 3840 of the 16384 pixels at zero, and the error message names that covered extent instead of hiding it.
 
-The answer is to pick a legal geometry rather than to pad the image into one, because padding synthesizes pixels you never had. `tilings(image_shape)` enumerates the legal geometries from the shape alone and allocates nothing while it does so, so you can call it before you have committed to anything: a 28x28 image has 5 exact tilings, and 100 of them once `allow_overlap=True` lets the patches overlap.
+The answer is to pick a legal geometry rather than to pad the image into one, because padding synthesizes pixels you never had. `tilings(image_shape)` enumerates the legal geometries from the shape alone and allocates nothing while it does so, so you can call it before you have committed to anything: a 28x28 image has 5 exact tilings, and 73 of them once `allow_overlap=True` lets the patches overlap.
 
 Two narrower questions have their own entry points. `num_patches` takes a geometry you already have in mind and returns the grid it implies, and `paired_tilings` is the one to reach for when a low-resolution image and a high-resolution image have to stay aligned patch for patch.
 
@@ -121,7 +121,7 @@ It helps when you tile one image for an inference pass too large to run in a sin
 
 The round trip is exact when every value in the count map is a power of two. The reason is that reconstruction divides each pixel by the number of patches that covered it, and dividing a float by a power of two is the one division that never rounds.
 
-That makes the geometry the deciding axis rather than the dtype, so `float64` is not a safe harbour: outside the rule `float32` misses by roughly `1e-7`, and `float64` misses too, by roughly `1e-16`.
+That makes the geometry the deciding axis rather than the dtype, so `float64` is not a safe harbour: outside the rule the per-pixel error is bounded by `(k+1)·eps·|v|`, with `k` the pixel's coverage count — a wider float buys a smaller miss, never exactness.
 
 The everyday shorthand is that `stride == patch_size` and `stride == patch_size / 2` always satisfy the rule. Both are sufficient conditions rather than necessary ones, so a geometry outside them can still be exact, and the [guide](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit) carries the sweep that measures it.
 

@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F  # noqa: N812 (torch convention)
 
 from patchcraft import extract, reconstruct, stitch
+from tests._rng import bit_equal, rand_image
 
 
 def _ramp(c: int, h: int, w: int, dtype: torch.dtype = torch.float32) -> torch.Tensor:
@@ -20,36 +21,41 @@ class TestUniformEqualsReconstruct:
     """`weight="uniform"` is mathematically equivalent to `reconstruct`."""
 
     def test_exact_tiling_bit_exact(self) -> None:
-        img = _ramp(1, 16, 16)
+        img = rand_image(1, 16, 16, torch.float32, seed=501)
         patches = extract(img, patch_size=4, stride=4)
         out_stitch = stitch(patches, image_shape=img.shape, stride=4)
         out_recon = reconstruct(patches, image_shape=img.shape, stride=4)
-        assert torch.equal(out_stitch, out_recon)
+        assert bit_equal(out_stitch, out_recon)
 
     def test_exact_tiling_recovers_image(self) -> None:
-        img = _ramp(2, 12, 12)
+        img = rand_image(2, 12, 12, torch.float32, seed=502)
         patches = extract(img, patch_size=4, stride=4)
         out = stitch(patches, image_shape=img.shape, stride=4, weight="uniform")
-        assert torch.equal(out, img)
+        assert bit_equal(out, img)
 
     def test_overlap_matches_reconstruct(self) -> None:
-        img = _ramp(1, 16, 16, dtype=torch.float64)
+        """Equivalence is down to floating-point ordering by contract, so
+        this stays `allclose` — but on real noise, not an integer ramp."""
+        img = rand_image(1, 16, 16, torch.float64, seed=503)
         patches = extract(img, patch_size=4, stride=2)
         out_stitch = stitch(patches, image_shape=img.shape, stride=2)
         out_recon = reconstruct(patches, image_shape=img.shape, stride=2)
         assert torch.allclose(out_stitch, out_recon, rtol=1e-12, atol=1e-12)
 
     def test_overlap_recovers_image(self) -> None:
-        img = _ramp(1, 16, 16, dtype=torch.float64)
+        """counts are 1, 2, 4 (powers of two): uniform stitch is bit-exact
+        here — the ones-kernel multiply is exact and the cumsum denominator
+        reproduces the integer count map exactly."""
+        img = rand_image(1, 16, 16, torch.float64, seed=504)
         patches = extract(img, patch_size=4, stride=2)
         out = stitch(patches, image_shape=img.shape, stride=2)
-        assert torch.allclose(out, img, rtol=1e-12, atol=1e-12)
+        assert bit_equal(out, img)
 
     def test_rectangular_geometry(self) -> None:
-        img = _ramp(1, 20, 30, dtype=torch.float64)
+        img = rand_image(1, 20, 30, torch.float64, seed=505)
         patches = extract(img, patch_size=(4, 6), stride=(4, 6))
         out = stitch(patches, image_shape=img.shape, stride=(4, 6))
-        assert torch.allclose(out, img, rtol=1e-12, atol=1e-12)
+        assert bit_equal(out, img)
 
 
 # -------------------------------------------------------------- hann window --
@@ -60,7 +66,7 @@ class TestHann:
 
     def test_unmodified_overlap_recovers_image(self) -> None:
         """With overlap, unmodified patches recover the full image under Hann."""
-        img = _ramp(1, 16, 16, dtype=torch.float64)
+        img = rand_image(1, 16, 16, torch.float64, seed=511)
         patches = extract(img, patch_size=4, stride=2)
         out = stitch(patches, image_shape=img.shape, stride=2, weight="hann")
         assert torch.allclose(out, img, rtol=1e-9, atol=1e-9)
@@ -70,7 +76,7 @@ class TestHann:
         edges, so at stride == patch_size a 12x12 image with 4x4 patches came
         back with 108 of 144 pixels zeroed. The window is now the interior of a
         longer Hann window, strictly positive on every sample."""
-        img = _ramp(1, 12, 12, dtype=torch.float64) + 1.0
+        img = rand_image(1, 12, 12, torch.float64, seed=512) + 1.0
         patches = extract(img, patch_size=4, stride=4)
         out = stitch(patches, image_shape=img.shape, stride=4, weight="hann")
         assert torch.allclose(out, img, rtol=1e-9, atol=1e-9)
@@ -78,7 +84,7 @@ class TestHann:
     def test_no_zeroed_pixels_with_overlap(self) -> None:
         """Regression (0.2.0 audit): 13x13 with patch 4 stride 3 lost 105 of 169
         pixels under the old window, including black bands in the interior."""
-        img = _ramp(1, 13, 13, dtype=torch.float64) + 1.0
+        img = rand_image(1, 13, 13, torch.float64, seed=513) + 1.0
         patches = extract(img, patch_size=4, stride=3)
         out = stitch(patches, image_shape=img.shape, stride=3, weight="hann")
         assert torch.allclose(out, img, rtol=1e-9, atol=1e-9)
@@ -86,7 +92,7 @@ class TestHann:
     def test_patch_size_2_not_degenerate(self) -> None:
         """Regression (0.2.0 audit): patch_size=2 made the old window
         identically [0, 0] and stitch returned an all-zero image with no error."""
-        img = _ramp(1, 8, 8, dtype=torch.float64)
+        img = rand_image(1, 8, 8, torch.float64, seed=514)
         patches = extract(img, patch_size=2, stride=2)
         out = stitch(patches, image_shape=img.shape, stride=2, weight="hann")
         assert torch.allclose(out, img, rtol=1e-9, atol=1e-9)
@@ -119,7 +125,7 @@ class TestGaussian:
     def test_unmodified_recovers_full_image(self) -> None:
         """Gaussian weight is > 0 everywhere; round-trip on unmodified
         overlapping patches recovers the full image (no corner artifact)."""
-        img = _ramp(1, 16, 16, dtype=torch.float64)
+        img = rand_image(1, 16, 16, torch.float64, seed=521)
         patches = extract(img, patch_size=4, stride=2)
         out = stitch(patches, image_shape=img.shape, stride=2, weight="gaussian")
         assert torch.allclose(out, img, rtol=1e-9, atol=1e-9)
@@ -155,18 +161,18 @@ class TestPreservation:
     def test_cuda_roundtrip(self) -> None:
         if not torch.cuda.is_available():
             pytest.skip("CUDA not available")
-        img = _ramp(1, 8, 8).cuda()
+        img = rand_image(1, 8, 8, torch.float32, seed=506).cuda()
         patches = extract(img, patch_size=4, stride=4)
         out = stitch(patches, image_shape=img.shape, stride=4)
         assert out.device.type == "cuda"
-        assert torch.equal(out, img)
+        assert bit_equal(out, img)
 
     def test_accepts_torch_size(self) -> None:
-        img = _ramp(1, 8, 8)
+        img = rand_image(1, 8, 8, torch.float32, seed=507)
         patches = extract(img, patch_size=4, stride=4)
         out = stitch(patches, image_shape=img.shape, stride=4)
         assert isinstance(img.shape, torch.Size)
-        assert torch.equal(out, img)
+        assert bit_equal(out, img)
 
 
 # ----------------------------------------------------------------- rejects --
@@ -280,10 +286,10 @@ class TestCoverageGuard:
             stitch(patches, image_shape=(1, 13, 13), stride=5)
 
     def test_exact_coverage_boundary_still_accepted(self) -> None:
-        img = torch.arange(100, dtype=torch.float32).reshape(1, 10, 10)
+        img = rand_image(1, 10, 10, torch.float32, seed=508)
         patches = extract(img, patch_size=4, stride=2)  # (4-1)*2+4 == 10
         out = stitch(patches, image_shape=img.shape, stride=2)
-        assert torch.allclose(out, img)
+        assert bit_equal(out, img)
 
 
 # --------------------------- characterization: pre-0.3.0 reference (Task 5) --

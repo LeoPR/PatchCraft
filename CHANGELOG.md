@@ -6,6 +6,43 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-01
+
+### Changed
+
+- `tilings`/`paired_tilings` no longer emit degenerate single-patch overlap
+  specs: with one patch the stride is unobservable and the spec duplicated
+  the exact tile. `tilings((28, 28), allow_overlap=True)` now returns 73
+  specs instead of 100; `paired_tilings((14, 14), (28, 28), allow_overlap=True)`
+  returns 27 instead of 40.
+
+### Fixed
+
+- **Public retraction: the documented exactness boundary was wrong.** The old
+  wording (`k_max <= 4`, "`stride == patch_size / 2`", "within ~1 ULP" outside
+  the rule) was measured false: the error grows with the pixel's coverage
+  count (up to 19 ULP at count 81 in float32). The correct contract
+  (ADR 0003): the `extract`/`reconstruct` round trip is bit-exact iff every
+  value of the overlap count map is a power of two — always true at
+  `stride == patch_size` — and outside the rule the per-pixel error is
+  bounded by `(k+1)·eps·|v|`, with `k` the pixel's coverage count.
+  Docstrings and docs (SCOPE, THEORY, GUIDE, USAGE, READMEs) now state this
+  form; THEORY §9.1 records the extract-truncates / reconstruct-rejects
+  asymmetry.
+- Test suite: round-trip assertions now run on seeded full-mantissa noise
+  (integer ramps and widened-float32 data could mask ULP-level errors); a
+  falsification suite (`tests/test_exactness.py`) enumerates the 126,736
+  legal geometries, samples 256 (seeded; full sweep via
+  `PATCHCRAFT_SWEEP_FULL=1`), and pins both halves of the predicate; a naive
+  loop-based reference (`tests/test_reference.py`) cross-checks the fast
+  paths; the 20-name public surface is frozen by `tests/test_public_api.py`;
+  the no-`zstandard` cache branch is now covered.
+
+### Notes
+
+- No signature changed. The public surface is exactly the 20 names of 0.4.0,
+  now pinned by test.
+
 ## [0.4.0] - 2026-09-01
 
 ### Added

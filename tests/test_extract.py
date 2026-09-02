@@ -111,7 +111,12 @@ class TestAccepts:
         assert out.shape == (16, 3, 4, 4)
 
     def test_truncation_drops_trailing(self) -> None:
-        """Image 10x10, patch 4, stride 3 → trailing column dropped."""
+        """Image 10x10, patch 4, stride 3 → trailing column dropped.
+
+        Truncation is the written boundary policy (ADR 0001, THEORY §9.1
+        "Assimetria ida/volta"): `extract` drops silently, `reconstruct`
+        raises on the same uncovered grid (§9.2). This test pins the silent
+        side; do not "fix" it into a raise without an ADR."""
         img = _ramp(1, 10, 10)
         # num_h = num_w = (10 - 4) // 3 + 1 = 3
         out = extract(img, patch_size=4, stride=3)

@@ -1,7 +1,9 @@
 """Stitch patches back into an image with configurable weighting kernels.
 
-Where :func:`patchcraft.reconstruct` is a bit-exact inverse of ``extract``,
-``stitch`` is intended for *modified* patches, meaning patches that have been
+Where :func:`patchcraft.reconstruct` inverts ``extract`` exactly under the
+count-map rule (every coverage count a power of two — always true at
+``stride == patch_size``), ``stitch`` is intended for *modified* patches,
+meaning patches that have been
 denoised, super-resolved, or otherwise altered, where overlap seams are
 visible if patches are averaged uniformly. Weighting by a window kernel
 (Hann, Gaussian) emphasizes patch centers and reduces those seams.
@@ -120,8 +122,8 @@ def stitch(
 
     Use ``stitch`` when patches have been modified (model output, denoised,
     super-resolved). Use :func:`patchcraft.reconstruct` when patches came
-    straight from ``extract`` and you want a bit-exact inverse with no
-    extra arithmetic.
+    straight from ``extract`` and you want the exact inverse — bit-exact
+    under the count-map rule — with no extra arithmetic.
 
     ``weight`` controls how overlapping patches are blended:
 

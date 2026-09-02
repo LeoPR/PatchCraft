@@ -50,7 +50,8 @@ dela. Tasks só migram para `src/` depois de passarem pelo funil do lab
 ## 2. Patch como ferramenta de decomposição/reconstrução
 
 ### 2.1 O que já existe
-- `reconstruct` (fold + count map, bit-exato), `stitch` (blend com janelas
+- `reconstruct` (fold + count map, bit-exato sob a regra do count
+  map), `stitch` (blend com janelas
   uniform/hann/gaussian).
 
 ### 2.2 O que falta

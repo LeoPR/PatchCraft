@@ -1,6 +1,7 @@
 """Tests for `patchcraft.Cache`, contract from docs/THEORY.md §9.5."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -252,3 +253,24 @@ class TestProperties:
         assert "Cache(" in r
         assert "'ns'" in r
         assert "version=7" in r
+
+
+# ------------------------------------------------------- No zstandard (raw) --
+
+class TestNoZstandardFallback:
+    """Branch coverage: with zstandard absent the payload is stored raw and
+    the sidecar says so (0.5.0; the compressed path is covered by the rest of
+    the suite whenever the extra is installed)."""
+
+    def test_put_get_roundtrip_uncompressed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("patchcraft.cache._try_zstandard", lambda: None)
+        c = Cache(tmp_path, namespace="t")
+        key = c.key_for("raw")
+        c.put(key, b"uncompressed bytes")
+        assert c.get(key) == b"uncompressed bytes"
+        sidecar_path = next((tmp_path / "t").glob("*.json"))
+        sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+        assert sidecar["compressed"] is False
+        assert sidecar["key"] == key

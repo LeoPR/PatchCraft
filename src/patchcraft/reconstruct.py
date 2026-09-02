@@ -37,9 +37,11 @@ def reconstruct(
     pixel is then covered exactly once. Overlap satisfies it only sometimes:
     with ``stride == patch_size / 2`` the counts are 1, 2 and 4, so the round
     trip stays exact, while a geometry that puts a 3 or a 9 in the map does not.
-    Outside the rule the error is about 1 ULP, measured at 2.4e-07 in float32 on
-    a 16x16 image with ``patch_size=4, stride=1``. Widening the dtype does not
-    help, because the deciding axis is the geometry rather than the precision.
+    Outside the rule the per-pixel error is bounded by ``(k + 1) * eps * |v|``,
+    where ``k`` is that pixel's coverage count — the error grows with the
+    overlap, so there is no fixed ULP figure (measured up to 19 ULP at k=81 in
+    float32). Widening the dtype does not help, because the deciding axis is
+    the geometry rather than the precision.
 
     Rejects (per §9.2): ``dilation != 1``; ``stride > patch_size`` in any axis
     (partial coverage would synthesize pixel values, which PatchCraft refuses);

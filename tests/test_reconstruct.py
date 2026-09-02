@@ -6,6 +6,7 @@ import torch
 import torch.nn.functional as F  # noqa: N812 (torch convention)
 
 from patchcraft import extract, reconstruct
+from tests._rng import bit_equal, coverage_counts, rand_image, within_pixel_bound
 
 
 def _ramp(c: int, h: int, w: int, dtype: torch.dtype = torch.float32) -> torch.Tensor:
@@ -19,63 +20,72 @@ class TestRoundtripExact:
     """`stride == patch_size`: each pixel covered exactly once, bit-exact."""
 
     def test_basic(self) -> None:
-        img = _ramp(3, 32, 32)
+        img = rand_image(3, 32, 32, torch.float32, seed=101)
         patches = extract(img, patch_size=8, stride=8)
         out = reconstruct(patches, image_shape=img.shape, stride=8)
-        assert torch.equal(out, img)
+        assert bit_equal(out, img)
 
     def test_rectangular_geometry(self) -> None:
-        img = _ramp(1, 20, 30)
+        img = rand_image(1, 20, 30, torch.float64, seed=102)
         patches = extract(img, patch_size=(4, 6), stride=(4, 6))
         out = reconstruct(patches, image_shape=img.shape, stride=(4, 6))
-        assert torch.equal(out, img)
+        assert bit_equal(out, img)
 
     def test_single_patch_equals_image(self) -> None:
-        img = _ramp(2, 8, 8)
+        img = rand_image(2, 8, 8, torch.float32, seed=103)
         patches = extract(img, patch_size=8, stride=8)
         out = reconstruct(patches, image_shape=img.shape, stride=8)
-        assert torch.equal(out, img)
+        assert bit_equal(out, img)
 
     def test_multichannel(self) -> None:
-        img = _ramp(7, 16, 16)
+        img = rand_image(7, 16, 16, torch.float32, seed=104)
         patches = extract(img, patch_size=4, stride=4)
         out = reconstruct(patches, image_shape=img.shape, stride=4)
-        assert torch.equal(out, img)
+        assert bit_equal(out, img)
 
     def test_patch_size_1(self) -> None:
-        img = _ramp(1, 4, 4)
+        img = rand_image(1, 4, 4, torch.float32, seed=105)
         patches = extract(img, patch_size=1, stride=1)
         out = reconstruct(patches, image_shape=img.shape, stride=1)
-        assert torch.equal(out, img)
+        assert bit_equal(out, img)
 
 
 class TestRoundtripOverlap:
-    """`stride < patch_size`: overlap; weighted reconstruction = original."""
+    """`stride < patch_size`: exact iff every count-map value is a power of
+    two (ADR 0003); otherwise bounded per pixel by (k+1)*eps*|v|."""
 
     def test_half_overlap_basic(self) -> None:
-        img = _ramp(1, 16, 16, dtype=torch.float64)
+        """counts are 1, 2, 4 -> inside the predicate -> bit-exact."""
+        img = rand_image(1, 16, 16, torch.float64, seed=201)
         patches = extract(img, patch_size=4, stride=2)
         out = reconstruct(patches, image_shape=img.shape, stride=2)
-        assert torch.allclose(out, img, rtol=1e-12, atol=1e-12)
+        assert bit_equal(out, img)
 
     def test_max_overlap_stride_1(self) -> None:
-        img = _ramp(2, 8, 8, dtype=torch.float64)
+        """p=3 s=1 puts a 3 in the count map -> outside the predicate;
+        the per-pixel bound (k+1)*eps*|v| is the contract (Amendment A)."""
+        img = rand_image(2, 8, 8, torch.float64, seed=202)
         patches = extract(img, patch_size=3, stride=1)
         out = reconstruct(patches, image_shape=img.shape, stride=1)
-        assert torch.allclose(out, img, rtol=1e-12, atol=1e-12)
+        assert within_pixel_bound(out, img, coverage_counts(8, 8, 3, 3, 1, 1))
 
     def test_asymmetric_overlap(self) -> None:
-        img = _ramp(1, 12, 18, dtype=torch.float64)
+        """counts on both axes are {1, 2} -> 2-D map in {1, 2, 4} -> exact."""
+        img = rand_image(1, 12, 18, torch.float64, seed=203)
         patches = extract(img, patch_size=(4, 6), stride=(2, 3))
         out = reconstruct(patches, image_shape=img.shape, stride=(2, 3))
-        assert torch.allclose(out, img, rtol=1e-12, atol=1e-12)
+        assert bit_equal(out, img)
 
-    def test_float32_overlap_close(self) -> None:
-        """float32 round-trip survives the divide-by-count step within rtol=1e-5."""
-        img = _ramp(1, 16, 16, dtype=torch.float32)
-        patches = extract(img, patch_size=4, stride=2)
-        out = reconstruct(patches, image_shape=img.shape, stride=2)
-        assert torch.allclose(out, img, rtol=1e-5, atol=1e-5)
+    def test_float32_overlap_within_pixel_bound(self) -> None:
+        """Amendment A: outside the predicate the error is bounded per pixel
+        by (k+1)*eps*|v| — it grows with the coverage count, so no fixed ULP
+        figure applies. (Was: `rtol=1e-5` on a p4 s2 geometry, which is
+        *inside* the predicate and therefore bit-exact — the old assertion
+        tested nothing about the error regime.)"""
+        img = rand_image(1, 16, 16, torch.float32, seed=204)
+        patches = extract(img, patch_size=4, stride=1)
+        out = reconstruct(patches, image_shape=img.shape, stride=1)
+        assert within_pixel_bound(out, img, coverage_counts(16, 16, 4, 4, 1, 1))
 
 
 class TestRoundtripPreservation:
@@ -96,19 +106,19 @@ class TestRoundtripPreservation:
     def test_cuda_roundtrip(self) -> None:
         if not torch.cuda.is_available():
             pytest.skip("CUDA not available")
-        img = _ramp(1, 8, 8).cuda()
+        img = rand_image(1, 8, 8, torch.float32, seed=106).cuda()
         patches = extract(img, patch_size=4, stride=4)
         out = reconstruct(patches, image_shape=img.shape, stride=4)
         assert out.device.type == "cuda"
-        assert torch.equal(out, img)
+        assert bit_equal(out, img)
 
     def test_accepts_torch_size(self) -> None:
         """torch.Tensor.shape returns torch.Size (a tuple subclass)."""
-        img = _ramp(1, 8, 8)
+        img = rand_image(1, 8, 8, torch.float32, seed=107)
         patches = extract(img, patch_size=4, stride=4)
         out = reconstruct(patches, image_shape=img.shape, stride=4)
         assert isinstance(img.shape, torch.Size)
-        assert torch.equal(out, img)
+        assert bit_equal(out, img)
 
 
 class TestCountMap:
@@ -257,10 +267,10 @@ class TestCoverageGuard:
 
     def test_exact_coverage_boundary_still_accepted(self) -> None:
         """Grid that ends exactly on the image edge must not raise."""
-        img = torch.arange(100, dtype=torch.float32).reshape(1, 10, 10)
+        img = rand_image(1, 10, 10, torch.float32, seed=301)
         patches = extract(img, patch_size=4, stride=2)  # (4-1)*2+4 == 10
         out = reconstruct(patches, image_shape=img.shape, stride=2)
-        assert torch.allclose(out, img)
+        assert bit_equal(out, img)
 
 
 # ----------------------------------------------------- Characterization (0.3.0) --
