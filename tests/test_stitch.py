@@ -286,6 +286,7 @@ class TestCoverageGuard:
             stitch(patches, image_shape=(1, 13, 13), stride=5)
 
     def test_exact_coverage_boundary_still_accepted(self) -> None:
+        """Grid that ends exactly on the image edge must not raise."""
         img = rand_image(1, 10, 10, torch.float32, seed=508)
         patches = extract(img, patch_size=4, stride=2)  # (4-1)*2+4 == 10
         out = stitch(patches, image_shape=img.shape, stride=2)
