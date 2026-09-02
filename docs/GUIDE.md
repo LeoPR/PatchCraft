@@ -628,7 +628,7 @@ TilingSpec(patch_size=(4, 4), stride=(4, 4), dilation=(1, 1), num_patches=(7, 7)
 TilingSpec(patch_size=(7, 7), stride=(7, 7), dilation=(1, 1), num_patches=(4, 4), total_patches=16, overlap=False)
 TilingSpec(patch_size=(14, 14), stride=(14, 14), dilation=(1, 1), num_patches=(2, 2), total_patches=4, overlap=False)
 TilingSpec(patch_size=(28, 28), stride=(28, 28), dilation=(1, 1), num_patches=(1, 1), total_patches=1, overlap=False)
-5 exact tilings, 100 once overlap is allowed
+5 exact tilings, 73 once overlap is allowed
 ```
 
 Nothing is read and nothing is allocated here. Enumeration is arithmetic on the shape, so it is cheap enough to run before you have decided anything.

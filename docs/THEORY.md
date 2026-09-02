@@ -53,7 +53,7 @@ The naïve way is to materialize patches with `extract` and check `.shape[0]`, o
 
 Truncated geometries (where the last patch falls short of the edge) are deliberately not emitted, because the function answers "which geometries are sound by construction?", not "which geometries `extract` will accept" (`extract` accepts any positive `(p, s, d)`).
 
-**Worked example (28×28 MNIST).** Divisors of 28 ≥ 2 are `{2, 4, 7, 14, 28}`, so `tilings((28, 28))` returns exactly 5 specs: `(p=2, total=196)`, `(p=4, total=49)`, `(p=7, total=16)`, `(p=14, total=4)`, `(p=28, total=1)`. With `allow_overlap=True` the set grows to 100 specs.
+**Worked example (28×28 MNIST).** Divisors of 28 ≥ 2 are `{2, 4, 7, 14, 28}`, so `tilings((28, 28))` returns exactly 5 specs: `(p=2, total=196)`, `(p=4, total=49)`, `(p=7, total=16)`, `(p=14, total=4)`, `(p=28, total=1)`. With `allow_overlap=True` the set grows to 73 specs (since 0.5.0, single-patch grids are skipped: one patch makes the stride unobservable and the spec duplicated the exact tile).
 
 **Dilation.** `tilings` always emits `dilation=(1, 1)` in v0.1, because dilated full-coverage tilings are a non-trivial enumeration (the patch footprint has gaps; you can interleave multiple dilated patches per pixel) and no consumer has asked for them yet. `num_patches` does honor `dilation` because the formula already does.
 
