@@ -17,6 +17,7 @@ from patchcraft import (
     scale_factor,
     tilings,
 )
+from tests._rng import bit_equal, count_map_pow2, coverage_counts, rand_image, within_pixel_bound
 
 # ---------------------------------------------------------------- num_patches --
 
@@ -147,27 +148,32 @@ class TestTilingsRejects:
 
 
 class TestTilingsRoundtripGuarantee:
-    """Every spec from tilings() must produce bit-exact extract+reconstruct."""
+    """Every spec from tilings() round-trips; the assertion written is the
+    contract itself (ADR 0003): bit-exact inside the predicate, per-pixel
+    bound outside it. A flat `allclose` cannot tell the two regimes apart."""
 
     def test_all_exact_tilings_28x28_roundtrip(self) -> None:
-        img = torch.arange(28 * 28, dtype=torch.float64).reshape(1, 28, 28)
+        img = rand_image(1, 28, 28, torch.float64, seed=401)
         for spec in tilings((28, 28)):
             patches = extract(img, patch_size=spec.patch_size, stride=spec.stride)
             assert patches.shape[0] == spec.total_patches
             recon = reconstruct(patches, image_shape=img.shape, stride=spec.stride)
-            assert torch.equal(recon, img), (
-                f"spec {spec} broke bit-exact round-trip"
-            )
+            assert bit_equal(recon, img), f"spec {spec} broke bit-exact round-trip"
 
-    def test_overlap_tilings_28x28_close_roundtrip(self) -> None:
-        """Overlap geometries: weighted reconstruction within float64 tolerance."""
-        img = torch.arange(28 * 28, dtype=torch.float64).reshape(1, 28, 28)
+    def test_overlap_tilings_28x28_roundtrip_predicate_split(self) -> None:
+        img = rand_image(1, 28, 28, torch.float64, seed=402)
         for spec in tilings((28, 28), allow_overlap=True):
+            ph, pw = spec.patch_size
+            sh, sw = spec.stride
             patches = extract(img, patch_size=spec.patch_size, stride=spec.stride)
             recon = reconstruct(patches, image_shape=img.shape, stride=spec.stride)
-            assert torch.allclose(recon, img, rtol=1e-12, atol=1e-12), (
-                f"spec {spec} broke overlap round-trip"
-            )
+            if count_map_pow2(28, 28, ph, pw, sh, sw):
+                assert bit_equal(recon, img), f"spec {spec} inside predicate, not exact"
+            else:
+                counts = coverage_counts(28, 28, ph, pw, sh, sw)
+                assert within_pixel_bound(recon, img, counts), (
+                    f"spec {spec} outside predicate, beyond (k+1)*eps*|v|"
+                )
 
 
 class TestTilingSpecShape:
