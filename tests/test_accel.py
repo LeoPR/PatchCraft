@@ -2,7 +2,7 @@
 
 Two layers: import/ABI/env behavior with fake modules (always runs), and
 numerical checks against `F.fold` (require the real `patchcraft-accel`
-installed — `maturin develop` — and are skipped otherwise).
+installed with `maturin develop`, and are skipped otherwise).
 """
 from __future__ import annotations
 
@@ -114,7 +114,7 @@ def test_fold_weighted_matches_manual_fold() -> None:
 # --- Equivalence through the public API, both modes -------------------------
 
 _OVERLAP_GEOMETRIES = [
-    # (ph, pw, sh, sw, h, w) — all with exact coverage
+    # (ph, pw, sh, sw, h, w), all with exact coverage
     (4, 4, 2, 2, 16, 16),  # square, half overlap
     (5, 4, 3, 2, 14, 14),  # stride does not divide patch, both axes
     (4, 6, 3, 5, 16, 21),  # rectangular everything

@@ -64,12 +64,15 @@ packages = ["src/patchcraft"]
 # track that proves it works (`tests/`, `docs/`). It must NOT carry `lab/`,
 # whose contents are gitignored scratch work (`lab/.gitignore` is `*`) and so
 # cannot be reproduced from any commit -- patchcraft-0.2.0.tar.gz shipped three
-# such files to PyPI. `.vscode/` is machine-local editor config.
+# such files to PyPI. `.vscode/` is machine-local editor config, `accel/`
+# is a separate distribution with its own sdist, and `.superpowers/` is
+# untracked agent tooling that hatchling would otherwise sweep in.
 [tool.hatch.build.targets.sdist]
 exclude = [
     "lab/",
     "**/.vscode/**",
     "accel/",
+    ".superpowers/",
 ]
 
 [tool.pytest.ini_options]

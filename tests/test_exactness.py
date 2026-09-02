@@ -4,10 +4,10 @@ Predicate: the ``extract``/``reconstruct`` round trip is bit-exact iff every
 value of the overlap count map is a power of two. Outside it, the per-pixel
 error is bounded by ``(k+1)*eps*|v|`` with ``k`` the pixel's coverage count
 (Amendment A of docs/superpowers/specs/2026-09-01-fase3-g1-predicado-design.md
-— the frozen "1 ULP" wording was measured false).
+(the frozen "1 ULP" wording was measured false).
 
 Strategy: enumerate the legal geometry space *independently* of the
-predicate (H, W in 4..24; ph, pw in 2..9; strides with exact coverage —
+predicate (H, W in 4..24; ph, pw in 2..9; strides with exact coverage,
 126,736 geometries), draw a seeded 256-geometry sample (67 inside the
 predicate, 189 outside), and try to break both halves:
 
@@ -17,7 +17,7 @@ predicate, 189 outside), and try to break both halves:
   63/300 exact seeds in float32 at the FOCO anchor geometry, so a single
   execution proves nothing) AND every seed stays within the pixel bound.
 
-``PATCHCRAFT_SWEEP_FULL=1`` replaces the sample with the full space — the
+``PATCHCRAFT_SWEEP_FULL=1`` replaces the sample with the full space, and the
 local gate before merging (recipe vs count map over all 126,736, plus one
 bit-exact round trip per inside-predicate geometry; ~1-2 min).
 """
@@ -124,7 +124,7 @@ class TestNegativeHalf:
             if not bit_equal(out, img):
                 inexact += 1
         assert inexact >= 1, (
-            f"{g} {dtype}: exact on all 50 seeds — either the predicate grew "
+            f"{g} {dtype}: exact on all 50 seeds, so either the predicate grew "
             "or the fixed sample got lucky; investigate before touching this"
         )
 
@@ -133,7 +133,7 @@ class TestNanInsidePredicate:
     @pytest.mark.parametrize("dtype", _DTYPES)
     def test_nan_roundtrips_bit_exact(self, dtype: torch.dtype) -> None:
         """D5 in code: inside the predicate the bits come back even when the
-        value is NaN — where torch.equal is not reflexive."""
+        value is NaN, where torch.equal is not reflexive."""
         img = rand_image(1, 16, 16, dtype, seed=99)
         img[0, 3, 5] = float("nan")
         img[0, 10, 11] = float("nan")

@@ -23,12 +23,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the rule) was measured false: the error grows with the pixel's coverage
   count (up to 19 ULP at count 81 in float32). The correct contract
   (ADR 0003): the `extract`/`reconstruct` round trip is bit-exact iff every
-  value of the overlap count map is a power of two — always true at
-  `stride == patch_size` — and outside the rule the per-pixel error is
+  value of the overlap count map is a power of two, which is always true
+  at `stride == patch_size`, and outside the rule the per-pixel error is
   bounded by `(k+1)·eps·|v|`, with `k` the pixel's coverage count.
   Docstrings and docs (SCOPE, THEORY, GUIDE, USAGE, READMEs) now state this
   form; THEORY §9.1 records the extract-truncates / reconstruct-rejects
   asymmetry.
+- Packaging: the sdist no longer carries `.superpowers/`, an untracked
+  directory of agent tooling that hatchling swept in (62 files). The same
+  class of leak as the `lab/` files that reached PyPI in 0.2.0.
+- Documentation: GUIDE section 6 still printed the pre-0.5.0 enumeration
+  output and described the single-patch duplicates as an open wart; section 7
+  asserted `__version__ == "0.4.0"`; section 8 and the BibTeX entry quoted
+  0.4.0 and its test counts. All four now match the release.
+- Prose: the em-dashes that entered the docstrings, docs and tests during
+  0.3.0 to 0.5.0 are rewritten as ordinary sentences, per the project's
+  writing rule.
 - Test suite: round-trip assertions now run on seeded full-mantissa noise
   (integer ramps and widened-float32 data could mask ULP-level errors); a
   falsification suite (`tests/test_exactness.py`) enumerates the 126,736

@@ -17,7 +17,7 @@ The exactness predicate (ADR 0003): the ``extract``/``reconstruct`` round
 trip is bit-exact iff every value of the overlap count map is a power of
 two. :func:`exact_axes_pow2` computes it with an O(H+W) per-axis closed
 form; :func:`count_map_pow2` materializes the count map with integer
-difference arrays — an independent code path, so cross-checking the two
+difference arrays, which is an independent code path, so cross-checking the two
 means something. Both assume exact coverage; without it there is no
 round-trip at all (``reconstruct`` raises).
 """
@@ -43,14 +43,14 @@ _INT_VIEW: dict[torch.dtype, torch.dtype] = {
 
 
 def rand_image(c: int, h: int, w: int, dtype: torch.dtype, seed: int) -> torch.Tensor:
-    """Uniform [0, 1) image generated directly in ``dtype`` — never widened
+    """Uniform [0, 1) image generated directly in ``dtype``, never widened
     from a narrower dtype (that would leave half the mantissa zeroed)."""
     gen = torch.Generator(device="cpu").manual_seed(seed)
     return torch.rand(c, h, w, dtype=dtype, generator=gen)
 
 
 def bit_equal(a: torch.Tensor, b: torch.Tensor) -> bool:
-    """Bitwise equality via the integer view — NaN-safe, unlike
+    """Bitwise equality via the integer view, which is NaN-safe unlike
     ``torch.equal`` (which is not reflexive on NaN)."""
     if a.shape != b.shape or a.dtype != b.dtype:
         return False
@@ -77,7 +77,7 @@ def exact_axes_pow2(h: int, w: int, ph: int, pw: int, sh: int, sw: int) -> bool:
 
 def coverage_counts(h: int, w: int, ph: int, pw: int, sh: int, sw: int) -> np.ndarray:
     """The ``(h, w)`` integer count map, built with per-axis difference
-    arrays (place every patch interval, cumsum, outer product) — no closed
+    arrays (place every patch interval, cumsum, outer product), with no closed
     form and no ``F.fold``, so it cross-checks :func:`exact_axes_pow2`
     independently."""
     axes: list[np.ndarray] = []

@@ -35,7 +35,7 @@ class TestUniformEqualsReconstruct:
 
     def test_overlap_matches_reconstruct(self) -> None:
         """Equivalence is down to floating-point ordering by contract, so
-        this stays `allclose` — but on real noise, not an integer ramp."""
+        this stays `allclose`, but on real noise rather than an integer ramp."""
         img = rand_image(1, 16, 16, torch.float64, seed=503)
         patches = extract(img, patch_size=4, stride=2)
         out_stitch = stitch(patches, image_shape=img.shape, stride=2)
@@ -44,7 +44,7 @@ class TestUniformEqualsReconstruct:
 
     def test_overlap_recovers_image(self) -> None:
         """counts are 1, 2, 4 (powers of two): uniform stitch is bit-exact
-        here — the ones-kernel multiply is exact and the cumsum denominator
+        here, because the ones-kernel multiply is exact and the cumsum denominator
         reproduces the integer count map exactly."""
         img = rand_image(1, 16, 16, torch.float64, seed=504)
         patches = extract(img, patch_size=4, stride=2)

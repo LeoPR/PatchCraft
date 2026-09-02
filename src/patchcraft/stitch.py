@@ -1,7 +1,7 @@
 """Stitch patches back into an image with configurable weighting kernels.
 
 Where :func:`patchcraft.reconstruct` inverts ``extract`` exactly under the
-count-map rule (every coverage count a power of two — always true at
+count-map rule (every coverage count a power of two, always true at
 ``stride == patch_size``), ``stitch`` is intended for *modified* patches,
 meaning patches that have been
 denoised, super-resolved, or otherwise altered, where overlap seams are
@@ -79,7 +79,7 @@ def _fold_window_1d(
     step: int,
 ) -> torch.Tensor:
     """``S[y] = sum of w1d[y - i*step]`` over ``i`` in ``[0, num)`` with
-    ``0 <= y - i*step < len(w1d)`` — the 1-D analog of folding the kernel.
+    ``0 <= y - i*step < len(w1d)``, the 1-D analog of folding the kernel.
 
     Within each residue class modulo ``step`` the sum is a sliding window
     over the strided kernel, computed with a cumsum: O(length + len(w1d))
@@ -122,8 +122,8 @@ def stitch(
 
     Use ``stitch`` when patches have been modified (model output, denoised,
     super-resolved). Use :func:`patchcraft.reconstruct` when patches came
-    straight from ``extract`` and you want the exact inverse — bit-exact
-    under the count-map rule — with no extra arithmetic.
+    straight from ``extract`` and you want the exact inverse, bit-exact
+    under the count-map rule, with no extra arithmetic.
 
     ``weight`` controls how overlapping patches are blended:
 
@@ -217,7 +217,7 @@ def stitch(
         )[0]
 
     # Separable denominator: because the kernel is an outer product,
-    # den[y, x] = (sum_i wh[y - i*sh]) * (sum_j ww[x - j*sw]) — two 1-D
+    # den[y, x] = (sum_i wh[y - i*sh]) * (sum_j ww[x - j*sw]), two 1-D
     # folds + outer product instead of a second 2-D F.fold.
     den_h = _fold_window_1d(wh, h, num_h, sh)
     den_w = _fold_window_1d(ww, w, num_w, sw)

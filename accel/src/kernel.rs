@@ -2,10 +2,10 @@
 //! `patches[p, c, y - i*sh, x - j*sw]` (optionally kernel-weighted) over every
 //! patch `p = (i, j)` covering output pixel `(y, x)`.
 //!
-//! Pure Rust — no pyo3 types — so `cargo test` exercises it directly.
+//! Pure Rust with no pyo3 types, so `cargo test` exercises it directly.
 //! Parallelized over output rows with rayon; each output pixel is written by
 //! exactly one worker (no atomics, no data races) and the summation order per
-//! pixel is fixed (descending patch index — i.e. ascending kernel offset,
+//! pixel is fixed (descending patch index, i.e. ascending kernel offset,
 //! matching ATen col2im's per-pixel order), so results are deterministic
 //! across runs and thread counts.
 
@@ -117,8 +117,8 @@ mod tests {
 
     /// Naive scatter reference: for each patch in descending order, add it into
     /// `out`. Per-pixel arrival order is descending patch index (= ascending
-    /// kernel offset, matching ATen col2im's per-pixel order) — the same order
-    /// the gather kernel sums in — so results must be bit-identical.
+    /// kernel offset, matching ATen col2im's per-pixel order), which is the
+    /// same order the gather kernel sums in, so results must be bit-identical.
     #[allow(clippy::too_many_arguments)]
     fn reference<T: Scalar>(
         patches: &[T],

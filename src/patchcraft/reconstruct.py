@@ -1,7 +1,7 @@
 """Reconstruction of an image from its patches.
 
 Non-overlapping grids are a pure rearrangement; overlapping grids sum the
-patches with a closed-form O(H+W) count map — via the optional native
+patches with a closed-form O(H+W) count map, or via the optional native
 accelerator (patchcraft-accel) when available, otherwise F.fold.
 
 Contract: docs/THEORY.md §2 and §9.2.
@@ -38,7 +38,7 @@ def reconstruct(
     with ``stride == patch_size / 2`` the counts are 1, 2 and 4, so the round
     trip stays exact, while a geometry that puts a 3 or a 9 in the map does not.
     Outside the rule the per-pixel error is bounded by ``(k + 1) * eps * |v|``,
-    where ``k`` is that pixel's coverage count — the error grows with the
+    where ``k`` is that pixel's coverage count, so the error grows with the
     overlap, so there is no fixed ULP figure (measured up to 19 ULP at k=81 in
     float32). Widening the dtype does not help, because the deciding axis is
     the geometry rather than the precision.
@@ -100,7 +100,7 @@ def reconstruct(
     # Numerator of the overlap fold: native accelerator when available,
     # otherwise F.fold of the (1, C*ph*pw, L) flattening. Both produce the
     # (C, H, W) sum over covering patches in descending patch order
-    # (= ascending kernel offset, ATen col2im's per-pixel order — bit-exact
+    # (= ascending kernel offset, ATen col2im's per-pixel order, bit-exact
     # against each other).
     numerator = fold_weighted(work, (c, h, w), (sh, sw), None)
     if numerator is None:

@@ -2,8 +2,8 @@
 
 The substitute for the lost `hand.py` x `pc.py` consumer gate: pure Python
 loops, no `F.fold`, no code shared with the library. If the fast paths and
-this reference agree bit for bit inside the predicate — and both stay within
-the per-pixel bound outside it — the arithmetic, not just the API, is right.
+this reference agree bit for bit inside the predicate, and both stay within
+the per-pixel bound outside it, so the arithmetic and not just the API is right.
 
 Runs in both accel modes on purpose: `reconstruct` dispatches internally, so
 an active accelerator is exercised here without any extra code (the full

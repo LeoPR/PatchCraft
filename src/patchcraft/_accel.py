@@ -3,8 +3,9 @@
 The accelerator is a separate PyPI package (a pyo3/Rust extension module).
 This module detects it at runtime and exposes a single primitive,
 :func:`fold_weighted`, for the overlap paths of ``reconstruct`` and
-``stitch``. Any failure — package absent, ABI mismatch, ``PATCHCRAFT_ACCEL=0``
-in the environment, or an ineligible tensor — yields ``None``/``False`` and
+``stitch``. Any failure at all, whether the package is absent, the ABI
+mismatches, ``PATCHCRAFT_ACCEL=0`` is set in the environment or the tensor is
+ineligible, yields ``None``/``False`` and
 the caller falls back to the pure-torch path. Nothing here raises for an
 unavailable accelerator.
 """
@@ -58,16 +59,16 @@ def fold_weighted(
     """Sum ``patches`` into a ``(C, H, W)`` image, optionally kernel-weighted.
 
     ``out[c, y, x] = sum_p patches[p, c, y - row_p, x - col_p] * kernel[...]``
-    over the patches covering ``(y, x)`` — the numerator of the overlap fold,
+    over the patches covering ``(y, x)``, which is the numerator of the overlap fold,
     before the count/denominator division the caller performs. Summation per
     pixel is in descending patch index (= ascending kernel offset), matching
-    ATen col2im's per-pixel order — the order that is bit-exact against
+    ATen col2im's per-pixel order, the one order that is bit-exact against
     ``F.fold``.
 
     Returns ``None`` when the accelerator is unavailable or the input is
     ineligible (non-CPU device, dtype outside float32/float64, mismatched
     kernel); the caller then uses its pure-torch path. Geometry is NOT
-    validated here — callers validate with ``check_fold_geometry`` first.
+    validated here, because callers validate with ``check_fold_geometry`` first.
     """
     mod = None if _env_disabled() else _load()
     if mod is None:
@@ -77,7 +78,7 @@ def fold_weighted(
     if patches.dtype not in (torch.float32, torch.float64):
         return None
     if patches.requires_grad:
-        # The native kernel writes a leaf tensor through raw pointers — no
+        # The native kernel writes a leaf tensor through raw pointers, so no
         # autograd graph. Fall back to the differentiable torch path.
         return None
     if kernel is not None and (

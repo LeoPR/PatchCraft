@@ -158,9 +158,10 @@ True
 
 Each pixel covered by *k* patches; each contribution is the original
 value; sum is `k * value`; division by the count map gives back
-`value`. Bit-exact when every count in the map is a power of two —
-`stride == patch_size` always, `stride == patch_size / 2` (counts 1,
-2, 4, as above) — and otherwise bounded per pixel by `(k+1)·eps·|v|`,
+`value`. Bit-exact when every count in the map is a power of two, so
+`stride == patch_size` always qualifies and `stride == patch_size / 2`
+does too (counts 1, 2, 4, as above). Otherwise the error is bounded
+per pixel by `(k+1)·eps·|v|`,
 whatever the dtype: the deciding axis is the geometry, not the
 precision.
 
@@ -172,8 +173,8 @@ precision.
 ## 6. `stitch`: blend modified patches back with a window kernel
 
 `reconstruct` is the exact inverse of `extract` under the
-count-map rule of §5 — bit-exact when every count is a power of
-two. When patches have been *modified* (model output, denoised,
+count-map rule of §5, so it is bit-exact when every count is a power
+of two. When patches have been *modified* (model output, denoised,
 super-resolved)
 uniform averaging makes the disagreement between adjacent patches
 show up as visible seams. `stitch` weights each patch by a 2-D

@@ -6,7 +6,7 @@ This is the manual. [The README](../README.md) is the call page, and it answers 
 
 You do not have to read it from the top. Each section stands on its own, so jump into the one that matches the problem in front of you, and follow the links out to [THEORY.md](THEORY.md) when you want the contract rather than the demonstration.
 
-**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run against `patchcraft` 0.3.0 on CPU, with Python 3.13.13 and torch 2.13.0+cpu. Version 0.4.0 changes only how the overlap fold executes internally (the optional `patchcraft-accel` native path), which is bit-exact against these outputs; the section 7 block was re-run on 0.4.0 and is current, and the tilings block there was updated for 0.5.0. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-what-this-project-does-not-claim), and the file and line references, which point at the repository as of 0.4.0.
+**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run against `patchcraft` 0.3.0 on CPU, with Python 3.13.13 and torch 2.13.0+cpu. Version 0.4.0 changes only how the overlap fold executes internally (the optional `patchcraft-accel` native path), which is bit-exact against these outputs; the section 7 block was re-run on 0.4.0 and again on 0.5.0, and the two `tilings` blocks in section 6 were re-run on 0.5.0, which is the one release that changed what the enumeration returns. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-what-this-project-does-not-claim), and the file and line references, which point at the repository as of 0.5.0.
 
 ## Contents
 
@@ -430,7 +430,7 @@ The maximum is 4, the geometry is legal and fully covering, and the round trip s
 
 ### Three honest details
 
-**Outside the predicate, exactness is a property of the data rather than of the geometry.** The guarantee runs one way only: all powers of two means exact, and anything else means not guaranteed. Some inputs do come back exact on a mixed map by luck of rounding, so a geometry that survived one image tells you nothing about the next. What does hold either way is the size of the miss: bounded per pixel by `(k+1)·eps·|v|`, with `k` the pixel's coverage count — `2.384e-07` in float32 and `4.441e-16` in float64 on the geometries above, and larger where the count map reaches higher, so there is no fixed ULP figure.
+**Outside the predicate, exactness is a property of the data rather than of the geometry.** The guarantee runs one way only: all powers of two means exact, and anything else means not guaranteed. Some inputs do come back exact on a mixed map by luck of rounding, so a geometry that survived one image tells you nothing about the next. What does hold either way is the size of the miss: bounded per pixel by `(k+1)·eps·|v|`, with `k` the pixel's coverage count, which is `2.384e-07` in float32 and `4.441e-16` in float64 on the geometries above, and larger where the count map reaches higher, so there is no fixed ULP figure.
 
 **float64 is not a safe harbour.** The deciding axis is the count map and not the dtype, so float64 misses the round trip at exactly the geometry where float32 misses it. Reaching for a wider float buys you a smaller error, and it never buys you exactness.
 
@@ -438,7 +438,7 @@ The maximum is 4, the geometry is legal and fully covering, and the round trip s
 
 ### Where this rule is written down
 
-[ADR 0003](ADR/0003-reversibility-classes.md) is where the exactness boundary is being turned into contract, and it is still **Proposed** (acceptance is part of the 1.0 freeze). The wording itself landed across the project in 0.5.0 — docstrings, SCOPE, THEORY, USAGE and the READMEs all state the count-map rule with the per-pixel bound — closing blocker B1 in [FOCO-1.0.md](FOCO-1.0.md).
+[ADR 0003](ADR/0003-reversibility-classes.md) is where the exactness boundary is being turned into contract, and it is still **Proposed** (acceptance is part of the 1.0 freeze). The wording itself landed across the project in 0.5.0, where docstrings, SCOPE, THEORY, USAGE and the READMEs all came to state the count-map rule with the per-pixel bound, closing blocker B1 in [FOCO-1.0.md](FOCO-1.0.md).
 
 Treat this section as the measured truth, and the ADR as the formal statement of the same rule.
 
@@ -696,9 +696,11 @@ round trip exact: True
 
 `num_patches` answers with a tuple what `extract` needs 79 MiB to discover. At 50 percent overlap the patch stack is more than three times the size of the image it came from, and that multiple grows as the stride shrinks, so the plan is worth making before the allocation.
 
-### One known wart in the enumeration
+### A wart the enumeration used to have
 
-Where the grid collapses to a single patch, `tilings(..., allow_overlap=True)` still emits one spec per stride value, and it labels almost all of them as overlapping.
+Up to 0.4.0 the enumeration emitted one spec per stride value wherever the grid collapsed to a single patch, and it labelled almost all of them as overlapping. On a 28 by 28 image that was 28 specs for the same whole-image tiling, 27 of them carrying `overlap=True`, where a single patch has nothing to overlap with.
+
+Version 0.5.0 removed them, because with one patch the stride is unobservable and each of those specs was a duplicate of the exact tile. The output of the block above already reflects the change: the overlap-allowed count for that shape fell from 100 to 73, and only one spec now describes the whole-image tiling.
 
 ```python
 from patchcraft import tilings
@@ -710,11 +712,11 @@ print(whole[0])
 ```
 
 ```
-28 specs describe the whole-image tiling, 27 of them labelled overlap=True
+1 specs describe the whole-image tiling, 0 of them labelled overlap=True
 TilingSpec(patch_size=(28, 28), stride=(28, 28), dilation=(1, 1), num_patches=(1, 1), total_patches=1, overlap=False)
 ```
 
-A single patch overlaps nothing, so the arithmetic is right and the label is not useful. The cause is the `nh > 1 or nw > 1` guard in `geometry.py`, it is recorded as blocker B6 in [FOCO-1.0.md](FOCO-1.0.md), and that is where the decision for 1.0 will be made. Filter on `total_patches > 1` if the duplicates get in your way.
+If you pinned a spec by its position in the returned list, that position moved. Select by `patch_size` and `stride` instead, which is what the fields are for.
 
 ## 7. The 20 symbols and what each allocates
 
@@ -723,7 +725,7 @@ The public surface is 20 names, and `__all__` is what fixes it.
 ```python
 import patchcraft
 
-assert patchcraft.__version__ == "0.4.0"
+assert patchcraft.__version__ == "0.5.0"
 assert len(patchcraft.__all__) == 20
 assert all(hasattr(patchcraft, name) for name in patchcraft.__all__)
 print(patchcraft.__all__)
@@ -789,9 +791,9 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 ## 8. What this project does not claim
 
-**Version 0.4.0 is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
+**Version 0.5.0 is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 698 tests, skips 30 cases whose geometry does not cover exactly, and deselects 5 GPU tests, in about ten seconds on this machine, so run `pytest` yourself for the number in your environment. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12 and 3.13, and all four cells are green. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 1534 tests, skips 32 cases, and deselects 5 GPU tests, in about half a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12 and 3.13, and all four cells are green. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Five things this project does not claim.
 
@@ -842,7 +844,7 @@ pip install -e ".[dev,cache]"
   author  = {Souza, Leonardo Marques de},
   title   = {PatchCraft: image patch extraction, reconstruction, pairing
              and seam-aware stitching},
-  version = {0.4.0},
+  version = {0.5.0},
   year    = {2026},
   url     = {https://github.com/LeoPR/PatchCraft}
 }

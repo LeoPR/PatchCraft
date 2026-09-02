@@ -78,9 +78,9 @@ class TestRoundtripOverlap:
 
     def test_float32_overlap_within_pixel_bound(self) -> None:
         """Amendment A: outside the predicate the error is bounded per pixel
-        by (k+1)*eps*|v| — it grows with the coverage count, so no fixed ULP
+        by (k+1)*eps*|v|, and it grows with the coverage count, so no fixed ULP
         figure applies. (Was: `rtol=1e-5` on a p4 s2 geometry, which is
-        *inside* the predicate and therefore bit-exact — the old assertion
+        *inside* the predicate and therefore bit-exact, so the old assertion
         tested nothing about the error regime.)"""
         img = rand_image(1, 16, 16, torch.float32, seed=204)
         patches = extract(img, patch_size=4, stride=1)
