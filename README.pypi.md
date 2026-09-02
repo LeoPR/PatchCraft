@@ -107,7 +107,7 @@ The saving is real on the other side too. Tiling an image, running a per-patch m
 
 `extract` follows whatever grid you hand it, but `reconstruct` and `stitch` refuse a grid that does not cover the image exactly, rather than returning a plausible tensor built on missing pixels. On a 128x128 image with `patch_size=32` and `stride=20` the grid reaches only 112x112, which leaves 3840 of the 16384 pixels at zero, and the error message names that covered extent instead of hiding it.
 
-The answer is to pick a legal geometry rather than to pad the image into one, because padding synthesizes pixels you never had. `tilings(image_shape)` enumerates the legal geometries from the shape alone and allocates nothing while it does so, so you can call it before you have committed to anything: a 28x28 image has 5 exact tilings, and 100 of them once `allow_overlap=True` lets the patches overlap.
+The answer is to pick a legal geometry rather than to pad the image into one, because padding synthesizes pixels you never had. `tilings(image_shape)` enumerates the legal geometries from the shape alone and allocates nothing while it does so, so you can call it before you have committed to anything: a 28x28 image has 5 exact tilings, and 73 of them once `allow_overlap=True` lets the patches overlap.
 
 Two narrower questions have their own entry points. `num_patches` takes a geometry you already have in mind and returns the grid it implies, and `paired_tilings` is the one to reach for when a low-resolution image and a high-resolution image have to stay aligned patch for patch.
 
