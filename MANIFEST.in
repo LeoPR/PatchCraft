@@ -32,6 +32,5 @@ recursive-include tools *.py
 
 prune lab
 prune archive
-prune .superpowers
 prune .github
 prune .vscode

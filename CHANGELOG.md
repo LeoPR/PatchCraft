@@ -6,6 +6,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Removed
+
+- The agentic workflow's leftovers. `.superpowers/` at the repository root
+  held 62 files of review diffs and task-progress notes, hidden from
+  `git status` by a nested `.gitignore` containing `*`, so it sat in the tree
+  unseen and reached the 0.5.0 sdist. The three implementation plans under
+  `docs/superpowers/plans/` were 4527 lines of checkbox task lists addressed
+  "For agentic workers", and they shipped to PyPI inside every sdist.
+
+### Changed
+
+- The three design specs that were under `docs/superpowers/specs/` moved to
+  `docs/design/`. They are the record of what was measured before each phase
+  was built, including the spike table that rejected `conv_transpose2d` and
+  `index_add_` before the Rust kernel was written, and Amendment A, which
+  `tests/test_exactness.py` cites for the per-pixel error bound.
+- The sdist is 264 KiB where it was 316 KiB.
+
 ## [0.5.1] - 2026-09-02
 
 > Numbered `0.6.0` while it was being built. Corrected before release: the

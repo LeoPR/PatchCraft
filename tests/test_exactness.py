@@ -3,7 +3,7 @@
 Predicate: the ``extract``/``reconstruct`` round trip is bit-exact iff every
 value of the overlap count map is a power of two. Outside it, the per-pixel
 error is bounded by ``(k+1)*eps*|v|`` with ``k`` the pixel's coverage count
-(Amendment A of docs/superpowers/specs/2026-09-01-fase3-g1-predicado-design.md
+(Amendment A of docs/design/2026-09-01-fase3-predicado.md
 (the frozen "1 ULP" wording was measured false).
 
 Strategy: enumerate the legal geometry space *independently* of the

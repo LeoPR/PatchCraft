@@ -137,7 +137,7 @@ PatchCraft/
 │   ├── FOCO-1.0.md                 what 1.0 freezes and the blockers in the way
 │   ├── ADR/                        one file per decision that shaped the API
 │   ├── STUDIES/                    background reading behind those decisions
-│   └── superpowers/                the design specs and implementation plans per work phase
+│   └── design/                     one spec per work phase: the alternatives measured and the decision
 └── archive/                        reference-only; gitignored (pruned 2026-05-17, only HISTORY.md kept)
 ```
 
