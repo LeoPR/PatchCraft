@@ -68,6 +68,36 @@ CARGO_TARGET_DIR=/tmp/pc-target uv sync --extra cache --extra dev
 
 ---
 
+## Nothing ephemeral lives in the project folder
+
+Caches, build output and virtual environments are kept off the tree, because
+they are large, regenerable and machine-specific. They are redirected by
+user-level environment variables rather than by anything committed here: a
+machine path in `pyproject.toml` would be wrong for every other machine and
+for CI, which is why one was removed in 0.3.0.
+
+| Variable | Sends |
+|---|---|
+| `CARGO_TARGET_DIR` | the Rust build output, which reached 269 MiB inside `accel/target` before it was redirected |
+| `PYTEST_ADDOPTS=-o cache_dir=...` | `.pytest_cache` |
+| `RUFF_CACHE_DIR`, `MYPY_CACHE_DIR` | the linter caches |
+| `UV_CACHE_DIR`, `PIP_CACHE_DIR` | downloaded wheels |
+| `PYTHONPYCACHEPREFIX` | `__pycache__` |
+
+The virtual environment lives outside the tree too; see
+[`docs/AUXILIARY.md`](docs/AUXILIARY.md).
+
+Two directories still appear during a build and are gitignored: `build/` and
+`src/patchcraft.egg-info/`, both setuptools working state. They exist only
+while you build, and redirecting them would need a machine path in a tracked
+file, which is the thing this section is avoiding.
+
+Three files are written into `src/patchcraft/` by an editable install and
+are gitignored: the compiled `_accel_native`, the generated `_version.py`, and
+`__pycache__`. Those have to be there for the package to import.
+
+---
+
 ## Layout
 
 ```

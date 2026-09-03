@@ -23,6 +23,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `index_add_` before the Rust kernel was written, and Amendment A, which
   `tests/test_exactness.py` cites for the per-pixel error bound.
 - The sdist is 264 KiB where it was 316 KiB.
+- Nothing ephemeral is kept in the project folder any more. `accel/target`
+  had reached 269 MiB of Rust build output, and `dist/`, `.pytest_cache` and
+  `src/patchcraft.egg-info` were accumulating alongside it. The caches are
+  now redirected by user-level environment variables, joining the ones this
+  machine already had for uv, ruff, mypy, pip and `__pycache__`, and
+  `CONTRIBUTING.md` records the convention and why it is not committed here.
+- `.vscode/settings.json` is untracked. It is machine-local editor config, it
+  pointed at a `.venv` this project does not use, and setuptools-scm's file
+  finder had started offering it to the sdist.
 
 ## [0.5.1] - 2026-09-02
 
