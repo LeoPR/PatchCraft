@@ -144,7 +144,10 @@ PatchCraft/
 ├── CITATION.cff                    citation metadata; GitHub reads it for the cite button
 ├── SECURITY.md                     how to report, and what the real attack surface is
 ├── CODE_OF_CONDUCT.md              Contributor Covenant 2.1, verbatim
-├── .github/workflows/
+├── .github/
+│   ├── ISSUE_TEMPLATE/             five forms; the required fields are what makes a report reproducible
+│   ├── PULL_REQUEST_TEMPLATE.md    asks whether a returned value moved, which decides the version bump
+│   └── workflows/
 │   ├── test.yml                    matrix CI on PRs/main, plus the accelerated job
 │   └── release.yml                 publishes to PyPI on vX.Y.Z tag push (Trusted Publishing)
 ├── src/patchcraft/                 library core, one-image-at-a-time primitives

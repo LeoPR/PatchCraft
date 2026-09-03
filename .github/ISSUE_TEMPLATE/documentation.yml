@@ -1,0 +1,38 @@
+name: Documentation is wrong
+description: A document states something the code does not do.
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Worth its own form. Every page here claims to be measured, so a page
+        that is wrong is a defect and not a typo, and this project has shipped
+        a false claim in its own docstrings before and retracted it in public.
+
+  - type: input
+    id: where
+    attributes:
+      label: Which file, and which line or section
+      placeholder: "docs/THEORY.md section 9.2, the bfloat16 sentence"
+    validations:
+      required: true
+
+  - type: textarea
+    id: claim
+    attributes:
+      label: What it says
+      description: Quote it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: measured
+    attributes:
+      label: What you measured instead
+      description: >
+        The command and its output, if there is one. A wrong output block in
+        GUIDE is exactly this kind of report: it promises every fenced block is
+        verbatim output of the code above it.
+      render: shell
+    validations:
+      required: true

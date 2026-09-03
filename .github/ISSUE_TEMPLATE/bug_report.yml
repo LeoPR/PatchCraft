@@ -1,0 +1,66 @@
+name: Bug report
+description: Something raised, hung, or returned a shape you did not ask for.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If the values came back **wrong** rather than the call failing, use the
+        "Wrong numeric result" form instead. It asks different questions.
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: The smallest code that shows it
+      description: >
+        Runnable as written, starting from `import torch`. Use `torch.rand`
+        with a seed rather than attaching an image.
+      render: python
+      placeholder: |
+        import torch
+        from patchcraft import extract, reconstruct
+
+        torch.manual_seed(0)
+        image = torch.rand(3, 128, 128)
+        patches = extract(image, patch_size=32, stride=20)
+        reconstruct(patches, image.shape, stride=20)
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened
+      description: Paste the traceback in full if there was one.
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: >
+        Paste the output of this. `accel_available()` matters: three of the
+        five accelerated wheels have never had their kernel executed in CI, so
+        the platform is part of the report.
+      render: shell
+      placeholder: |
+        python -c "import patchcraft, torch, sys, platform; print('patchcraft', patchcraft.__version__); print('torch', torch.__version__); print('python', sys.version.split()[0]); print('platform', platform.platform()); print('accel_available', patchcraft.accel_available())"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: accel_off
+    attributes:
+      label: Does it still happen with the accelerator off?
+      description: >
+        Set `PATCHCRAFT_ACCEL=0` in the environment and run it again. This one
+        answer separates a defect in the native kernel from one in the library,
+        and it is the single most useful thing in a report here.
+      options:
+        - "Yes, it happens with PATCHCRAFT_ACCEL=0 too"
+        - "No, it goes away with PATCHCRAFT_ACCEL=0"
+        - "accel_available() is already False on this install"
+        - "I have not tried"
+    validations:
+      required: true

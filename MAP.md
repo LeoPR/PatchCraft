@@ -63,7 +63,10 @@ PatchCraft/
 │
 ├── outreach/ ................. material for presenting the project; not shipped
 ├── lab/ ...................... scratch experiments; only the README is tracked
-└── .github/workflows/ ........ test.yml (both code paths) and release.yml (one project, six wheels)
+└── .github/
+    ├── ISSUE_TEMPLATE/ ....... five forms, each asking for the geometry and PATCHCRAFT_ACCEL=0
+    ├── PULL_REQUEST_TEMPLATE.md
+    └── workflows/ ............ test.yml (both code paths) and release.yml (one project, six wheels)
 ```
 
 ## I want to... go here
@@ -85,6 +88,7 @@ PatchCraft/
 | Know **what is left before 1.0** | [docs/FOCO-1.0.md](docs/FOCO-1.0.md) |
 | **Cite** it | [CITATION.cff](CITATION.cff) |
 | Report something **exploitable**, or read the trust boundaries | [SECURITY.md](SECURITY.md) |
+| **Report a bug** or propose a change | the issue forms, or [CONTRIBUTING.md](CONTRIBUTING.md) to send a PR |
 
 ## Two things worth knowing before you read anything else
 

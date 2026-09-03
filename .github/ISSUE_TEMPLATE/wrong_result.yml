@@ -1,0 +1,87 @@
+name: Wrong numeric result
+description: The call succeeded and the numbers are not what they should be.
+labels: ["bug", "numerics"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This project treats a wrong number as a first-class defect and has
+        publicly retracted a false exactness claim before, so this form exists
+        separately and asks for the measurement rather than the impression.
+
+        Before filing, two things settle most reports on their own:
+
+        - **The round trip is exact only under a rule.** It is bit-exact if and
+          only if every value of the overlap coverage map is a power of two,
+          always true at `stride == patch_size`. Outside it the per-pixel error
+          is bounded by `(k+1)*eps*|v|`, with `k` the pixel's coverage count.
+          [GUIDE section 4](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit) has the sweep.
+        - **`stitch` is not `reconstruct`.** With a non-uniform window it
+          blends, so it is not expected to return the input unchanged.
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: The measurement
+      description: >
+        Runnable as written, seeded, and printing the number you object to.
+        Please print the difference rather than describing it.
+      render: python
+      placeholder: |
+        import torch
+        from patchcraft import extract, reconstruct
+
+        torch.manual_seed(0)
+        image = torch.rand(3, 64, 64)
+        patches = extract(image, patch_size=16, stride=8)
+        back = reconstruct(patches, image.shape, stride=8)
+        print("bit-identical:", torch.equal(back, image))
+        print("max abs diff :", (back - image).abs().max().item())
+    validations:
+      required: true
+
+  - type: input
+    id: geometry
+    attributes:
+      label: Geometry
+      description: Image shape, patch_size, stride, dilation, dtype.
+      placeholder: "(3, 64, 64), patch 16, stride 8, dilation 1, float32"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and which document says so
+      description: >
+        Quote the sentence. If a document and the code disagree, that is worth
+        knowing on its own: THEORY section 9 is the arbiter, and it has been
+        wrong before.
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      render: shell
+      placeholder: |
+        python -c "import patchcraft, torch, sys, platform; print('patchcraft', patchcraft.__version__); print('torch', torch.__version__); print('python', sys.version.split()[0]); print('platform', platform.platform()); print('accel_available', patchcraft.accel_available())"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: accel_off
+    attributes:
+      label: Do the numbers change with PATCHCRAFT_ACCEL=0?
+      description: >
+        The accelerated and pure paths are bit-identical by test, so a
+        difference here is itself the bug and is the most valuable line in the
+        report.
+      options:
+        - "Same numbers either way"
+        - "The numbers differ between the two paths"
+        - "accel_available() is already False on this install"
+        - "I have not tried"
+    validations:
+      required: true

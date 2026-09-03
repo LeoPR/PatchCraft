@@ -1,0 +1,43 @@
+name: Feature request
+description: Something the library could do and does not.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The surface is 20 names and is frozen by test, heading for a 1.0 that
+        freezes it for real. That does not make additions unwelcome, but it
+        does mean each one is a permanent commitment, so the useful request
+        names the problem before the API.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: >
+            I have read
+            [SCOPE.md](https://github.com/LeoPR/PatchCraft/blob/main/docs/SCOPE.md)
+            and this is not a batch axis, a dataset, a dataloader, a model, or
+            padding to make an awkward geometry fit. Those are out by decision,
+            not by omission.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem you hit
+      description: What you were doing, and what you had to write by hand instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: What you think it should look like
+      description: >
+        A signature is welcome but optional. If it changes a returned value,
+        say so plainly: that is the difference between a patch and a minor
+        here.
+    validations:
+      required: false

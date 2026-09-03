@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/LeoPR/PatchCraft/security/advisories/new
+    about: >
+      Report privately instead of opening an issue. SECURITY.md says which
+      surfaces are worth reporting; a wrong numeric result is not one of them
+      and belongs in a bug report.
+  - name: Is this library the right tool for what I am doing?
+    url: https://github.com/LeoPR/PatchCraft/blob/main/docs/SCOPE.md
+    about: >
+      SCOPE.md draws the line between this library and your pipeline. There is
+      no batch axis, no dataset, no dataloader and no model, and that boundary
+      is binding rather than provisional.

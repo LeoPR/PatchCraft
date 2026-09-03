@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Issue forms and a pull-request template. A report about this library is
+  irreproducible without the geometry, the dtype, the torch version and
+  `accel_available()`, so the forms make those required rather than suggested,
+  and every bug form asks whether the behaviour survives `PATCHCRAFT_ACCEL=0`,
+  which is the one answer that separates the native kernel from the library.
+  "Wrong numeric result" is a form of its own, because a wrong number is a
+  first-class defect here. The PR template asks whether a returned value moved
+  and offers the four answers the versioning rule distinguishes.
 - `SECURITY.md`. It names the real edges instead of being boilerplate: the
   native kernel writes through raw pointers and trusts the geometry the Python
   side validated, which is the sharpest thing in the library; `Cache` joins its
