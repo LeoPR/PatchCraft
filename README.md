@@ -46,7 +46,9 @@ time. Every other platform gets the universal wheel and runs the pure-torch
 paths, which return the same values.
 
 `patchcraft.accel_available()` reports at runtime which one you got, and
-`PATCHCRAFT_ACCEL=0` in the environment forces the pure path.
+`PATCHCRAFT_ACCEL=0` in the environment forces the pure path. On the overlapping
+fold it is worth between 2.6x and 14x here, measured in
+[docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
 The distribution name and the import name are both `patchcraft`. The runtime dependencies are `torch>=2.6`, `numpy>=1.26` and `pillow>=10`, and the supported Python versions are in [the guide](docs/GUIDE.md#9-install-details-and-citation) together with the note you need before you install a GPU wheel.
 
@@ -75,7 +77,7 @@ That is the whole loop. You extract, you do your work per patch, and then you co
 
 The two functions answer two different questions, so choosing between them is the first decision you make.
 
-`reconstruct` is the inverse. It assumes the patches still hold the pixels `extract` gave you, it divides by the count map, and on a covering geometry it hands the image back unchanged.
+`reconstruct` is the inverse. It assumes the patches still hold the pixels `extract` gave you, it divides by the count map, and on the geometries described further down it hands the image back unchanged.
 
 `stitch` is for patches a model rewrote. Neighbouring patches now disagree about the pixels they share, and uniform averaging leaves that disagreement visible as a grid of seams, so `stitch` weights each patch by a window that fades toward its border.
 
@@ -106,7 +108,7 @@ assert not torch.equal(scrambled, patches)                   # and the wrong pix
 
 The second one is a stride that does not cover the image. On a 128 by 128 image with `patch=32, stride=20` the grid stops at pixel 112, which leaves 3840 of the 16384 pixels at zero, and a hand-rolled `fold` returns that partly black image without complaining.
 
-Writing the tile-and-blend loop by hand costs 17 non-blank lines against 3 here, and the two results are bit-identical. [The guide](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) runs both versions side by side.
+Writing the tile-and-blend loop by hand costs 17 non-blank lines against 3 here, and the two results agree to about 1.2e-05 on a value in [0, 1], the two routes differing only in the order they sum a separable window. [The guide](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) runs both versions side by side.
 
 ## The geometry has to cover the image
 
@@ -153,7 +155,8 @@ No external project has consumed it yet, and no CUDA path in this library has ev
 | If you want | Open |
 |---|---|
 | The manual: every argument above, measured, with its output | [docs/GUIDE.md](docs/GUIDE.md) |
-| A walkthrough of each of the 20 public symbols | [docs/USAGE.md](docs/USAGE.md) |
+| What the native accelerator is worth, and how to re-measure it | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
+| A walkthrough of the public surface, captured against an older release | [docs/USAGE.md](docs/USAGE.md) |
 | The line between this library and your pipeline | [docs/SCOPE.md](docs/SCOPE.md) |
 | The math, the decisions and the per-function contract | [docs/THEORY.md](docs/THEORY.md) |
 | Why the API looks like this | [docs/ADR/](docs/ADR) |

@@ -45,7 +45,10 @@ time. Every other platform gets the universal wheel and runs the pure-torch
 paths, which return the same values.
 
 `patchcraft.accel_available()` reports at runtime which one you got, and
-`PATCHCRAFT_ACCEL=0` in the environment forces the pure path.
+`PATCHCRAFT_ACCEL=0` in the environment forces the pure path. On the overlapping
+fold it is worth between 2.6x and 14x on the machine it was measured on, which
+the [performance page](https://github.com/LeoPR/PatchCraft/blob/main/docs/PERFORMANCE.md)
+reports in full.
 
 The distribution name and the import name are both `patchcraft`. The cache extra is optional, because `Cache` works without `zstandard` as well and simply stores its payload uncompressed.
 
@@ -99,7 +102,7 @@ assert scrambled.shape == patches.shape                      # the right shape
 assert not torch.equal(scrambled, patches)                   # and the wrong pixels
 ```
 
-The saving is real on the other side too. Tiling an image, running a per-patch model and blending the result back with a Hann window took 17 non-blank lines by hand against 3 with `extract` and `stitch`, and the two outputs were bit-identical.
+The saving is real on the other side too. Tiling an image, running a per-patch model and blending the result back with a Hann window took 17 non-blank lines by hand against 3 with `extract` and `stitch`, and the two outputs agreed to about 1.2e-05 on a value in [0, 1].
 
 ## The geometry has to cover the image
 
@@ -132,7 +135,8 @@ Two limits are worth knowing before you depend on it. Every figure on this page 
 ## Documentation
 
 - [Guide](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md), the manual, with every figure on this page shown as runnable code
-- [Usage](https://github.com/LeoPR/PatchCraft/blob/main/docs/USAGE.md), a walkthrough of each of the 20 public symbols
+- [Performance](https://github.com/LeoPR/PatchCraft/blob/main/docs/PERFORMANCE.md), what the native accelerator is worth and how to re-measure it
+- [Usage](https://github.com/LeoPR/PatchCraft/blob/main/docs/USAGE.md), a walkthrough of the public surface, captured against an older release
 - [Theory](https://github.com/LeoPR/PatchCraft/blob/main/docs/THEORY.md), the math and the per-function contract
 - [Scope](https://github.com/LeoPR/PatchCraft/blob/main/docs/SCOPE.md), the line between this library and your pipeline
 - [Repository](https://github.com/LeoPR/PatchCraft), [issues](https://github.com/LeoPR/PatchCraft/issues) and [contributing](https://github.com/LeoPR/PatchCraft/blob/main/CONTRIBUTING.md)

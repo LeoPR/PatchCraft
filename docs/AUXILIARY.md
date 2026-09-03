@@ -151,10 +151,15 @@ If you want to confirm the boundary, after a build:
 python -m zipfile -l dist/patchcraft-*.whl
 ```
 
-You should see only `patchcraft/` (the eight primitive modules
-`cache`, `extract`, `geometry`, `metrics`, `pair`, `reconstruct`,
-`resize`, `stitch`, plus `__init__` and `py.typed`) and the
-`*.dist-info/` metadata. Nothing else.
+You should see only `patchcraft/` and the `*.dist-info/` metadata. Inside
+`patchcraft/` are the eight primitive modules `cache`, `extract`, `geometry`,
+`metrics`, `pair`, `reconstruct`, `resize` and `stitch`, plus `__init__`, the
+two private helpers `_accel` and `_foldgeom`, the generated `_version`, and
+`py.typed`. A platform wheel carries one more file, the compiled
+`_accel_native`, which is the Rust fold; the universal wheel does not.
+
+What must never appear: `tests/`, `lab/`, `docs/`, `accel/` sources or any
+dataset. Those live in the repository and, except for `lab/`, in the sdist.
 
 ---
 

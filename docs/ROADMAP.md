@@ -4,7 +4,8 @@ Milestone-based plan. Each milestone is "done" only when its tests pass and the 
 
 ## M0: Scaffold (this commit)
 
-- [x] `pyproject.toml` (hatchling, Python >=3.12).
+- [x] `pyproject.toml` (hatchling at the time, Python >=3.12; the backend moved to
+      setuptools plus setuptools-rust in 0.5.1).
 - [x] `src/patchcraft/__init__.py` with `__version__`.
 - [x] `tests/test_import.py` verifying the package imports.
 - [x] `docs/THEORY.md` and `docs/ROADMAP.md` skeletons.

@@ -87,11 +87,14 @@ exists *exactly* to slot into that pipeline ([ADR
 
 ### 2.3 What PatchCraft will *not* do
 
-- **No internal threading or multiprocessing.** Threads inside a
+- **No Python threading or multiprocessing.** Threads inside a
   primitive surprise callers who already use a `DataLoader` or
-  `Pool`; multiprocessing breaks notebook UX. The lib stays
-  pure-Python single-threaded at the call site; parallelism is
-  provided by the torch operators and by the pipeline above.
+  `Pool`; multiprocessing breaks notebook UX. PatchCraft spawns
+  neither, so it never competes with the pipeline above it for
+  workers. Parallelism comes from the torch operators, and on the
+  platforms whose wheel carries the native accelerator, from its
+  rayon-parallel fold kernel, which holds the GIL released for the
+  duration of one call and is bit-exact against the torch path.
 - **No batched `extract(images: (B, C, H, W))`.** Different images
   can have different shapes (and therefore different `L`), so the
   output would need padding or a list-of-tensors, and both leak

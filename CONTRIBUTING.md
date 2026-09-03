@@ -6,6 +6,13 @@ If you've cloned this repo and want to run the test suite, understand how the pr
 
 ## Run tests
 
+The test runner and the linters live in the `dev` extra, so a plain `uv sync`
+does not install them:
+
+```
+uv sync --locked --extra cache --extra dev
+```
+
 ```
 pytest
 pytest -m "not gpu"        # skip GPU-requiring tests
@@ -34,9 +41,9 @@ Which one your checkout runs depends on whether the extension got built:
 python -c "import patchcraft; print(patchcraft.accel_available())"
 ```
 
-`uv sync` builds it when a Rust toolchain is on PATH. Two environment
-variables override that, and CI sets both explicitly rather than relying on
-what happens to be installed:
+`uv sync --extra cache --extra dev` builds it when a Rust toolchain is on
+PATH, always in release mode. Two environment variables override that, and CI
+sets both explicitly rather than relying on what happens to be installed:
 
 | Variable | Effect |
 |---|---|
@@ -56,7 +63,7 @@ cargo reports and the copy step fails. Point the build at an ASCII directory
 and it works:
 
 ```
-CARGO_TARGET_DIR=/tmp/pc-target uv sync
+CARGO_TARGET_DIR=/tmp/pc-target uv sync --extra cache --extra dev
 ```
 
 ---
@@ -68,6 +75,7 @@ PatchCraft/
 ├── pyproject.toml                  package metadata, build backend, cibuildwheel targets
 ├── setup.py                        the one build decision: with or without the Rust extension
 ├── tools/check_dist.py             gate: extension present, versions agree, tag respected
+├── tools/benchmark.py              accelerated vs pure, and proves they agree first
 ├── MANIFEST.in                     what the sdist carries
 ├── README.md                       the call page, canonical, English
 ├── README.pt-BR.md                 the same call page in Portuguese
@@ -81,7 +89,7 @@ PatchCraft/
 │   ├── test.yml                    matrix CI on PRs/main, plus the accelerated job
 │   └── release.yml                 publishes to PyPI on vX.Y.Z tag push (Trusted Publishing)
 ├── src/patchcraft/                 library core, one-image-at-a-time primitives
-│   ├── __init__.py                 re-exports the full public API, holds __version__
+│   ├── __init__.py                 re-exports the full public API and the generated version
 │   ├── extract.py                  patches via strided view or F.unfold; Patchify (ADR 0002)
 │   ├── reconstruct.py              inverse via F.fold + count map, closed-form fast path
 │   ├── stitch.py                   weighted reassembly for modified patches
@@ -116,11 +124,11 @@ PatchCraft/
 │   ├── test_rng.py                 tests for those helpers
 │   └── _datasets.py                dev-only fixtures (MNIST, etc), NOT public API
 ├── lab/                            ephemeral experiments; see lab/README.md
-│   ├── README.md                   bench rules (tracked)
-│   ├── usage_demo.py               regenerates the live REPL outputs in docs/USAGE.md
+│   ├── README.md                   bench rules (tracked; the scripts themselves are not)
 │   └── .gitignore                  ignores everything else (tracked)
 ├── docs/
 │   ├── GUIDE.md                    the manual, every README claim measured with its output
+│   ├── PERFORMANCE.md              what the accelerator is worth, and how to re-measure
 │   ├── USAGE.md                    REPL walkthrough of every public symbol (behind, see B4)
 │   ├── SCOPE.md                    responsibilities matrix + parallelization analysis
 │   ├── AUXILIARY.md                tests/_datasets, lab/, Z:\ conventions (NOT part of the wheel)

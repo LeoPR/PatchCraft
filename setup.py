@@ -64,6 +64,13 @@ if BUILD_EXTENSION:
             # `optional` is the graceful-degradation switch: a build failure
             # drops the extension instead of aborting the install.
             optional=not REQUIRE_EXTENSION,
+            # Always release. Left to follow the build command, an editable
+            # install compiles a debug kernel, and a debug kernel is not the
+            # thing anyone wants: measured on this machine it turned a 16x
+            # speedup into 2.1x, so a developer benchmarking their checkout
+            # would draw the wrong conclusion, and the accelerated CI job
+            # would exercise code no user ever runs.
+            debug=False,
         )
     ]
     # One abi3 wheel per platform covers every Python from 3.12 up, which is

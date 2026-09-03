@@ -170,8 +170,8 @@ image = torch.rand(3, 128, 128)
 by_hand = tile_and_blend_by_hand(image, model, patch=32, stride=16)
 with_patchcraft = tile_and_blend(image, model, patch=32, stride=16)
 
-assert torch.equal(by_hand, with_patchcraft)
 print(tuple(with_patchcraft.shape), with_patchcraft.dtype)
+print("bit-identical:", torch.equal(by_hand, with_patchcraft))
 print("max_abs difference:", (by_hand - with_patchcraft).abs().max().item())
 print("lines:", statements(tile_and_blend_by_hand), "by hand,",
       statements(tile_and_blend), "with patchcraft")
@@ -179,17 +179,22 @@ print("lines:", statements(tile_and_blend_by_hand), "by hand,",
 
 ```
 (3, 128, 128) torch.float32
-max_abs difference: 0.0
+bit-identical: False
+max_abs difference: 1.1742115020751953e-05
 lines: 17 by hand, 3 with patchcraft
 ```
 
-Seventeen non-blank lines against three, and the two results are the same tensor to the last bit rather than merely close.
+Seventeen non-blank lines against three, for a result that agrees to about 1.2e-05 on a value in [0, 1].
+
+**That last number used to read 0.0, and the change is worth understanding rather than glossing.** The two versions compute the same quantity by different routes. `stitch` builds its denominator from two 1-D window folds, because a separable kernel allows it, while the hand-rolled version folds a replicated 2-D kernel. Same value, different summation order, so the float result differs in the last few bits. Nothing here is a correctness gap, and the reason to say so out loud is that this page claimed bit-equality until the measurement was re-run.
+
+The exception is `weight="uniform"`, where `stitch` still agrees with `reconstruct` bit for bit, because the ones-kernel multiply is exact.
 
 The by-hand version above is also the correct one, since it already has the coverage check, the right permutation and the strictly positive window. Getting to that version is the work.
 
 ### Two honest caveats
 
-PatchCraft computes nothing that torch cannot. It is the same `unfold`, the same `fold` and the same count map underneath, and it is not faster. What you are buying is that the geometry is checked before the arithmetic runs, in one place, with tests around it.
+PatchCraft computes nothing that torch cannot, and on the platforms without a native wheel it is the same arithmetic underneath. It is no longer the same code, though: `extract` takes a strided-window view instead of im2col, `reconstruct` skips the fold entirely on non-overlapping grids and computes the count map in closed form, and five of the six wheels carry a Rust kernel for the overlapping fold. [PERFORMANCE.md](PERFORMANCE.md) has the measurements. What you are buying is that the geometry is checked before the arithmetic runs, in one place, with tests around it.
 
 The second caveat is that the coverage defect shown above once shipped inside PatchCraft itself, which validated the patch count and never the coverage, and so returned partly black images until a later release added the guard. [CHANGELOG.md](../CHANGELOG.md) carries that entry with the measurements that found it. The argument for the library is that the guard is written once and regression tested, and not that it was ever obvious.
 
@@ -742,7 +747,7 @@ The table below is the one place that records what each call allocates, which is
 | `extract` | `image`, `patch_size`, `stride`, `dilation` | `(L, C, ph, pw)` | the whole patch stack, `L * C * ph * pw` values |
 | `Patchify` | the same geometry, at construction | a callable returning `(L, C, ph, pw)` | nothing beyond the geometry, no cache and no buffer |
 | `reconstruct` | `patches`, `image_shape`, `stride`, `dilation` | `(C, H, W)` | one image plus one count map |
-| `stitch` | the same, plus keyword-only `weight=`, default `"uniform"` | `(C, H, W)` | one image, one weight map, one `(ph, pw)` kernel |
+| `stitch` | the same, plus keyword-only `weight=`, default `"uniform"` | `(C, H, W)` | one image, one weight map, one `(ph, pw)` kernel, and on the pure-torch path a full weighted copy of the patch stack, which is the largest of the four and which the accelerated path skips |
 | `WeightKind` | nothing, it is a `Literal` type alias | `"uniform"`, `"hann"` or `"gaussian"` | nothing |
 | `pair` | `lr_image`, `hr_image`, `lr_patch_size`, `scale_factor`, `stride` | `PatchPair` | both patch stacks plus `L` metadata records |
 | `PatchPair`, `PatchMeta` | frozen dataclasses | patches and grid coordinates | metadata stays on CPU, always |
@@ -793,7 +798,7 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 **This is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 1534 tests, skips 32 cases, and deselects 5 GPU tests, in about half a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 1534 tests, skips 32 cases, and deselects 5 GPU tests, in about half a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Five things this project does not claim.
 
@@ -801,13 +806,15 @@ Five things this project does not claim.
 
 **2. No CUDA, anywhere.** The torch build here is CPU only, and both workflows run `pytest -m "not gpu"`, so the CUDA paths of `extract`, `reconstruct`, `stitch` and `resize` have never executed. Device preservation is implemented and unmeasured on device, and every measurement on this page is CPU.
 
-**3. The no-zstandard cache path runs in no environment.** `Cache` falls back to uncompressed payloads when `zstandard` is absent, and every configuration here and in CI installs the extra. So a plain `pip install patchcraft` takes precisely the branch that nothing exercises.
+**3. The no-zstandard cache path runs in no whole environment.** `Cache` falls back to uncompressed payloads when `zstandard` is absent, and every configuration here and in CI installs the extra, so a plain `pip install patchcraft` takes a branch that no end-to-end run exercises. It is covered by a unit test that monkeypatches the import away, which is weaker than actually installing without it.
 
 **4. Nothing executes the examples on this page.** They were run by hand and pasted verbatim, against the release the provenance note at the top names, and no test in the suite runs them. A test that executes every fenced block and checks the figures quoted in prose is the next piece of work on this file, and [USAGE.md](USAGE.md) is in the same position, on top of being captured against a much older release, which its own banner says.
 
-**5. Pre-1.0 means output values can change when the middle digit moves.** One release rewrote the hann window, so `stitch(..., weight="hann")` returns different values than the release before it did for every geometry, and the round-trip contract did not change. That is the kind of change a new `0.y` is allowed to carry and a new `0.y.z` is not. [CHANGELOG.md](../CHANGELOG.md) records each one together with the measurement that motivated it.
+**5. The accelerated and the pure paths are equal by test, on two platforms out of five.** Every geometry in the suite is checked with `torch.equal` against the pure path, but that job runs on Ubuntu and Windows x86_64 only. The macOS and aarch64 wheels are built and their contents are checked, and nothing has ever executed their kernel in CI.
 
-The backlog that closes these, along with the wording corrections named in [section 4](#4-when-the-round-trip-is-bit-for-bit) and the label wart in [section 6](#6-planning-the-geometry-before-you-allocate), is [FOCO-1.0.md](FOCO-1.0.md).
+**6. Pre-1.0 means output values can change when the middle digit moves.** One release rewrote the hann window, so `stitch(..., weight="hann")` returns different values than the release before it did for every geometry, and the round-trip contract did not change. That is the kind of change a new `0.y` is allowed to carry and a new `0.y.z` is not. [CHANGELOG.md](../CHANGELOG.md) records each one together with the measurement that motivated it.
+
+The backlog that closes these is [FOCO-1.0.md](FOCO-1.0.md).
 
 ## 9. Install details and citation
 
@@ -831,15 +838,15 @@ cd PatchCraft
 pip install -e ".[dev,cache]"
 ```
 
-**Wheels.** A release publishes one sdist and six wheels. Five of them are tagged `cp312-abi3-<platform>` and carry a Rust accelerator for the overlapping fold, covering Windows x64, Linux x86_64 and aarch64, and both macOS architectures; the sixth is `py3-none-any` and runs the torch paths. Installers prefer the most specific compatible tag, so `pip install patchcraft` picks the accelerated wheel where one exists and the universal wheel otherwise. The two return the same values, which [section 8](#8-what-this-project-does-not-claim) qualifies, and `patchcraft.accel_available()` says which one you are running. There is no extra to enable and nothing separate to install.
+**Wheels.** A release publishes one sdist and six wheels. Five of them are tagged `cp312-abi3-<platform>` and carry a Rust accelerator for the overlapping fold, covering Windows x64, Linux x86_64 and aarch64, and both macOS architectures; the sixth is `py3-none-any` and runs the torch paths. Installers prefer the most specific compatible tag, so `pip install patchcraft` picks the accelerated wheel where one exists and the universal wheel otherwise. The two return the same values, which [section 8](#8-what-this-project-does-not-claim) item 5 qualifies, and `patchcraft.accel_available()` says which one you are running. There is no extra to enable and nothing separate to install.
 
-Installing from the sdist compiles the accelerator when a Rust toolchain is present and falls back to a pure install when it is not, so the source path never fails for want of cargo.
+Installing from the sdist compiles the accelerator when a Rust toolchain is present and falls back to a pure install when it is not, so the source path never fails for want of cargo. `PATCHCRAFT_ACCEL=0` in the environment forces the pure path at runtime, which is how you check whether the accelerator explains a difference you are seeing.
 
 **Python versions.** CI tests 3.12, 3.13 and 3.14 on Ubuntu and Windows, which is also what the classifiers advertise. The floor is real rather than cautious: `cache.py` uses the PEP 695 generic syntax that arrived in 3.12, so the package does not parse on 3.11. `requires-python` is `>=3.12` with no ceiling, so pip will install this on a newer Python too, where nothing has been measured.
 
 **GPU.** Install a matching torch wheel first, following [pytorch.org/get-started/locally](https://pytorch.org/get-started/locally/). Read [section 8](#8-what-this-project-does-not-claim) before you do, because no CUDA path in this library has ever been executed.
 
-**Contributing.** The three commands CI runs are `pytest -m "not gpu"`, `ruff check src tests` and `mypy --strict src`. New behaviour arrives as a hypothesis measured in `lab/`, becomes a test in `tests/` when the measurement holds, and is recorded in an ADR when it changes a contract. [CONTRIBUTING.md](../CONTRIBUTING.md) carries the full layout, the validation conventions and the release procedure.
+**Contributing.** The commands CI runs are `pytest -m "not gpu"`, `ruff check src tests`, `mypy --strict src`, and `cargo test --manifest-path accel/Cargo.toml` for the Rust kernel. New behaviour arrives as a hypothesis measured in `lab/`, becomes a test in `tests/` when the measurement holds, and is recorded in an ADR when it changes a contract. [CONTRIBUTING.md](../CONTRIBUTING.md) carries the full layout, the validation conventions and the release procedure.
 
 **Citation.** There is no DOI and no `CITATION.cff` in the repository yet, so GitHub shows no "Cite this repository" button. Until there is one, this entry is the reference:
 

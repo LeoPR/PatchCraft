@@ -52,6 +52,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Measured before choosing: `importlib.metadata` alone was the wrong default,
   because it took 56 ms on first call and reported a stale version in an
   editable install.
+- `docs/PERFORMANCE.md`, which is where the accelerator's measurements live.
+  It carries the test machine, the versions, the date, the reproduction
+  command and what the numbers do not say, and its table is pasted from
+  `tools/benchmark.py --markdown` rather than retyped.
+- The Rust kernel is now always built in release mode, including in an
+  editable install. It was following the build command, so a development
+  checkout compiled a debug kernel: measured here, that turned a 14x speedup
+  into 2.1x, which made local benchmarks meaningless and made the accelerated
+  CI job exercise code no user runs.
 - `patchcraft.__version__` is re-exported explicitly, so `mypy --strict` in a
   consuming project still accepts it. Moving it out of a literal and into an
   import had quietly made it an implicit re-export, which strict mode rejects.
@@ -81,6 +90,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in the git history.
 - `MANIFEST.in`, which puts `accel/` in the sdist so the source path can build
   the extension, and keeps `lab/`, `.superpowers/` and cargo's `target/` out.
+
+- **Corrected: the hand-rolled and library tile-and-blend results are not
+  bit-identical.** The three cover pages and GUIDE section 1 claimed they were,
+  and the GUIDE block asserted it. Re-measured: they agree to 1.17e-05 on a
+  value in [0, 1], differing on 24500 of 49152 elements. The cause is the 0.3.0
+  separable denominator, where `stitch` sums two 1-D window folds while the
+  hand-rolled twin folds a replicated 2-D kernel. `stitch(weight="uniform")`
+  is still bit-identical to `reconstruct`. Nothing about the round-trip
+  contract changed; the documentation was simply asserting more than the code
+  delivered.
+- Documentation corrections found by auditing every page against the code:
+  the changelog's reference links did not define the two most recent versions;
+  `docs/AUXILIARY.md` listed wheel contents that predate three releases;
+  `docs/SCOPE.md` still promised "pure-Python single-threaded", which the
+  rayon-parallel kernel contradicts; `docs/ROADMAP.md` still named hatchling;
+  GUIDE said the library "is not faster", that the no-zstandard branch is
+  untested, and that CI is six cells; the cover pages pointed at `USAGE.md` as
+  a walkthrough of 20 symbols when it covers 18 and says so. `CONTRIBUTING.md`
+  told a contributor to run `pytest` after a `uv sync` that does not install it.
 
 ### Notes
 
@@ -559,9 +587,12 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) covers installation, the car-vs-track metaphor,
   validation lab.
 
-[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.4.0...HEAD
-[0.4.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.4.0
-[0.3.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.3.0
+[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.1
+[0.5.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.0
+
+<!-- 0.4.0 and 0.3.0 are deliberately unlinked: they are source milestones that
+     were never tagged and never released, as their own entries say. -->
 [0.2.2]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.2.2
 [0.2.1]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.2.1
 [0.2.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.2.0

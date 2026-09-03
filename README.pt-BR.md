@@ -46,7 +46,9 @@ acelerador em Rust para o fold com sobreposição, que é onde o `reconstruct` e
 rodam os caminhos em torch puro, que devolvem os mesmos valores.
 
 O `patchcraft.accel_available()` informa em runtime qual dos dois você recebeu,
-e `PATCHCRAFT_ACCEL=0` no ambiente força o caminho puro.
+e `PATCHCRAFT_ACCEL=0` no ambiente força o caminho puro. No fold com
+sobreposição ele vale entre 2.6x e 14x aqui, medido em
+[docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
 O nome da distribuição e o nome de importação são os dois `patchcraft`. As dependências de execução são `torch>=2.6`, `numpy>=1.26` e `pillow>=10`. As versões de Python suportadas estão [no manual](docs/GUIDE.md#9-install-details-and-citation), junto com a observação que você precisa ler antes de instalar uma wheel de GPU.
 
@@ -75,7 +77,7 @@ O laço é esse. Você extrai, faz o seu trabalho em cada patch, e depois volta 
 
 As duas funções respondem a perguntas diferentes, então escolher entre elas é a primeira decisão que você toma.
 
-O `reconstruct` é o inverso. Ele parte do princípio de que os patches ainda guardam os pixels que o `extract` entregou, divide pelo mapa de cobertura e, numa geometria que cobre a imagem, devolve a imagem inalterada.
+O `reconstruct` é o inverso. Ele parte do princípio de que os patches ainda guardam os pixels que o `extract` entregou, divide pelo mapa de cobertura e, nas geometrias descritas mais abaixo, devolve a imagem inalterada.
 
 O `stitch` é para patches que um modelo reescreveu. Nesse caso os patches vizinhos passam a discordar sobre os pixels que compartilham, e a média uniforme deixa essa discordância visível como uma grade de emendas, então o `stitch` pondera cada patch por uma janela que desce até a borda.
 
@@ -106,7 +108,7 @@ assert not torch.equal(scrambled, patches)                   # e os pixels errad
 
 O segundo é um stride que não cobre a imagem. Numa imagem de 128 por 128 com `patch=32, stride=20`, a grade para no pixel 112, o que deixa 3840 dos 16384 pixels em zero, e um `fold` escrito à mão devolve essa imagem parcialmente preta sem reclamar.
 
-Escrever o laço de recortar e remontar à mão custa 17 linhas não vazias contra 3 aqui, e os dois resultados são idênticos bit a bit. [O manual](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) roda as duas versões lado a lado.
+Escrever o laço de recortar e remontar à mão custa 17 linhas não vazias contra 3 aqui, e os dois resultados concordam em cerca de 1.2e-05 num valor em [0, 1], com as duas rotas diferindo só na ordem em que somam uma janela separável. [O manual](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) roda as duas versões lado a lado.
 
 ## A geometria precisa cobrir a imagem
 
@@ -153,7 +155,8 @@ Nenhum projeto externo consumiu a biblioteca ainda, e nenhum caminho CUDA dela j
 | Se você quer | Abra |
 |---|---|
 | O manual: cada argumento acima, medido, com a saída | [docs/GUIDE.md](docs/GUIDE.md) |
-| Um passeio por cada um dos 20 símbolos públicos | [docs/USAGE.md](docs/USAGE.md) |
+| Quanto vale o acelerador nativo, e como remedir | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
+| Um passeio por a superfície pública, capturado numa versão mais antiga | [docs/USAGE.md](docs/USAGE.md) |
 | A linha entre esta biblioteca e o seu pipeline | [docs/SCOPE.md](docs/SCOPE.md) |
 | A matemática, as decisões e o contrato por função | [docs/THEORY.md](docs/THEORY.md) |
 | Por que a API tem essa cara | [docs/ADR/](docs/ADR) |
