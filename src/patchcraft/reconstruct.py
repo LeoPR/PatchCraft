@@ -94,9 +94,15 @@ def reconstruct(
             out = out.clone()
         return out
 
-    # Half-precision inputs overflow inside F.fold, which accumulates the sum
-    # of all overlapping patches before the count-map division (fp16 max is
-    # 65504). Accumulate in float32 and cast back at the end (§9.2).
+    # Half-precision accumulates in float32, for one reason in float16 and a
+    # different one in bfloat16. float16 genuinely overflows: F.fold sums every
+    # overlapping patch before the count-map division, and a constant 10000.0
+    # image at ph=3, stride=1 reached inf in 144 of 256 pixels against a finite
+    # max of 65504. bfloat16 carries float32's exponent and cannot overflow
+    # here; its numerator peaked at 9.0e+04 against a finite max of 3.4e+38.
+    # What the promotion buys bfloat16 is precision, since it has 8 mantissa
+    # bits to float16's 11: on ordinary [0, 1] data it cut the error from
+    # 9.3e-03 to 1.9e-03. Cast back at the end (§9.2).
     accum_dtype = (
         torch.float32
         if patches.dtype in (torch.float16, torch.bfloat16)

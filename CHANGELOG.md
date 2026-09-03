@@ -6,6 +6,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **THEORY §9 justified promoting `bfloat16` with a fact that is false of it,
+  and §9 is the arbiter of the contract.** Both half formats were promoted to
+  a `float32` accumulator citing `float16`'s finite maximum of 65504. Only
+  `float16` overflows there: on the documented case its numerator reaches
+  `inf` in 144 of 256 pixels, while `bfloat16` carries `float32`'s exponent
+  and peaked at `9.0112e+04` against a finite maximum of `3.390e+38`. What the
+  promotion buys `bfloat16` is precision, since it has 8 mantissa bits to
+  `float16`'s 11, and on ordinary [0, 1] data it cut the maximum error from
+  `9.262e-03` to `1.935e-03`. §9.2 now carries one entry per format with the
+  measurement behind each, and the two docstrings and GUIDE section 4 say the
+  same. Two tests pin it.
+- Closed blocker B5 in `docs/FOCO-1.0.md`. The contradiction it named, §9.2
+  accepting the half-precision promotion in one list and excluding it as out
+  of scope eight lines below, had already been removed in 0.3.0 and never
+  recorded. Checking that is what surfaced the `bfloat16` error above.
+
+
 ## [0.5.2] - 2026-09-03
 
 ### Fixed

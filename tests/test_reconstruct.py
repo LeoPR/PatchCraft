@@ -340,3 +340,40 @@ def test_single_patch_grid_does_not_alias_the_caller(shape, patch):
     snapshot = out.clone()
     patches.zero_()
     assert torch.equal(out, snapshot)
+
+
+# ------------------------------------------- Why half precision is promoted --
+def test_float16_overflows_the_fold_but_bfloat16_cannot():
+    """THEORY 9.2 promoted both half formats citing fp16's finite maximum.
+
+    Only one of them overflows. `bfloat16` carries `float32`'s exponent, so the
+    promotion buys it precision rather than range, and until 0.5.2 the contract
+    section stated a reason that applies to one of the two formats.
+    """
+    h = w = 16
+    ph = st = 3, 1
+    kernel, stride = ph
+    cols = F.unfold(
+        torch.full((1, 1, h, w), 10000.0), kernel_size=kernel, stride=stride
+    )
+
+    numerators = {}
+    for dtype in (torch.float16, torch.bfloat16):
+        folded = F.fold(
+            cols.to(dtype), output_size=(h, w), kernel_size=kernel, stride=stride
+        )
+        numerators[dtype] = folded
+
+    assert torch.isinf(numerators[torch.float16]).any(), "fp16 no longer overflows here"
+    assert not torch.isinf(numerators[torch.bfloat16]).any()
+    assert numerators[torch.bfloat16].max().item() < torch.finfo(torch.bfloat16).max
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
+def test_half_precision_round_trip_survives_the_overflow_case(dtype):
+    """Whatever the reason for the promotion, neither format may return inf."""
+    img = torch.full((1, 16, 16), 10000.0, dtype=dtype)
+    patches = extract(img, 3, stride=1)
+    out = reconstruct(patches, img.shape, stride=1)
+    assert not torch.isinf(out).any()
+    assert out.dtype == dtype

@@ -182,9 +182,10 @@ def stitch(
     # stride was validated inside the helper; normalize it for the F.fold calls.
     sh, sw = (stride, stride) if isinstance(stride, int) else stride
 
-    # Half-precision inputs overflow inside F.fold, which accumulates the sum
-    # of all overlapping patches before the division (fp16 max is 65504).
-    # Build the kernel and accumulate in float32, cast back at the end (§9.9).
+    # Half-precision accumulates in float32 for the two different reasons
+    # reconstruct.py records: float16 overflows the fold, bfloat16 cannot and
+    # is promoted for precision instead. Build the kernel and accumulate in
+    # float32, cast back at the end (§9.9).
     accum_dtype = (
         torch.float32
         if patches.dtype in (torch.float16, torch.bfloat16)
