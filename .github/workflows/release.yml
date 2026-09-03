@@ -129,6 +129,10 @@ jobs:
           CIBW_ARCHS: ${{ matrix.archs }}
 
       - name: Every platform wheel must carry the extension, at the tag version
+        # bash explicitly: this job also runs on Windows, where the default
+        # shell is PowerShell and ${GITHUB_REF_NAME#v} is not expansion but a
+        # literal string.
+        shell: bash
         run: python tools/check_dist.py wheelhouse --expect-version "${GITHUB_REF_NAME#v}"
 
       - uses: actions/upload-artifact@v4
