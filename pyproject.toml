@@ -103,6 +103,10 @@ environment = { PATH = "$HOME/.cargo/bin:$PATH", PATCHCRAFT_REQUIRE_EXTENSION = 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+# docs/USAGE.md is a REPL transcript and is executed as a doctest, so the
+# page cannot go stale silently. ELLIPSIS lets it elide a temp path or a
+# float tail; NORMALIZE_WHITESPACE lets a long repr wrap for the reader.
+doctest_optionflags = ["ELLIPSIS", "NORMALIZE_WHITESPACE"]
 markers = [
     "slow: long-running tests (deselect with -m 'not slow')",
     "gpu: requires CUDA",

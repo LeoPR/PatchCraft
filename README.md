@@ -156,7 +156,7 @@ No external project has consumed it yet, and no CUDA path in this library has ev
 |---|---|
 | The manual: every argument above, measured, with its output | [docs/GUIDE.md](docs/GUIDE.md) |
 | What the native accelerator is worth, and how to re-measure it | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
-| A walkthrough of the public surface, captured against an older release | [docs/USAGE.md](docs/USAGE.md) |
+| A walkthrough of each of the 20 public symbols, executed as a doctest | [docs/USAGE.md](docs/USAGE.md) |
 | The line between this library and your pipeline | [docs/SCOPE.md](docs/SCOPE.md) |
 | The math, the decisions and the per-function contract | [docs/THEORY.md](docs/THEORY.md) |
 | Why the API looks like this | [docs/ADR/](docs/ADR) |

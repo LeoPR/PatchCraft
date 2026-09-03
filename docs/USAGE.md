@@ -1,22 +1,21 @@
 # PatchCraft: usage walkthrough
 
-> **This walkthrough is behind the library.** It was captured against 0.2.0, so it predates
-> `WeightKind` becoming public, the four correctness fixes in 0.2.1 and the docstring correction in
-> 0.2.2, and some of its examples no longer reproduce. The current manual is
-> [GUIDE.md](GUIDE.md), and the per-function contract is in [THEORY.md](THEORY.md) §9. Regenerating
-> this page is tracked in [FOCO-1.0.md](FOCO-1.0.md) as blocker B4.
+> **This page is executed, not transcribed.** Every `>>>` below runs in the
+> test suite as a doctest, and the output shown is compared against the output
+> produced. A stale line here fails CI rather than misleading a reader, which
+> is what the page could do before: it spent three releases claiming an API
+> that had moved.
 
-Every snippet below was captured from a live REPL session against
-`patchcraft==0.2.0`. Outputs are real, not pseudocode. Re-run the
-script behind it at any time:
+Run it yourself against your install:
 
 ```
-python lab/usage_demo.py
+pytest --doctest-glob='*.md' docs/USAGE.md
 ```
 
-The script is intentionally not part of the wheel. See
-[`AUXILIARY.md`](AUXILIARY.md) for why bench scripts live in
-`lab/` and stay out of the shipped package.
+This is the tour of the public surface, one symbol at a time. For the
+argument-by-argument manual with the measurements, read [GUIDE.md](GUIDE.md);
+for what each function accepts and rejects, [THEORY.md](THEORY.md) §9 is the
+arbiter.
 
 ---
 
@@ -24,18 +23,21 @@ The script is intentionally not part of the wheel. See
 
 ```python
 >>> import patchcraft
->>> patchcraft.__version__
-'0.2.0'
+>>> len(patchcraft.__all__)
+20
 >>> sorted(patchcraft.__all__)
 ['Cache', 'PairedTilingSpec', 'PatchMeta', 'PatchPair', 'Patchify',
- 'TilingSpec', 'extract', 'num_patches', 'pair', 'paired_tilings',
- 'patch_metrics', 'per_patch_mse', 'per_patch_psnr', 'reconstruct',
- 'resize', 'scale_factor', 'stitch', 'tilings']
+ 'TilingSpec', 'WeightKind', 'accel_available', 'extract', 'num_patches',
+ 'pair', 'paired_tilings', 'patch_metrics', 'per_patch_mse',
+ 'per_patch_psnr', 'reconstruct', 'resize', 'scale_factor', 'stitch',
+ 'tilings']
+
 ```
 
-Eighteen public symbols as of v0.2.0 (v0.1.0 shipped eleven).
-Functions are lowercase; classes / dataclasses / NamedTuples are
-PascalCase.
+Twenty public symbols, frozen by `tests/test_public_api.py`. Functions are
+lowercase; classes, dataclasses and NamedTuples are PascalCase. The version is
+not shown here on purpose: it comes from the git tag, so any literal would be
+wrong the moment it is written.
 
 ---
 
@@ -55,6 +57,7 @@ function. Takes `(H, W)` or `(C, H, W)`; channels are ignored. Returns
 (4, 4)
 >>> num_patches((4, 4), patch_size=8, stride=1)        # patch too big -> (0, 0)
 (0, 0)
+
 ```
 
 Use it for memory planning before allocating, for shape assertions,
@@ -73,6 +76,7 @@ TilingSpec(patch_size=(4,  4), stride=(4,  4), dilation=(1, 1), num_patches=(7, 
 TilingSpec(patch_size=(7,  7), stride=(7,  7), dilation=(1, 1), num_patches=(4,  4),  total_patches=16,  overlap=False)
 TilingSpec(patch_size=(14, 14), stride=(14, 14), dilation=(1, 1), num_patches=(2,  2),  total_patches=4,   overlap=False)
 TilingSpec(patch_size=(28, 28), stride=(28, 28), dilation=(1, 1), num_patches=(1,  1),  total_patches=1,   overlap=False)
+
 ```
 
 Exact tilings only. Divisors of 28 that are `>= 2` are
@@ -83,6 +87,7 @@ round-trip (see §5).
 ```python
 >>> len(tilings((28, 28), allow_overlap=True))
 73
+
 ```
 
 With `allow_overlap=True` the function also emits `stride < patch_size`
@@ -106,6 +111,7 @@ torch.Size([1, 28, 28])
 torch.Size([16, 1, 7, 7])
 >>> patches.dtype
 torch.float32
+
 ```
 
 Truncation is the only boundary policy. If the geometry fits no
@@ -123,6 +129,7 @@ callers decide whether that's an error.
 Patchify(patch_size=(4, 4), stride=(2, 2), dilation=(1, 1))
 >>> patchify(img).shape   # 13*13 = 169 overlapping patches
 torch.Size([169, 1, 4, 4])
+
 ```
 
 Eager validation: a bad geometry fails at `Patchify(...)`, not at the
@@ -141,6 +148,7 @@ the rationale.
 torch.Size([1, 28, 28])
 >>> torch.equal(recon, img)
 True
+
 ```
 
 `F.fold` plus a same-geometry fold-of-ones count map. When
@@ -154,6 +162,7 @@ reconstruction is a cheap copy (count is all-ones; division is no-op).
 >>> recon_overlap = reconstruct(ps_overlap, image_shape=img.shape, stride=2)
 >>> torch.allclose(recon_overlap, img)
 True
+
 ```
 
 Each pixel covered by *k* patches; each contribution is the original
@@ -228,6 +237,7 @@ True
 ...                     stride=4, weight="gaussian")
 >>> out_gauss[0, 0, 0].item()
 0.5
+
 ```
 
 Use `stitch` for "I have model output and want a single image";
@@ -262,6 +272,7 @@ PatchMeta(patch_index=0, row=0, col=0,
 PatchMeta(patch_index=3, row=4, col=4,
           lr_patch_size=(4, 4), hr_patch_size=(8, 8),
           image_id='demo-0')
+
 ```
 
 LR coords (`row`, `col`) are in pixel space; multiply by
@@ -292,6 +303,7 @@ both spatial axes.
 >>> tensor_out = resize(tensor_img, target_size=(8, 8), backend="torch")
 >>> type(tensor_out).__name__, tuple(tensor_out.shape), tensor_out.dtype
 ('Tensor', (3, 8, 8), torch.float32)
+
 ```
 
 PIL in → PIL out. Tensor in → Tensor out. Cross-backend
@@ -309,7 +321,7 @@ with `backend="torch"`.
 >>> tmp = tempfile.mkdtemp()
 >>> c = Cache(tmp, namespace="demo", version=1)
 >>> c
-Cache(root='.../tmpXXXXXXXX/demo', namespace='demo', version=1)
+Cache(root=..., namespace='demo', version=1)
 
 >>> config = {"target_size": (8, 8), "resample": "lanczos"}
 >>> k = c.key_for("image-fingerprint", config)
@@ -378,6 +390,7 @@ integer `k` exists such that `hr == k * lr`. Accepts `(H, W)` or
 lr=(2, 2)   stride=(2, 2)   | hr=(4, 4)   stride=(4, 4)   | total=49 | sf=2
 lr=(7, 7)   stride=(7, 7)   | hr=(14, 14) stride=(14, 14) | total=4  | sf=2
 lr=(14, 14) stride=(14, 14) | hr=(28, 28) stride=(28, 28) | total=1  | sf=2
+
 ```
 
 Every entry is guaranteed by construction to:
@@ -408,13 +421,11 @@ your pick based on how big a patch you want vs how many examples.
 {'mae': 0.0, 'mse': 0.0, 'max_abs': 0.0, 'psnr_db': inf}
 
 >>> patch_metrics(patches_a, patches_b)        # +0.01 across the board
-{'mae': 0.009999...,
- 'mse': 9.9999e-05,
- 'max_abs': 0.01000...,
- 'psnr_db': 40.0000...}    # 10 * log10(1 / 0.0001) = 40 dB
+{'mae': 0.00999..., 'mse': 9.99998...e-05, 'max_abs': 0.0100000..., 'psnr_db': 40.0000...}
 
 >>> per_patch_psnr(patches_a, patches_b)
-tensor([40.0000, 40.0000, 40.0000, ..., 40.0000])  # one per patch (16 total)
+tensor([40.0000, 40.0000, ..., 40.0000, 40.0000], dtype=torch.float64)
+
 ```
 
 - `patch_metrics` reduces over the whole tensor and returns a dict

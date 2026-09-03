@@ -136,7 +136,7 @@ Two limits are worth knowing before you depend on it. Every figure on this page 
 
 - [Guide](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md), the manual, with every figure on this page shown as runnable code
 - [Performance](https://github.com/LeoPR/PatchCraft/blob/main/docs/PERFORMANCE.md), what the native accelerator is worth and how to re-measure it
-- [Usage](https://github.com/LeoPR/PatchCraft/blob/main/docs/USAGE.md), a walkthrough of the public surface, captured against an older release
+- [Usage](https://github.com/LeoPR/PatchCraft/blob/main/docs/USAGE.md), a walkthrough of each of the 20 public symbols, executed as a doctest
 - [Theory](https://github.com/LeoPR/PatchCraft/blob/main/docs/THEORY.md), the math and the per-function contract
 - [Scope](https://github.com/LeoPR/PatchCraft/blob/main/docs/SCOPE.md), the line between this library and your pipeline
 - [Repository](https://github.com/LeoPR/PatchCraft), [issues](https://github.com/LeoPR/PatchCraft/issues) and [contributing](https://github.com/LeoPR/PatchCraft/blob/main/CONTRIBUTING.md)

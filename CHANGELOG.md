@@ -6,6 +6,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`docs/USAGE.md` is executed instead of transcribed, which closes the last
+  1.0 blocker.** The page claimed eighteen public names when there were twenty
+  and had spent three releases describing an API that had moved, and the script
+  that once generated it was never tracked, so it could not be regenerated.
+  Making the page run in place is the durable fix: `tests/test_docs_usage.py`
+  collects it as a doctest, so a stale line fails CI rather than misleading a
+  reader. Only five outputs were genuinely wrong; the other eight failures were
+  formatting, where the output touched the closing fence and doctest read the
+  fence as expected text. `ELLIPSIS` and `NORMALIZE_WHITESPACE` are enabled in
+  `pyproject.toml` so the page may still elide a temp path or wrap a long repr
+  for the reader. The version literal is gone from it: the version comes from
+  the git tag, so any literal is wrong the moment it is written.
+
+
 ### Added
 
 - `STATUS.md`, the snapshot: what is released, what is unreleased, and who each

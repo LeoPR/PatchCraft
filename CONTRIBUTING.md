@@ -194,7 +194,7 @@ PatchCraft/
 ├── docs/
 │   ├── GUIDE.md                    the manual, every README claim measured with its output
 │   ├── PERFORMANCE.md              what the accelerator is worth, and how to re-measure
-│   ├── USAGE.md                    REPL walkthrough of every public symbol (behind, see B4)
+│   ├── USAGE.md                    REPL walkthrough of every public symbol; run as a doctest
 │   ├── SCOPE.md                    responsibilities matrix + parallelization analysis
 │   ├── AUXILIARY.md                tests/_datasets, lab/, Z:\ conventions (NOT part of the wheel)
 │   ├── THEORY.md                   distilled design + §9 condition contract; §0 binding scope

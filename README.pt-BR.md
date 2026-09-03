@@ -156,7 +156,7 @@ Nenhum projeto externo consumiu a biblioteca ainda, e nenhum caminho CUDA dela j
 |---|---|
 | O manual: cada argumento acima, medido, com a saída | [docs/GUIDE.md](docs/GUIDE.md) |
 | Quanto vale o acelerador nativo, e como remedir | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
-| Um passeio por a superfície pública, capturado numa versão mais antiga | [docs/USAGE.md](docs/USAGE.md) |
+| Um passeio por cada um dos 20 símbolos públicos, executado como doctest | [docs/USAGE.md](docs/USAGE.md) |
 | A linha entre esta biblioteca e o seu pipeline | [docs/SCOPE.md](docs/SCOPE.md) |
 | A matemática, as decisões e o contrato por função | [docs/THEORY.md](docs/THEORY.md) |
 | Por que a API tem essa cara | [docs/ADR/](docs/ADR) |

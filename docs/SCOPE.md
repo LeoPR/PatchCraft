@@ -289,7 +289,7 @@ parses, validates, or persists it.
 - [`THEORY.md`](THEORY.md) §0 gives the binding scope (the short version).
 - [`THEORY.md`](THEORY.md) §9 has the per-API condition contract
   (Accepts / Rejects / Out of scope), one row per primitive.
-- [`USAGE.md`](USAGE.md) is the usage walkthrough with real outputs.
+- [`USAGE.md`](USAGE.md) is the usage walkthrough, executed as a doctest.
 - [`AUXILIARY.md`](AUXILIARY.md) documents the bench tooling
   (`tests/_datasets.py`, `lab/`, dataset / output conventions on
   `Z:\`). Never mixed with the core docs.

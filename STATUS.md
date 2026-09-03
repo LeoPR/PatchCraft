@@ -51,17 +51,19 @@ boundary in [SECURITY.md](SECURITY.md). **Waits on the owner.**
 
 ## 1.0 blockers
 
-Five of six are closed. **B4 is the only one open**: `docs/USAGE.md` was
-captured against 0.2.0, covers 18 of the 20 names, and 18 of its 87 examples no
-longer run. A banner at the top of the page says so, which protects the reader
-but does not close the blocker.
+**All six are closed.** The last, B4, closed in 0.5.3 by making `docs/USAGE.md`
+executable rather than by regenerating it: every `>>>` on the page now runs in
+the suite, so it cannot go stale silently again.
+
+What that leaves before 1.0 is not a blocker but a decision, and it is ADR 0003,
+above.
 
 | | |
 |---|---|
 | B1 predicate wrong in fifteen places | closed in 0.5.0 |
 | B2 the suite could not falsify B1 | closed in 0.5.0 |
 | B3 nothing pinned the public surface | closed in 0.5.0 |
-| **B4 the two pages a stranger reads** | **open** |
+| B4 the two pages a stranger reads | closed in 0.5.3 |
 | B5 THEORY §9 contradicted itself on fp16 | closed in 0.5.2 |
 | B6 enumeration junk and asymmetric guards | closed in 0.5.0 |
 

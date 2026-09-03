@@ -100,8 +100,10 @@ The current local working copy has, at the time of writing:
   M2 + M3 end-to-end on MNIST (4 geometries, max diff `1.19e-7`
   on `stride=1 float32`). Produced
   `Z:\outputs\patchcraft\2026-05-16-roundtrip-mnist\sample0-digit0-half-overlap.png`.
-- `lab/usage_demo.py` + `lab/usage_demo.out` are the script and
-  captured output behind [`USAGE.md`](USAGE.md). Re-run if any
+- [`USAGE.md`](USAGE.md) needs no script behind it any more: it is executed
+  in place as a doctest by `tests/test_docs_usage.py`. The former
+  `lab/usage_demo.py` was never tracked, which is why the page could drift
+  three releases before anyone noticed. Re-run if any
   public API signature changes.
 
 Neither is in the repo. If you clone fresh, `lab/` will have only

@@ -52,7 +52,7 @@ PatchCraft/
 │   ├── THEORY.md ............. the math, and §9 is the arbiter of the per-function contract
 │   ├── SCOPE.md .............. the line between this library and your pipeline
 │   ├── PERFORMANCE.md ........ what the accelerator is worth; machine, versions, date, command
-│   ├── USAGE.md .............. a walkthrough, captured against an old release and saying so
+│   ├── USAGE.md .............. the 20 symbols one at a time; every >>> runs in the suite
 │   ├── AUXILIARY.md .......... test fixtures, lab/, the off-tree conventions
 │   ├── ROADMAP.md ............ milestones, historical
 │   ├── FOCO-1.0.md ........... what 1.0 freezes, and the blockers still in the way

@@ -808,7 +808,7 @@ Five things this project does not claim.
 
 **3. The no-zstandard cache path runs in no whole environment.** `Cache` falls back to uncompressed payloads when `zstandard` is absent, and every configuration here and in CI installs the extra, so a plain `pip install patchcraft` takes a branch that no end-to-end run exercises. It is covered by a unit test that monkeypatches the import away, which is weaker than actually installing without it.
 
-**4. Nothing executes the examples on this page.** They were run by hand and pasted verbatim, against the release the provenance note at the top names, and no test in the suite runs them. A test that executes every fenced block and checks the figures quoted in prose is the next piece of work on this file, and [USAGE.md](USAGE.md) is in the same position, on top of being captured against a much older release, which its own banner says.
+**4. Nothing executes the examples on this page.** They were run by hand and pasted verbatim, against the release the provenance note at the top names, and no test in the suite runs them. A test that executes every fenced block and checks the figures quoted in prose is the next piece of work on this file, [USAGE.md](USAGE.md) is no longer in that position: since 0.5.3 every `>>>` on it runs in the suite, so a stale line there fails CI.
 
 **5. The accelerated and the pure paths are equal by test, on two platforms out of five.** Every geometry in the suite is checked with `torch.equal` against the pure path, but that job runs on Ubuntu and Windows x86_64 only. The macOS and aarch64 wheels are built and their contents are checked, and nothing has ever executed their kernel in CI.
 
