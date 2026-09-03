@@ -15,6 +15,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `docs/superpowers/plans/` were 4527 lines of checkbox task lists addressed
   "For agentic workers", and they shipped to PyPI inside every sdist.
 
+### Added
+
+- `outreach/`, material for presenting the project publicly, in the shape the
+  sibling projects use: a dated news source at the root and one subfolder per
+  channel, with the rule that no channel text changes before the source does.
+  It publishes no new measurement, and it is pruned from the sdist.
+
 ### Changed
 
 - The three design specs that were under `docs/superpowers/specs/` moved to

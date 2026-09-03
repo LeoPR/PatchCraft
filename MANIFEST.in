@@ -34,3 +34,6 @@ prune lab
 prune archive
 prune .github
 prune .vscode
+# Presentation material, not source. It is tracked, so the file finder offers
+# it and only this line keeps it out.
+prune outreach

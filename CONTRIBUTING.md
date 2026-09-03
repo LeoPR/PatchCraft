@@ -168,6 +168,10 @@ PatchCraft/
 │   ├── ADR/                        one file per decision that shaped the API
 │   ├── STUDIES/                    background reading behind those decisions
 │   └── design/                     one spec per work phase: the alternatives measured and the decision
+├── outreach/                       material for presenting the project publicly, not shipped
+│   ├── README.md                   how it is organized and what to check before publishing
+│   ├── 2026-09-03-lancamento.md    the dated news source every channel text derives from
+│   └── linkedin/                   post (short) and artigo (long), each in PT and EN
 └── archive/                        reference-only; gitignored (pruned 2026-05-17, only HISTORY.md kept)
 ```
 
