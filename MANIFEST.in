@@ -17,7 +17,7 @@
 # `tools/check_dist.py` holds the matching allowlist and will fail the release
 # for anything unexpected, which is the reminder to come back here.
 
-include LICENSE CITATION.cff
+include LICENSE CITATION.cff SECURITY.md CODE_OF_CONDUCT.md
 include CHANGELOG.md CONTRIBUTING.md MAP.md
 include README.md README.pt-BR.md README.pypi.md
 include pyproject.toml setup.py uv.lock .python-version

@@ -8,6 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `SECURITY.md`. It names the real edges instead of being boilerplate: the
+  native kernel writes through raw pointers and trusts the geometry the Python
+  side validated, which is the sharpest thing in the library; `Cache` joins its
+  `namespace` straight into a path, so a namespace derived from untrusted input
+  escapes the root; nothing in the shipped package opens a network connection;
+  and image decoding happens in Pillow before this library sees anything. It
+  also says what is not a security issue here, because a wrong numeric result
+  belongs in a public issue with its measurement.
+- `CODE_OF_CONDUCT.md`, Contributor Covenant 2.1, taken verbatim from the
+  source repository rather than retyped.
 - `MAP.md`, one page of wayfinding: an annotated tree of the repository and a
   want-to/go-to table. It follows the shape the sibling projects use, and it
   opens by saying what the repository actually is, which is 20 public names

@@ -142,6 +142,8 @@ PatchCraft/
 ├── .gitignore                      ignores archive/, venvs, caches, outputs
 ├── .pre-commit-config.yaml         the CI gates, before the commit instead of after
 ├── CITATION.cff                    citation metadata; GitHub reads it for the cite button
+├── SECURITY.md                     how to report, and what the real attack surface is
+├── CODE_OF_CONDUCT.md              Contributor Covenant 2.1, verbatim
 ├── .github/workflows/
 │   ├── test.yml                    matrix CI on PRs/main, plus the accelerated job
 │   └── release.yml                 publishes to PyPI on vX.Y.Z tag push (Trusted Publishing)

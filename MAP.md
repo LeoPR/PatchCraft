@@ -19,6 +19,8 @@ PatchCraft/
 ├── CONTRIBUTING.md ........... layout, the two code paths, the versioning rule, releasing
 ├── CITATION.cff .............. citation metadata; GitHub reads it for the cite button
 ├── LICENSE ................... MIT
+├── SECURITY.md ............... how to report, and the three trust boundaries that matter
+├── CODE_OF_CONDUCT.md ........ Contributor Covenant 2.1
 │
 ├── src/patchcraft/ ........... THE LIBRARY. 20 public names, frozen by test
 │   ├── __init__.py ........... re-exports the surface and the generated version
@@ -82,6 +84,7 @@ PatchCraft/
 | Know **what changed and why** | [CHANGELOG.md](CHANGELOG.md) |
 | Know **what is left before 1.0** | [docs/FOCO-1.0.md](docs/FOCO-1.0.md) |
 | **Cite** it | [CITATION.cff](CITATION.cff) |
+| Report something **exploitable**, or read the trust boundaries | [SECURITY.md](SECURITY.md) |
 
 ## Two things worth knowing before you read anything else
 
