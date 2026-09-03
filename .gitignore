@@ -26,10 +26,6 @@ env/
 htmlcov/
 .tox/
 
-# Editor config is machine-local: the interpreter path differs per machine,
-# and a tracked one pointed at a .venv this project does not use.
-.vscode/
-
 # Type checkers / linters
 .mypy_cache/
 .ruff_cache/

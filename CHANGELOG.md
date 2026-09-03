@@ -29,9 +29,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   now redirected by user-level environment variables, joining the ones this
   machine already had for uv, ruff, mypy, pip and `__pycache__`, and
   `CONTRIBUTING.md` records the convention and why it is not committed here.
-- `.vscode/settings.json` is untracked. It is machine-local editor config, it
-  pointed at a `.venv` this project does not use, and setuptools-scm's file
-  finder had started offering it to the sdist.
+- `.vscode/settings.json` stays tracked and is pruned from the sdist instead.
+  Its `${workspaceFolder}/.venv` path is not broken: `.venv` is a directory
+  junction to the real environment outside the tree, so the setting resolves
+  and is portable to any checkout following the same convention.
 
 ## [0.5.1] - 2026-09-02
 
