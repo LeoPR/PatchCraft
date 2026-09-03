@@ -351,8 +351,7 @@ def test_float16_overflows_the_fold_but_bfloat16_cannot():
     section stated a reason that applies to one of the two formats.
     """
     h = w = 16
-    ph = st = 3, 1
-    kernel, stride = ph
+    kernel, stride = 3, 1
     cols = F.unfold(
         torch.full((1, 1, h, w), 10000.0), kernel_size=kernel, stride=stride
     )
