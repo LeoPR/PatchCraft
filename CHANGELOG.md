@@ -52,6 +52,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Measured before choosing: `importlib.metadata` alone was the wrong default,
   because it took 56 ms on first call and reported a stale version in an
   editable install.
+- `patchcraft.__version__` is re-exported explicitly, so `mypy --strict` in a
+  consuming project still accepts it. Moving it out of a literal and into an
+  import had quietly made it an implicit re-export, which strict mode rejects.
+- `tools/benchmark.py` measures the accelerated fold against the pure one and
+  refuses to report a timing unless the two results are bit-identical. The
+  numbers in the documentation come from it, and it is the reproduction
+  command they cite.
 - Every build checkout uses `fetch-depth: 0`. The default shallow clone hides
   the tags, and setuptools-scm's fallback for that is a silent
   `0.1.dev1+g<sha>`, a version that walks backwards rather than an error.

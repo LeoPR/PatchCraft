@@ -18,7 +18,9 @@ from patchcraft.resize import resize
 from patchcraft.stitch import WeightKind, stitch
 
 try:
-    from patchcraft._version import __version__
+    # The redundant alias is the PEP 484 form for an explicit re-export, so
+    # `mypy --strict` in a consuming project accepts `patchcraft.__version__`.
+    from patchcraft._version import __version__ as __version__
 except ImportError:  # pragma: no cover - source tree that was never built
     # importlib.metadata is the slow path and is only reached in a checkout
     # with no build behind it, so the import cost never lands on real users.
