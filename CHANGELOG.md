@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `CITATION.cff`, validated against Citation File Format 1.2.0, so GitHub shows
+  the "Cite this repository" button and the metadata has one authoritative
+  home. It ships in the sdist. The BibTeX entry in GUIDE section 9 stays,
+  because `cffconvert`'s generated form drops the version and emits a
+  placeholder key, but the `.cff` is now the source and the release checklist
+  moves both. A test pins its version against the newest released section of
+  this file, since comparing it to `patchcraft.__version__` cannot work in a
+  checkout, where setuptools-scm resolves a development version.
+
 ### Fixed
 
 - **THEORY §9 justified promoting `bfloat16` with a fact that is false of it,

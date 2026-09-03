@@ -306,7 +306,7 @@ silent: a version that walks backwards rather than an error.
 ## Releasing (maintainer only)
 
 1. Close the `[Unreleased]` section in [`CHANGELOG.md`](CHANGELOG.md) as `[X.Y.Z] YYYY-MM-DD`.
-2. Update the `version` field of the BibTeX entry in [`docs/GUIDE.md`](docs/GUIDE.md) section 9. It is the one version string left in the documentation, because a citation needs a concrete one.
+2. Update `version` and `date-released` in [`CITATION.cff`](CITATION.cff), and the `version` field of the BibTeX entry in [`docs/GUIDE.md`](docs/GUIDE.md) section 9. Those are the only version strings left in the repository, because a citation needs a concrete one. `uvx --from cffconvert cffconvert --validate` checks the file.
 3. Update [`docs/ROADMAP.md`](docs/ROADMAP.md) milestone checkboxes.
 4. Commit: `release: vX.Y.Z`.
 5. Tag + push: `git tag -a vX.Y.Z -m "..."` then `git push origin vX.Y.Z`.

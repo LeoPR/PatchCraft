@@ -165,4 +165,4 @@ Nenhum projeto externo consumiu a biblioteca ainda, e nenhum caminho CUDA dela j
 
 ## Licença e citação
 
-MIT, em [LICENSE](LICENSE). Ainda não existe DOI, então, se você precisar citar este trabalho, a entrada BibTeX está [no manual](docs/GUIDE.md#9-install-details-and-citation).
+MIT, em [LICENSE](LICENSE). Para citar este trabalho, o botão "Cite this repository" do GitHub lê o [CITATION.cff](CITATION.cff); a mesma referência em BibTeX está [no manual](docs/GUIDE.md#9-install-details-and-citation). Ainda não existe DOI.

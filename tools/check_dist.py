@@ -48,7 +48,7 @@ SDIST_MUST_CARRY = ("accel/src/lib.rs", "accel/src/kernel.rs", "accel/Cargo.toml
 # benchmarks/ or .pre-commit-config.yaml the way a prefix blocklist cannot.
 SDIST_TOP_DIRS = {"src", "tests", "docs", "accel", "tools"}
 SDIST_TOP_FILES = {
-    "PKG-INFO", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md", "MANIFEST.in",
+    "PKG-INFO", "LICENSE", "CITATION.cff", "CHANGELOG.md", "CONTRIBUTING.md", "MANIFEST.in",
     "README.md", "README.pt-BR.md", "README.pypi.md",
     "pyproject.toml", "setup.py", "setup.cfg", "uv.lock", ".python-version",
     ".gitignore",

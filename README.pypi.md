@@ -143,4 +143,4 @@ Two limits are worth knowing before you depend on it. Every figure on this page 
 
 ## License and citation
 
-MIT, in [LICENSE](https://github.com/LeoPR/PatchCraft/blob/main/LICENSE). There is no DOI yet, so if you need to cite this work the BibTeX entry is in the [guide](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md#9-install-details-and-citation).
+MIT, in [LICENSE](https://github.com/LeoPR/PatchCraft/blob/main/LICENSE). To cite this work, the authoritative metadata is in [CITATION.cff](https://github.com/LeoPR/PatchCraft/blob/main/CITATION.cff), which is what GitHub's "Cite this repository" button reads; the same reference as BibTeX is in the [guide](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md#9-install-details-and-citation). There is no DOI yet.

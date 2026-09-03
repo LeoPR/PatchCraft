@@ -1,0 +1,51 @@
+cff-version: 1.2.0
+title: "PatchCraft: image patch extraction, reconstruction, pairing and seam-aware stitching"
+message: "If you use this software, please cite it using these metadata."
+type: software
+authors:
+  - given-names: Leonardo
+    family-names: Marques de Souza
+    email: leonardo.marques.souza@gmail.com
+version: "0.5.2"
+date-released: "2026-09-03"
+repository-code: "https://github.com/LeoPR/PatchCraft"
+license: MIT
+abstract: >
+  PatchCraft cuts one image into patches and puts it back. One call takes one
+  (C, H, W) float tensor and returns one tensor: there is no batch axis, no
+  dataset, no dataloader and no model, and that boundary is documented as
+  binding rather than provisional. It owns the unfold and fold arithmetic, the
+  geometry validation and the seam blending, so a pipeline can own the rest.
+
+  Two silent defects motivate it. The intuitive reshape of F.unfold's output
+  gives the right shape with the wrong pixels, and a stride that does not cover
+  the image leaves pixels at zero without any error: on a 128 by 128 image with
+  patch 32 and stride 20, 3840 of 16384 pixels. Both are checked once here,
+  with tests around them.
+
+  The numeric contract is stated as a caller-evaluable predicate rather than a
+  promise. The extract and reconstruct round trip is bit-exact if and only if
+  every value of the overlap coverage map is a power of two, always true at
+  stride equal to patch size, and outside that rule the per-pixel error is
+  bounded by (k+1) times eps times the absolute value, with k the pixel's
+  coverage count. An earlier and weaker form of that claim was published, then
+  measured false and publicly retracted; a falsification suite now enumerates
+  the 126,736 legal geometries of the space independently of the predicate and
+  tries to break both halves of it.
+
+  Five of the six published wheels carry a Rust kernel for the overlapping
+  fold, compiled into the wheel itself rather than into a separate package, and
+  bit-identical to the pure-torch path by test. Every other platform installs a
+  universal wheel and runs the same operation in torch.
+
+  Pre-1.0: output values may change when the middle digit moves, and the
+  changelog records each change with the measurement behind it.
+keywords:
+  - image-processing
+  - patches
+  - super-resolution
+  - pytorch
+  - tiling
+  - reconstruction
+  - seam-blending
+  - numerical-reproducibility

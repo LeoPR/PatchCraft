@@ -165,4 +165,4 @@ No external project has consumed it yet, and no CUDA path in this library has ev
 
 ## License and citation
 
-MIT, in [LICENSE](LICENSE). There is no DOI yet, so if you need to cite this work the BibTeX entry is in [the guide](docs/GUIDE.md#9-install-details-and-citation).
+MIT, in [LICENSE](LICENSE). To cite this work, GitHub's "Cite this repository" button reads [CITATION.cff](CITATION.cff); the same reference as BibTeX is in [the guide](docs/GUIDE.md#9-install-details-and-citation). There is no DOI yet.

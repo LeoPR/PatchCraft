@@ -848,7 +848,7 @@ Installing from the sdist compiles the accelerator when a Rust toolchain is pres
 
 **Contributing.** The commands CI runs are `pytest -m "not gpu"`, `ruff check src tests`, `mypy --strict src`, and `cargo test --manifest-path accel/Cargo.toml` for the Rust kernel. New behaviour arrives as a hypothesis measured in `lab/`, becomes a test in `tests/` when the measurement holds, and is recorded in an ADR when it changes a contract. [CONTRIBUTING.md](../CONTRIBUTING.md) carries the full layout, the validation conventions and the release procedure.
 
-**Citation.** There is no DOI and no `CITATION.cff` in the repository yet, so GitHub shows no "Cite this repository" button. Until there is one, this entry is the reference:
+**Citation.** [`CITATION.cff`](../CITATION.cff) carries the authoritative metadata, validated against Citation File Format 1.2.0, and it is what GitHub reads for the "Cite this repository" button. There is still no DOI. The same reference as BibTeX, if you would rather paste it:
 
 ```bibtex
 @software{souza_patchcraft_2026,
