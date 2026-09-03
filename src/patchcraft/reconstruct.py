@@ -85,7 +85,14 @@ def reconstruct(
         # reconstruction is a pure rearrangement -- no fold, no count map, and
         # no widening for half precision (nothing accumulates).
         grid = patches.reshape(num_h, num_w, c, ph, pw)
-        return grid.permute(2, 0, 3, 1, 4).reshape(c, h, w)
+        out = grid.permute(2, 0, 3, 1, 4).reshape(c, h, w)
+        if out.untyped_storage().data_ptr() == patches.untyped_storage().data_ptr():
+            # Single-patch grid: the permuted view is already contiguous, so
+            # reshape aliased the caller's patches and a later write to them
+            # would change an image this function already returned. `extract`
+            # guards the mirror image of this case.
+            out = out.clone()
+        return out
 
     # Half-precision inputs overflow inside F.fold, which accumulates the sum
     # of all overlapping patches before the count-map division (fp16 max is

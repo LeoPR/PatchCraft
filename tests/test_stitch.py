@@ -352,3 +352,38 @@ def test_gaussian_kernel_stays_above_exp_minus_4(n):
     from patchcraft.stitch import _window_kernel
     k = _window_kernel("gaussian", n, n, torch.float64, torch.device("cpu"))
     assert k.min().item() > math.exp(-4)
+
+
+# ---------------------------------------------- Denominator floor (defect) --
+@pytest.mark.parametrize("patch", [128, 200, 256])
+def test_hann_corner_band_survives_large_patches(patch):
+    """The denominator floor must not swallow a legitimate window weight.
+
+    The 2-D hann corner weight is ``(pi/(n+1))**4``, which drops below 1e-6 at
+    patch 99. An absolute ``clamp(min=1e-6)`` therefore divided the corner band
+    of every larger hann stitch by 1e-6 instead of by the real weight. Measured
+    before the fix at 640x640, patch 256, stride 128: max error 0.94 on data in
+    [0, 1] and 960 wrong pixels, identical in float64 because the constant, not
+    the precision, was the cause.
+    """
+    from patchcraft import extract
+    from patchcraft.stitch import _window_kernel
+
+    corner = _window_kernel("hann", patch, patch, torch.float64, torch.device("cpu")).min()
+    assert corner < 1e-6, "geometry no longer exercises the defect"
+
+    img = rand_image(1, patch * 2, patch * 2, torch.float64, seed=patch)
+    patches = extract(img, patch, stride=patch // 2)
+    got = stitch(patches, img.shape, stride=patch // 2, weight="hann")
+    assert (got - img).abs().max().item() < 1e-9
+
+
+def test_denominator_floor_is_dtype_relative_not_absolute():
+    """The floor is the dtype's smallest normal, so it never fires on a real
+    weight: even at patch 1024 the 2-D hann corner is 8.8e-11, which is 27
+    orders of magnitude above float32's tiny."""
+    from patchcraft.stitch import _window_kernel
+
+    for dtype in (torch.float32, torch.float64):
+        corner = _window_kernel("hann", 1024, 1024, dtype, torch.device("cpu")).min().item()
+        assert corner > torch.finfo(dtype).tiny * 1e3

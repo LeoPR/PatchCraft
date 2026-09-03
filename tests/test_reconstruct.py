@@ -319,3 +319,24 @@ def test_reconstruct_matches_fold_reference(c, h, w, ph, pw, sh, sw, dtype):
     assert got.shape == ref.shape
     assert got.dtype == ref.dtype
     assert torch.equal(got, ref)
+
+
+# ------------------------------------------------- Result independence ------
+@pytest.mark.parametrize("shape,patch", [((1, 8, 8), 8), ((3, 4, 4), 4), ((2, 1, 1), 1)])
+def test_single_patch_grid_does_not_alias_the_caller(shape, patch):
+    """A one-patch grid is a pure rearrangement, and reshape returned a view.
+
+    The caller's patches and the returned image then shared storage, so a write
+    to the patches changed an image this function had already returned.
+    `extract` guards the mirror image of this case.
+    """
+    from patchcraft import extract
+
+    img = rand_image(*shape, torch.float32, seed=11)
+    patches = extract(img, patch, stride=patch)
+    out = reconstruct(patches, img.shape, stride=patch)
+
+    assert out.untyped_storage().data_ptr() != patches.untyped_storage().data_ptr()
+    snapshot = out.clone()
+    patches.zero_()
+    assert torch.equal(out, snapshot)

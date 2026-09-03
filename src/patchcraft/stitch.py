@@ -223,7 +223,13 @@ def stitch(
     den_w = _fold_window_1d(ww, w, num_w, sw)
     den = den_h.unsqueeze(1) * den_w.unsqueeze(0)
 
-    # clamp(min=1e-6): geometry validation guarantees coverage and all three
-    # windows are strictly positive, so the denominator is genuinely
-    # positive; the clamp is a defensive no-op kept from the fold version.
-    return (numerator / den.clamp(min=1e-6)).to(patches.dtype)
+    # The floor is the dtype's own smallest normal, not an absolute constant.
+    # Geometry validation guarantees coverage and all three windows are
+    # strictly positive, so the denominator is genuinely positive and this
+    # only guards a true zero. An absolute 1e-6 was not the no-op its comment
+    # claimed: the 2-D hann corner weight is (pi/(n+1))**4, which falls below
+    # 1e-6 at patch 99, so every larger hann stitch had its corner band
+    # divided by 1e-6 instead of by the real weight. Measured at 640x640,
+    # patch 256, stride 128: max error 0.94 on data in [0, 1], 960 pixels
+    # wrong, identical in float64 because it was never a precision problem.
+    return (numerator / den.clamp_min(torch.finfo(den.dtype).tiny)).to(patches.dtype)

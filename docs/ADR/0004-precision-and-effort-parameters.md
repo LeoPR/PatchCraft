@@ -177,7 +177,7 @@ integer path on the float predicate would be a category error.
 | Step | Size | Breaks frozen surface | When |
 |---|---|---|---|
 | 0. Record this ADR, and qualify the four copies of "widening the dtype does not help" | 0.5 to 1 day | no | before 1.0, and it is the only item that must be |
-| A. Fix three defects as bugs, no knob: the `stitch` absolute `1e-6` clamp, the `bfloat16` justification, the resize antialias gap | 1 to 2 days | no signature change | before 1.0 |
+| A. Fix three defects as bugs, no knob | done, 2026-09-03 | no signature change | done before 1.0, as planned |
 | 1. `extract` accepts the five integer dtypes, by adding them to the fast-path set | ~1 day | no | after 1.0, never alone |
 | 2. Exact integer `reconstruct`, unrestricted, `int32` accumulator, every legal geometry | 4 to 6 days | no signature change | after 1.0, shipped with step 1 as one 1.1 |
 | 3. Byte-native `uint8` quotient-and-remainder path | 2 to 3 days | no | do not build yet: 1.7x over an `int32` accumulator, at the cost of a second, different predicate on the doc surface |
@@ -189,7 +189,12 @@ integer path on the float predicate would be a category error.
 ### Order
 
 Record the design. Fix the three defects as bugs on their own merits, because folding them
-into a `precise` tier would sell the absence of a bug as a quality level. Document, at zero
+into a `precise` tier would sell the absence of a bug as a quality level. **Step A landed on
+2026-09-03**, and the three were the `stitch` denominator floor, the `reconstruct`
+single-patch aliasing and the `resize` inbound clamp on a dtype that cannot hold the bound.
+The remaining items named in the audit, the `bfloat16` justification in THEORY 9.2 and the
+resize antialias gap, are still open and are not defects of the same kind: the first is a
+documentation correction and the second is a user-facing choice that needs its own release. Document, at zero
 cost, the rounding policy already in force. Freeze 1.0 at 20 names with no new parameters.
 Then 1.1 brings steps 1 and 2 together and unrestricted. Then stop and wait for a user:
 only if one appears do the knobs follow, and the preset last of all.

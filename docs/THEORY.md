@@ -111,9 +111,9 @@ Visualizing the count map along one axis (image cols 0..7, `ph=4`, `sh=2`):
 
 **Dilation.** `F.fold` does not support dilation in the same way as `F.unfold`: for `d > 1` the patch footprint skips pixels, and `fold` would deposit the sparse contributions into a canvas that is not the image. Rather than building a custom scatter, we refuse `dilation != 1` at reconstruction time with a clear `ValueError`. Callers who extracted with dilation are expected to consume patches directly (e.g., as features) and not round-trip.
 
-**Stride maior que patch (lacunas).** Quando `sh > ph` ou `sw > pw`, o grid pula pixels: a soma `fold(...)` tem zeros nessas posições, e qualquer divisão (incluindo pelo clamp `min=1e-6`) produz pixels com valor arbitrário, ou seja, síntese de dado, exatamente o que §1 proíbe ao escolher truncamento como única política de borda. Recusamos a condição com `ValueError` logo na entrada de `reconstruct`. Consumidores que querem features esparsas (kernels, classificadores) usam apenas `extract`, onde `stride > patch_size` é aceito sem objeções, e não tentam round-trip.
+**Stride maior que patch (lacunas).** Quando `sh > ph` ou `sw > pw`, o grid pula pixels: a soma `fold(...)` tem zeros nessas posições, e qualquer divisão (incluindo pelo piso do denominador) produz pixels com valor arbitrário, ou seja, síntese de dado, exatamente o que §1 proíbe ao escolher truncamento como única política de borda. Recusamos a condição com `ValueError` logo na entrada de `reconstruct`. Consumidores que querem features esparsas (kernels, classificadores) usam apenas `extract`, onde `stride > patch_size` é aceito sem objeções, e não tentam round-trip.
 
-**Design decision.** `patchcraft.reconstruct(patches, image_shape, stride, dilation=1) -> Tensor[C, H, W]` uses `F.fold` followed by division by the overlap-count map (computed once, same-geometry fold of ones). Raises `ValueError` when `dilation != 1` **ou quando `sh > ph` ou `sw > pw`** (cobertura parcial é proibida). `image_shape` is `(C, H, W)` and must match the geometry implied by the patch grid; inconsistent shapes raise `ValueError`. The count map clamp (`min=1e-6`) existe apenas para absorver ruído float em pixels totalmente cobertos, nunca para mascarar buracos de cobertura. Output dtype matches input.
+**Design decision.** `patchcraft.reconstruct(patches, image_shape, stride, dilation=1) -> Tensor[C, H, W]` uses `F.fold` followed by division by the overlap-count map (computed once, same-geometry fold of ones). Raises `ValueError` when `dilation != 1` **ou quando `sh > ph` ou `sw > pw`** (cobertura parcial é proibida). `image_shape` is `(C, H, W)` and must match the geometry implied by the patch grid; inconsistent shapes raise `ValueError`. O piso do denominador existe apenas para absorver ruído float em pixels totalmente cobertos, nunca para mascarar buracos de cobertura; desde 0.5.2 ele é `finfo(dtype).tiny`, que nunca alcança um peso legítimo (o menor canto hann 2-D, mesmo em patch 1024, é 8,8e-11). Output dtype matches input.
 
 ## 2.5 Stitching modified patches
 
@@ -129,7 +129,7 @@ The standard trick is to weight each patch's contribution by a 2-D window whose 
 
 For *unmodified* patches, every `patch_k(i_k, j_k)` equals `img(x, y)` (definition of `extract`), so the numerator factors as `img(x, y) · denominator(x, y)`, and the output is `img(x, y)` exactly, so round-trip is preserved for any kernel as long as the denominator at `(x, y)` is positive. For *modified* patches, contributions are weighted by how central `(x, y)` is to each contributing patch, so seams are attenuated.
 
-**Implementation.** Two `F.fold` calls: one on the weighted patches (numerator), one on the kernel replicated across the `L` patch slots (denominator). Identical geometry to `reconstruct`'s count-map fold; same `clamp(min=1e-6)` on the denominator to absorb float noise.
+**Implementation.** Two `F.fold` calls: one on the weighted patches (numerator), one on the kernel replicated across the `L` patch slots (denominator). Identical geometry to `reconstruct`'s count-map fold; the denominator carries the same floor. Since 0.5.2 that floor is `torch.finfo(dtype).tiny` and no longer an absolute `1e-6`: the 2-D hann corner weight is `(π/(n+1))⁴`, which falls below `1e-6` at patch 99, so every larger hann stitch had its corner band divided by the floor instead of by the real weight. Medido a 640×640, patch 256, stride 128: erro máximo 0,94 em dado [0, 1] e 960 pixels errados, idêntico em float64 porque a causa era a constante e não a precisão.
 
 **Window kernels.**
 
@@ -319,6 +319,7 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 - `resample=None` → default por backend (LANCZOS pra PIL, bilinear pra torch).
 - Tensor inteiro com `backend == "torch"`: interpolação em float, cast de volta com **round + clamp** ao range do dtype (bicubic ultrapassa o range de entrada legitimamente, e um cast cru wrapava: `-9.0 → 247` em uint8; corrigido em 0.2.1).
 - Tensor float com `backend == "pil"`: o hop uint8 pelo PIL **clampa a `[0, 1]`**; valores fora desse intervalo não sobrevivem nesse backend (comportamento documentado, não exceção).
+- Tensor inteiro com `backend == "pil"`: o mesmo hop uint8 **clampa a `[0, 255]`** na ida e satura ao range do dtype na volta. Os dois backends recusam-se a dar a volta (`wrap`), que é a classe de defeito da 0.2.0, mas saturam em ranges diferentes de propósito: o torch preserva 300 e −9 num int32, o PIL não. Até 0.5.1 a ida fazia `clamp(0, 255)` no dtype de entrada, e num `int8` o próprio limite era irrepresentável, então o torch levantava `RuntimeError` cru antes de limitar coisa alguma.
 
 **Rejeita (`ValueError`):**
 - `Tensor` em CUDA com `backend == "pil"` (PIL não enxerga GPU, então exige `.cpu()` explícito do caller).
@@ -439,7 +440,7 @@ The blending counterpart to `reconstruct`. Same fold geometry, same rejections; 
 - `dtype` and `device` preserved on output.
 
 **Sinaliza (não exceção):**
-- (nenhuma condição sinalizada; as três janelas são estritamente positivas desde 0.2.1, então nenhum pixel coberto é zerado pela janela)
+- (nenhuma condição sinalizada; as três janelas são estritamente positivas desde 0.2.1, então nenhum pixel coberto é zerado pela janela. Até 0.5.1 essa frase era verdadeira quanto à janela e falsa quanto ao resultado, porque o piso absoluto `1e-6` do denominador corrompia a banda de canto a partir de patch 99; corrigido em 0.5.2.)
 
 **Rejeita (`ValueError` / `TypeError`):**
 - `patches` not a tensor (`TypeError`).

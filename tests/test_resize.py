@@ -238,3 +238,38 @@ def test_tensor_to_pil_int_tensor_clamps_instead_of_wrapping():
     assert out[0, 0, 1].item() == 0    # would be 251 with a bare astype(uint8)
     assert out[0, 1, 0].item() == 100
     assert out[0, 1, 1].item() == 255
+
+
+# --------------------------------------------------- Integer dtype parity ---
+@pytest.mark.parametrize(
+    "dtype", [torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64]
+)
+@pytest.mark.parametrize("backend", ["torch", "pil"])
+def test_every_integer_dtype_resizes_on_both_backends(dtype, backend):
+    """`clamp(0, 255)` needs bounds the dtype can hold.
+
+    On an int8 tensor the literal 255 is unrepresentable, so torch raised
+    `value cannot be converted to type int8_t without overflow` before clamping
+    anything, and the PIL backend rejected a dtype the contract accepts.
+    """
+    x = (torch.rand(1, 8, 8) * 100).to(dtype)
+    out = resize(x, (4, 4), backend=backend)
+    assert out.dtype == dtype
+    assert out.shape == (1, 4, 4)
+
+
+def test_out_of_range_integers_saturate_rather_than_wrap():
+    """Neither backend wraps, which is the 0.2.0 defect class (`-9 -> 247`).
+
+    The two clamp to different ranges on purpose, as THEORY 9.4 states: the
+    torch backend clamps to the dtype range and so preserves 300 and -9 in
+    int32, while the PIL backend goes through a uint8 hop and therefore lands
+    inside [0, 255]. What both must never do is wrap.
+    """
+    x = torch.tensor([[[300, -9]]], dtype=torch.int32).repeat(1, 4, 2)
+
+    torch_out = resize(x, (8, 8), backend="torch")
+    assert torch_out.min().item() >= -9 and torch_out.max().item() <= 300
+
+    pil_out = resize(x, (8, 8), backend="pil")
+    assert pil_out.min().item() >= 0 and pil_out.max().item() <= 255

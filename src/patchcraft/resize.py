@@ -57,8 +57,11 @@ def _tensor_to_pil_u8(tensor: torch.Tensor) -> PILImage:
     else:
         # Integer tensors: clamp to the uint8 range before casting, otherwise
         # values outside [0, 255] wrap (300 -> 44) -- same defect class as the
-        # 0.2.0 bicubic overshoot wrap on the torch backend.
-        arr = tensor.clamp(0, 255).cpu().numpy().astype(np.uint8)
+        # 0.2.0 bicubic overshoot wrap on the torch backend. Widen first,
+        # because the bound itself has to be representable: `clamp(0, 255)` on
+        # an int8 tensor raised `value cannot be converted to type int8_t
+        # without overflow` before clamping anything.
+        arr = tensor.to(torch.int32).clamp(0, 255).cpu().numpy().astype(np.uint8)
     c = arr.shape[0]
     if c == 1:
         return Image.fromarray(arr[0], mode="L")
@@ -184,7 +187,13 @@ def resize(
             pil_out = _resize_pil(pil_in, target_size, resample)
             tensor_out = _pil_to_tensor_f32(pil_out)
             if not original_dtype.is_floating_point:
-                tensor_out = (tensor_out * 255).round()
+                # Round AND clamp, the same pair the torch branch applies.
+                # Without the clamp a narrow signed dtype cannot represent the
+                # 0..255 range the PIL hop produces, and the cast raised a raw
+                # `RuntimeError: value cannot be converted to type int8_t
+                # without overflow` instead of returning a saturated value.
+                info = torch.iinfo(original_dtype)
+                tensor_out = (tensor_out * 255).round().clamp(info.min, info.max)
             return tensor_out.to(original_dtype)
         return _resize_torch(image, target_size, resample)
 

@@ -6,6 +6,32 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`stitch(weight="hann")` corrupted the corner band of every patch of 99 or
+  more.** The denominator was floored by an absolute `clamp(min=1e-6)` whose
+  comment called it a defensive no-op. It was not: the 2-D hann corner weight
+  is `(pi/(n+1))**4`, which crosses below `1e-6` at patch 99, so the corner
+  band was divided by the floor rather than by the real weight. Measured at
+  640x640, patch 256, stride 128: maximum error 0.94 on data in [0, 1] and 960
+  wrong pixels, identical in float64 because the constant and not the precision
+  was the cause. The floor is now `finfo(dtype).tiny`, the model already used
+  in `metrics.py`, which never reaches a legitimate weight: the smallest 2-D
+  hann corner even at patch 1024 is 8.8e-11. THEORY 9.9 claimed no covered
+  pixel is zeroed by the window, which was true of the window and false of the
+  result.
+- **`reconstruct` returned a view aliasing the caller's patches on a
+  single-patch grid.** Writing to the patches afterwards changed an image the
+  function had already returned, measured as 0.744 becoming 99.0. `extract`
+  guards the mirror image of this case and `reconstruct` did not.
+- **`resize(..., backend="pil")` raised a raw `RuntimeError` on `int8`.** The
+  inbound `clamp(0, 255)` was applied in the input dtype, where the bound 255
+  is unrepresentable, so torch raised `value cannot be converted to type
+  int8_t without overflow` before clamping anything. Every integer dtype now
+  works on both backends, and THEORY 9.4 gained the row for integer tensors on
+  the PIL backend, which it had never specified.
+
+
 ### Removed
 
 - The agentic workflow's leftovers. `.superpowers/` at the repository root
