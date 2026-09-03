@@ -6,6 +6,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `docs/STUDIES/2026-09-03-strata-conformity.md`, a review of this repository
+  against Strata v1.2.2. Its §9 bounded the review before it bounded the
+  project: name the genre and apply its standard, and take no change as the
+  default verdict unless a defect pays for the fix. The genre is a library, so
+  the standard is tests, packaging and CI. The finding is conformance, one gap
+  and one piece of debris. The gap is the absence of a DOI, which is the only
+  item missing from the publishing pattern and cannot be applied to releases
+  already out. The debris was a stale `.pytest_cache`, removed, with the
+  redirect verified to hold.
+
 ### Changed
 
 - **`docs/USAGE.md` is executed instead of transcribed, which closes the last

@@ -58,7 +58,7 @@ PatchCraft/
 │   ├── FOCO-1.0.md ........... what 1.0 freezes, and the blockers still in the way
 │   ├── ADR/ .................. one file per decision that shaped the API
 │   ├── design/ ............... one spec per work phase: alternatives measured, then chosen
-│   └── STUDIES/ .............. background reading behind those decisions
+│   └── STUDIES/ .............. background reading, and the Strata conformity review
 │
 ├── tools/
 │   ├── benchmark.py .......... accelerated vs pure, and proves they agree before timing

@@ -77,5 +77,9 @@ their kernel has never run in CI.
 
 ## Also outstanding, outside the 1.0 path
 
-A conformity review of the Strata method against this repository, asked for and
-not yet done.
+**A DOI.** The Strata conformity review
+([docs/STUDIES/2026-09-03-strata-conformity.md](docs/STUDIES/2026-09-03-strata-conformity.md))
+found it to be the one item missing from the publishing pattern, and it is the
+kind that cannot be applied retroactively: Zenodo mints a DOI per release from
+the moment it is connected, and every release before that has none, permanently.
+One authorisation. **Waits on the owner.**
