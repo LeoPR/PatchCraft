@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-09-03
+
 ### Fixed
 
 - **`stitch(weight="hann")` corrupted the corner band of every patch of 99 or
@@ -69,6 +71,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   machine already had for uv, ruff, mypy, pip and `__pycache__`, and
   `CONTRIBUTING.md` records the convention and why it is not committed here.
 - `.vscode/settings.json` stays tracked and is pruned from the sdist instead.
+- **The versioning rule was self-contradictory and is corrected.** One row said
+  an output value change is a `0.Y.0`, the next said a fix is a `0.y.Z`, and a
+  bug fix satisfies both, so the table made every fix a minor and left patch
+  releases unable to fix anything. It also contradicted the project's own
+  history: `0.2.1` changed `stitch(weight="hann")` output for every geometry
+  and shipped as a patch. The rule now turns on whether the contract moved or
+  the implementation stopped violating it, which sorts `0.2.1`, `0.3.0`,
+  `0.5.0` and `0.5.2` correctly. `CONTRIBUTING.md` carries the rule with those
+  four worked, and GUIDE section 8 item 6 no longer cites a patch release as
+  an example of what only a minor may do.
   Its `${workspaceFolder}/.venv` path is not broken: `.venv` is a directory
   junction to the real environment outside the tree, so the setting resolves
   and is portable to any checkout following the same convention.
@@ -654,7 +666,8 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) covers installation, the car-vs-track metaphor,
   validation lab.
 
-[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.2
 [0.5.1]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.1
 [0.5.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.0
 

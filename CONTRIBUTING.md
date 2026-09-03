@@ -220,12 +220,34 @@ promise that nothing does.
 
 That fixes what each digit is for here:
 
+The question that decides it is not "did a returned value change". A bug fix
+changes returned values by definition, and if that forced a `0.Y.0` then a
+patch release could never fix anything. The question is **whether the contract
+moved, or whether the implementation stopped violating it**:
+
 | Change | Bump | Why |
 |---|---|---|
-| An output value, a signature, a name or documented behaviour changes | `0.Y.0` | Resolvers stop at the y boundary, so this is where a break belongs |
-| New functionality that breaks nothing, or a fix | `0.y.Z` | Anyone pinned to the y-series should get it |
+| The documented contract moves: a signature, a name, or behaviour the documentation described as correct | `0.Y.0` | Code that was right against the old documentation can now be wrong |
+| The implementation stops violating the contract, however visibly | `0.y.Z` | The documentation always promised this; only the code was wrong |
+| New functionality that breaks nothing | `0.y.Z` | Anyone pinned to the y-series should get it |
 | Documentation, tests, CI, packaging or tooling only | `0.y.Z` | Still a release if it is published, still no break |
 | Nothing published | nothing | Accumulate under `[Unreleased]` |
+
+The project's own history sorts cleanly under that rule, and does not sort
+under any rule keyed on whether values changed:
+
+- `0.2.1` rewrote the hann window, changing `stitch(weight="hann")` output for
+  **every** geometry. THEORY §9.9 had promised no covered pixel is zeroed by
+  the window; the old window zeroed 108 of 144 pixels in one measured case. A
+  violation, so a **z**, and it shipped as one.
+- `0.5.2` floored the `stitch` denominator by the dtype's tiny instead of an
+  absolute `1e-6`, changing hann output at patch 99 and above. The same
+  promise, the same kind of violation, so also a **z**.
+- `0.3.0` moved `stitch` output by ULPs through a different summation order.
+  Nothing was wrong before, so behaviour the documentation endorsed changed.
+  A **y**.
+- `0.5.0` made `tilings` return 73 specs where it returned 100. The
+  enumeration's output set is the contract. A **y**.
 
 After 1.0 the ordinary reading applies: breaking is major, additive is minor,
 fixed is patch. What 1.0 freezes is written in

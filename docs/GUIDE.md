@@ -812,7 +812,7 @@ Five things this project does not claim.
 
 **5. The accelerated and the pure paths are equal by test, on two platforms out of five.** Every geometry in the suite is checked with `torch.equal` against the pure path, but that job runs on Ubuntu and Windows x86_64 only. The macOS and aarch64 wheels are built and their contents are checked, and nothing has ever executed their kernel in CI.
 
-**6. Pre-1.0 means output values can change when the middle digit moves.** One release rewrote the hann window, so `stitch(..., weight="hann")` returns different values than the release before it did for every geometry, and the round-trip contract did not change. That is the kind of change a new `0.y` is allowed to carry and a new `0.y.z` is not. [CHANGELOG.md](../CHANGELOG.md) records each one together with the measurement that motivated it.
+**6. Pre-1.0 means output values can change in either kind of release, for two different reasons.** A new `0.y` may move behaviour the documentation endorsed, which is what happened when `tilings` began returning 73 specs where it returned 100. A new `0.y.z` may change values too, but only by making the code match a promise the documentation was already making: twice now that has been the `stitch` hann denominator, once for a window that zeroed covered pixels and once for a floor that swallowed the corner band. [CHANGELOG.md](../CHANGELOG.md) records each one together with the measurement that motivated it, and [CONTRIBUTING.md](../CONTRIBUTING.md) carries the rule.
 
 The backlog that closes these is [FOCO-1.0.md](FOCO-1.0.md).
 
@@ -855,7 +855,7 @@ Installing from the sdist compiles the accelerator when a Rust toolchain is pres
   author  = {Souza, Leonardo Marques de},
   title   = {PatchCraft: image patch extraction, reconstruction, pairing
              and seam-aware stitching},
-  version = {0.5.1},   % check CHANGELOG.md for the release you used
+  version = {0.5.2},   % check CHANGELOG.md for the release you used
   year    = {2026},
   url     = {https://github.com/LeoPR/PatchCraft}
 }
