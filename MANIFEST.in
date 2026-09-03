@@ -19,8 +19,10 @@
 
 include LICENSE CITATION.cff SECURITY.md CODE_OF_CONDUCT.md
 include CHANGELOG.md CONTRIBUTING.md MAP.md AGENTS.md STATUS.md
-# CLAUDE.md is tool-specific and points at AGENTS.md; it has no reader in an sdist.
-prune CLAUDE.md
+# CLAUDE.md is tool-specific and points at AGENTS.md; it has no reader in an
+# sdist. `exclude`, not `prune`: prune takes a directory and is a silent no-op
+# on a file, which is how this shipped once.
+exclude CLAUDE.md
 include README.md README.pt-BR.md README.pypi.md
 include pyproject.toml setup.py uv.lock .python-version
 include .pre-commit-config.yaml
