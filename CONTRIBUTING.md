@@ -138,6 +138,7 @@ PatchCraft/
 ├── MAP.md                          one-page wayfinding: the tree, and a want-to/go-to table
 ├── AGENTS.md                       the canonical rules; ten invariants, each earned
 ├── CLAUDE.md                       thin pointer to AGENTS.md plus tool-specific notes
+├── STATUS.md                       the snapshot; what is in flight and what waits on whom
 ├── CHANGELOG.md                    Keep-a-Changelog format
 ├── LICENSE                         MIT
 ├── .python-version                 3.13

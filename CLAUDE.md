@@ -15,8 +15,9 @@
    question · I8 nothing ephemeral in the tree · I9 a tracked file ships ·
    I10 do not invent what exists
 2. [`MAP.md`](MAP.md), where things are
-3. [`docs/FOCO-1.0.md`](docs/FOCO-1.0.md), what is left before 1.0
-4. [`README.md`](README.md), the overview a human reads
+3. [`STATUS.md`](STATUS.md), where things stand and who each open item waits on
+4. [`docs/FOCO-1.0.md`](docs/FOCO-1.0.md), what is left before 1.0
+5. [`README.md`](README.md), the overview a human reads
 
 ## Specific to this tool
 

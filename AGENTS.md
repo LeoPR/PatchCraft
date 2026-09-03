@@ -5,6 +5,7 @@
 >
 > **Route**: this guide = *the rules* · [`MAP.md`](MAP.md) = *where things are* ·
 > [`CONTRIBUTING.md`](CONTRIBUTING.md) = *how to run the gates and release* ·
+> [`STATUS.md`](STATUS.md) = *where things stand now* ·
 > [`docs/FOCO-1.0.md`](docs/FOCO-1.0.md) = *what is left before 1.0*.
 > Do not repeat between them. Link.
 

@@ -18,7 +18,7 @@
 # for anything unexpected, which is the reminder to come back here.
 
 include LICENSE CITATION.cff SECURITY.md CODE_OF_CONDUCT.md
-include CHANGELOG.md CONTRIBUTING.md MAP.md AGENTS.md
+include CHANGELOG.md CONTRIBUTING.md MAP.md AGENTS.md STATUS.md
 # CLAUDE.md is tool-specific and points at AGENTS.md; it has no reader in an sdist.
 prune CLAUDE.md
 include README.md README.pt-BR.md README.pypi.md

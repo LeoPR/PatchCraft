@@ -47,6 +47,8 @@ Teste de aceitação da definição inteira, em uma frase: **um estranho instala
 
 **B1. O predicado errado, em quinze lugares, corrigido em um commit.** Medido por grep sobre `src/`, `docs/`, `README.md` e `README.pypi.md`:
 
+**Fechado em 0.5.0.** O predicado corrigido está nos quinze pontos; a forma antiga (`k_max <= 4`) sobrevive apenas no registro de fase `docs/design/` e no enunciado deste bloco, como memória do que foi retratado. A refutação medida está no ADR 0003.
+
 `src/patchcraft/reconstruct.py:24`; `src/patchcraft/stitch.py:3`, `:11`, `:89`; `docs/THEORY.md:100`, `:153`, `:157`; `docs/USAGE.md:74`, `:128`, `:163`; `docs/SCOPE.md:229`; `docs/ADR/0003-reversibility-classes.md:16`, `:66`, `:72`, `:78`; `README.md:52`, `:120`; `README.pypi.md:11`, `:41`, `:47`, `:61`, `:66`.
 
 Dois desses fazem a afirmação em outras palavras e não estavam na lista anterior: `stitch.py:11` e `THEORY.md:157` dizem que `weight="uniform"` é matematicamente equivalente a `reconstruct`, e o segundo justifica isso com "teste de igualdade bit a bit em não-sobreposição e `allclose` em sobreposição", que é exatamente o padrão de tolerância frouxa que B2 existe para matar. O CHANGELOG é registro histórico e não se reescreve; a retratação entra como entrada da 0.3.0.
@@ -55,9 +57,13 @@ O grep de verificação precisa incluir a raiz do repositório, porque `README.m
 
 **B2. A suíte não consegue falsificar B1.** Cinco geradores de falso negativo: rampa inteira (`test_reconstruct.py:10`), float64 alargado de float32, NaN sob `torch.equal`, varreduras que só visitam `stride == patch/2`, e `rtol=1e-5` três ordens acima do erro medido.
 
+**Fechado em 0.5.0.** `tests/test_exactness.py` enumera as 126.736 geometrias legais independentemente do predicado e procura os dois contraexemplos. Os geradores de falso negativo foram trocados pelo helper auditado em `tests/_rng.py`.
+
 A metade negativa precisa ser escrita como afirmação sobre um conjunto de sementes, não sobre uma execução. Medido na geometria `(1, 4, 14)`, patch `(4, 4)`, stride `(1, 1)`, fora do predicado: `torch.equal` devolve True em 63 de 300 sementes float32 e 57 de 300 float64. Exatidão fora do predicado é propriedade da amostra, não da geometria. A forma correta é: **pelo menos uma de N sementes é inexata, e toda semente tem erro dentro de 1 ULP.** Escrita como assert simples, essa metade instala flake no CI e chama isso de detector.
 
 **B3. Nada fixa a superfície pública.** `tests/test_import.py` verifica duas coisas. Fixar os 19 nomes com `inspect.signature`, mais a decisão do item 2 da seção 1.
+
+**Fechado em 0.5.0.** `tests/test_public_api.py` prende os 20 nomes com `inspect.signature`, mais os campos e a ordem dos quatro carregadores de dados.
 
 **B4. As duas páginas que o estranho lê estão erradas, e uma delas não está no git.** `USAGE.md` afirma 0.2.0, omite `WeightKind`, e seus exemplos não rodam em lugar nenhum: 87 tentados, 69 passam, 18 falham. Uma das falhas é alinhamento de coluna, então os flags `NORMALIZE_WHITESPACE` e `ELLIPSIS` são parte do contrato, não detalhe de fiação. Nota de 2026-08-30: `README.pypi.md` foi reescrito (222 linhas), commitado e fiado no `pyproject.toml`, e já enuncia a regra na forma correta (todo valor do mapa de cobertura é potência de dois). O que resta de B4 é o `USAGE.md`. `README.md` já tem todos os links absolutos, então esse item está fechado para o arquivo que o PyPI publica hoje.
 
@@ -66,6 +72,8 @@ A metade negativa precisa ser escrita como afirmação sobre um conjunto de seme
 A contradição que este bloco nomeava já tinha caído em `33d3002`, durante a 0.3.0: a linha "Fora de escopo v0.1: Promoção automática float16 → float32" foi removida da §9.2, e nada aqui registrou. Ao conferir para fechar, apareceu um segundo defeito na mesma frase, esse ainda vivo e mais grave, porque a §9 é o árbitro do contrato e estava afirmando um fato falso: a promoção de `float16` **e** `bfloat16` era justificada pelo estouro do máximo finito de fp16, e o `bfloat16` carrega o expoente do `float32` e não estoura. Medido: numerador em `9.0112e+04` contra máximo finito de `3.390e+38`, zero `inf`. A promoção dele compra precisão, não alcance, e a §9.2 agora tem uma entrada para cada formato com a medição de cada um.
 
 **B6. Enumeração com lixo e guardas assimétricas.** `tilings((1,28,28), allow_overlap=True)` devolve 100 specs, 28 degenerados de patch único, 27 deles marcados `overlap=True`, onde não há com o que sobrepor (guarda `nh > 1 or nw > 1` em `geometry.py`). E a guarda de cobertura existe só na volta: `extract(torch.rand(3,130,130), patch_size=32, stride=32)` devolve `(16, 3, 32, 32)` sem erro, descartando 2 linhas e 2 colunas em silêncio, e `Patchify` faz o mesmo. Quem extrai, roda o modelo e nunca reconstrói recebe exatamente a perda silenciosa que a biblioteca promete impedir. Ambos são itens 4 e 3 do congelamento: corrigir depois de 1.0 é quebra. Ou corrige agora, ou documenta a assimetria por escrito.
+
+**Fechado em 0.5.0**, pelas duas saídas que o próprio bloco admitia. As specs degeneradas saíram: `tilings((1,28,28), allow_overlap=True)` devolve 73 em vez de 100, com uma única spec de imagem inteira e nenhuma marcada `overlap=True`. A assimetria das guardas foi documentada em vez de corrigida, que era a alternativa oferecida, e está escrita na THEORY §9.1.
 
 **O que não bloqueia, contra o inventário:**
 

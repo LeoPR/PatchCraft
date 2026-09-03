@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `STATUS.md`, the snapshot: what is released, what is unreleased, and who each
+  open item waits on. Writing it surfaced that `docs/FOCO-1.0.md` still listed
+  B1, B2, B3 and B6 as open although all four were closed in 0.5.0, the same
+  bookkeeping gap B5 had. Each is now recorded with what closed it, verified
+  rather than assumed: the retracted predicate survives only in the phase spec
+  and in the blocker's own text, the falsification suite enumerates 126,736
+  geometries, the surface is pinned with `inspect.signature`, and `tilings`
+  returns 73 specs with one whole-image entry and none labelled `overlap`.
+  B4 is the only blocker still open.
 - `AGENTS.md`, the canonical agent-facing guide, and a thin `CLAUDE.md` that
   points at it rather than duplicating it. Its ten invariants are the ones this
   repository actually enforces, and each names the incident it came from: the

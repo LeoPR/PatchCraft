@@ -17,6 +17,7 @@ PatchCraft/
 ├── MAP.md .................... this file
 ├── AGENTS.md ................. the rules, agent-agnostic and canonical; ten invariants
 ├── CLAUDE.md ................. thin; points at AGENTS.md and holds tool-specific notes
+├── STATUS.md ................. the snapshot: where things are now, and who each item waits on
 ├── CHANGELOG.md .............. every release, each change with the measurement behind it
 ├── CONTRIBUTING.md ........... layout, the two code paths, the versioning rule, releasing
 ├── CITATION.cff .............. citation metadata; GitHub reads it for the cite button
@@ -89,6 +90,7 @@ PatchCraft/
 | **Release** it | [CONTRIBUTING.md](CONTRIBUTING.md), the "Releasing" section |
 | Know **what changed and why** | [CHANGELOG.md](CHANGELOG.md) |
 | Know **what is left before 1.0** | [docs/FOCO-1.0.md](docs/FOCO-1.0.md) |
+| Know **where things stand right now** | [STATUS.md](STATUS.md) |
 | **Cite** it | [CITATION.cff](CITATION.cff) |
 | Report something **exploitable**, or read the trust boundaries | [SECURITY.md](SECURITY.md) |
 | **Report a bug** or propose a change | the issue forms, or [CONTRIBUTING.md](CONTRIBUTING.md) to send a PR |
