@@ -15,6 +15,8 @@ PatchCraft/
 │   README.pt-BR.md ........... the same page in Portuguese
 │   README.pypi.md ............ the PyPI page; links absolute, because relative ones break there
 ├── MAP.md .................... this file
+├── AGENTS.md ................. the rules, agent-agnostic and canonical; ten invariants
+├── CLAUDE.md ................. thin; points at AGENTS.md and holds tool-specific notes
 ├── CHANGELOG.md .............. every release, each change with the measurement behind it
 ├── CONTRIBUTING.md ........... layout, the two code paths, the versioning rule, releasing
 ├── CITATION.cff .............. citation metadata; GitHub reads it for the cite button
@@ -74,6 +76,7 @@ PatchCraft/
 | I want to | Go to |
 |---|---|
 | **See what this is, in two minutes** | [README.md](README.md) |
+| **Work on it as an agent**, or learn what this repo insists on | [AGENTS.md](AGENTS.md) |
 | **Use it**: every argument, measured, with its printed output | [docs/GUIDE.md](docs/GUIDE.md) |
 | Know **when the round trip is exact**, as a rule I can evaluate myself | [docs/GUIDE.md §4](docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit), and [docs/ADR/0003](docs/ADR/0003-reversibility-classes.md) for the contract |
 | Know **what each function accepts and rejects**, precisely | [docs/THEORY.md §9](docs/THEORY.md), which is the arbiter where documents disagree |

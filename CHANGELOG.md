@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `AGENTS.md`, the canonical agent-facing guide, and a thin `CLAUDE.md` that
+  points at it rather than duplicating it. Its ten invariants are the ones this
+  repository actually enforces, and each names the incident it came from: the
+  predicate published and retracted, the benchmark that measured the opposite
+  of what it claimed because `uint8.sum()` promotes silently, the 269 MiB of
+  Rust build output that lived in the tree, and the machine path once committed
+  to `pyproject.toml` that created a literal `Z:\caches\pytest` directory on
+  Linux. `AGENTS.md` ships in the sdist; `CLAUDE.md` does not, having no reader
+  there.
 - Issue forms and a pull-request template. A report about this library is
   irreproducible without the geometry, the dtype, the torch version and
   `accel_available()`, so the forms make those required rather than suggested,
