@@ -6,8 +6,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
+## [0.5.3] - 2026-09-03
 
+### Added
 - `docs/STUDIES/2026-09-03-strata-conformity.md`, a review of this repository
   against Strata v1.2.2. Its §9 bounded the review before it bounded the
   project: name the genre and apply its standard, and take no change as the
@@ -18,23 +19,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   already out. The debris was a stale `.pytest_cache`, removed, with the
   redirect verified to hold.
 
-### Changed
 
-- **`docs/USAGE.md` is executed instead of transcribed, which closes the last
-  1.0 blocker.** The page claimed eighteen public names when there were twenty
-  and had spent three releases describing an API that had moved, and the script
-  that once generated it was never tracked, so it could not be regenerated.
-  Making the page run in place is the durable fix: `tests/test_docs_usage.py`
-  collects it as a doctest, so a stale line fails CI rather than misleading a
-  reader. Only five outputs were genuinely wrong; the other eight failures were
-  formatting, where the output touched the closing fence and doctest read the
-  fence as expected text. `ELLIPSIS` and `NORMALIZE_WHITESPACE` are enabled in
-  `pyproject.toml` so the page may still elide a temp path or wrap a long repr
-  for the reader. The version literal is gone from it: the version comes from
-  the git tag, so any literal is wrong the moment it is written.
-
-
-### Added
 
 - `STATUS.md`, the snapshot: what is released, what is unreleased, and who each
   open item waits on. Writing it surfaced that `docs/FOCO-1.0.md` still listed
@@ -95,8 +80,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   this file, since comparing it to `patchcraft.__version__` cannot work in a
   checkout, where setuptools-scm resolves a development version.
 
-### Fixed
+### Changed
+- **`docs/USAGE.md` is executed instead of transcribed, which closes the last
+  1.0 blocker.** The page claimed eighteen public names when there were twenty
+  and had spent three releases describing an API that had moved, and the script
+  that once generated it was never tracked, so it could not be regenerated.
+  Making the page run in place is the durable fix: `tests/test_docs_usage.py`
+  collects it as a doctest, so a stale line fails CI rather than misleading a
+  reader. Only five outputs were genuinely wrong; the other eight failures were
+  formatting, where the output touched the closing fence and doctest read the
+  fence as expected text. `ELLIPSIS` and `NORMALIZE_WHITESPACE` are enabled in
+  `pyproject.toml` so the page may still elide a temp path or wrap a long repr
+  for the reader. The version literal is gone from it: the version comes from
+  the git tag, so any literal is wrong the moment it is written.
 
+### Fixed
 - **THEORY §9 justified promoting `bfloat16` with a fact that is false of it,
   and §9 is the arbiter of the contract.** Both half formats were promoted to
   a `float32` accumulator citing `float16`'s finite maximum of 65504. Only
@@ -112,7 +110,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   accepting the half-precision promotion in one list and excluding it as out
   of scope eight lines below, had already been removed in 0.3.0 and never
   recorded. Checking that is what surfaced the `bfloat16` error above.
-
 
 ## [0.5.2] - 2026-09-03
 
@@ -774,7 +771,8 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) covers installation, the car-vs-track metaphor,
   validation lab.
 
-[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.3...HEAD
+[0.5.3]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.3
 [0.5.2]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.2
 [0.5.1]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.1
 [0.5.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.0
