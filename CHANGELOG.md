@@ -17,6 +17,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `docs/ADR/0004-precision-and-effort-parameters.md`, in `Proposed` status: names the
+  precision policy the library already applies in five places, and designs an `effort=`
+  preset under the constraint that it may change speed and memory but never a returned
+  value. Nothing is implemented; the ADR records the design, the effort per step and the
+  order. It amends ADR 0003 on one measured point, that the exactness predicate is a
+  property of the geometry and the accumulator rather than of the geometry alone.
 - `outreach/`, material for presenting the project publicly, in the shape the
   sibling projects use: a dated news source at the root and one subfolder per
   channel, with the rule that no channel text changes before the source does.

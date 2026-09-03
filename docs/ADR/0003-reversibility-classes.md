@@ -3,6 +3,7 @@
 - **Status:** Proposed
 - **Date:** 2026-08-04
 - **Deciders:** Leonardo Marques de Souza
+- **Amended by:** [ADR 0004](0004-precision-and-effort-parameters.md), which measures the exactness predicate below to be a property of the geometry **and the accumulator**, not of the geometry alone: with a `float64` accumulator, 76 of 76 sampled legal geometries are bit-exact where a `float32` accumulator gives 45, and those 45 are exactly the power-of-two ones.
 - **Relates to:** [ADR 0001](0001-patch-extraction-api.md), [`THEORY.md`](../THEORY.md) §0, §9, [`STUDIES/2026-08-04-patch-techniques.md`](../STUDIES/2026-08-04-patch-techniques.md) §4, §5
 
 ## Context
