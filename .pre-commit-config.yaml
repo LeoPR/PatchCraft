@@ -1,0 +1,45 @@
+# Runs the gates CI runs, before the commit rather than after it.
+#
+# Deliberately absent: `ruff-format`. This project has never used it and
+# adopting it here would reformat 36 of 65 files in a commit that changed no
+# behaviour. `ruff check` is the gate; formatting is not.
+#
+# `mypy` runs through the project environment rather than through a pre-commit
+# virtualenv, because it needs torch to resolve any annotation in `src/` and
+# installing torch into an isolated hook environment would cost hundreds of
+# megabytes per hook update.
+#
+# Install: see the "Run tests" section of CONTRIBUTING.md. On a machine with a
+# global `core.hooksPath`, `pre-commit install` writes to `.git/hooks/`, which
+# git then ignores, and the hook is silently inert. CONTRIBUTING says how to
+# check.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=512"]
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: ["--fix=no"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.5
+    hooks:
+      - id: ruff-check
+        args: ["src", "tests", "tools"]
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: mypy-strict
+        name: mypy --strict src
+        entry: mypy --strict src
+        language: system
+        types: [python]
+        pass_filenames: false

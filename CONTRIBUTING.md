@@ -13,6 +13,30 @@ does not install them:
 uv sync --locked --extra cache --extra dev
 ```
 
+The same gates run before a commit if you install the hooks:
+
+```
+uvx pre-commit install
+uvx pre-commit run --all-files     # once, to see the tree is clean
+```
+
+**Check that the hook is actually live**, because on some machines it is not.
+`pre-commit install` writes `.git/hooks/pre-commit`, and git ignores that file
+entirely when a global `core.hooksPath` is set:
+
+```
+git config --get core.hooksPath        # empty means the hook will run
+```
+
+If it prints a path, the hooks in it run instead of yours, and `pre-commit`
+is silently inert here. Either make that global hook delegate, or set
+`core.hooksPath` for this clone alone, remembering that doing so also disables
+whatever else the global hooks were doing.
+
+`ruff-format` is deliberately not among the hooks. This project has never used
+it, and adopting it would reformat 36 of 65 files in a commit that changed no
+behaviour.
+
 ```
 pytest
 pytest -m "not gpu"        # skip GPU-requiring tests
@@ -115,6 +139,8 @@ PatchCraft/
 ├── LICENSE                         MIT
 ├── .python-version                 3.13
 ├── .gitignore                      ignores archive/, venvs, caches, outputs
+├── .pre-commit-config.yaml         the CI gates, before the commit instead of after
+├── CITATION.cff                    citation metadata; GitHub reads it for the cite button
 ├── .github/workflows/
 │   ├── test.yml                    matrix CI on PRs/main, plus the accelerated job
 │   └── release.yml                 publishes to PyPI on vX.Y.Z tag push (Trusted Publishing)

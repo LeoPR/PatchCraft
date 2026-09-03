@@ -51,7 +51,7 @@ SDIST_TOP_FILES = {
     "PKG-INFO", "LICENSE", "CITATION.cff", "CHANGELOG.md", "CONTRIBUTING.md", "MANIFEST.in",
     "README.md", "README.pt-BR.md", "README.pypi.md",
     "pyproject.toml", "setup.py", "setup.cfg", "uv.lock", ".python-version",
-    ".gitignore",
+    ".gitignore", ".pre-commit-config.yaml",
 }
 _PRE_SEP = re.compile(r"[-_.]?(a|b|c|rc|alpha|beta|pre|preview|post|rev|r|dev)[-_.]?", re.I)
 

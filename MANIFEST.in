@@ -21,6 +21,7 @@ include LICENSE CITATION.cff
 include CHANGELOG.md CONTRIBUTING.md
 include README.md README.pt-BR.md README.pypi.md
 include pyproject.toml setup.py uv.lock .python-version
+include .pre-commit-config.yaml
 
 recursive-include src *.py
 include src/patchcraft/py.typed

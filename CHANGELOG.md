@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `.pre-commit-config.yaml`, running the gates CI runs. `ruff-format` is
+  deliberately absent: the project has never used it and adopting it would
+  reformat 36 of 65 files in a commit that changed no behaviour. Two things
+  surfaced while wiring it up. `docs/FOCO-1.0.md` had no trailing newline, now
+  fixed with the file's own CRLF rather than a bare LF, which is a mistake the
+  `mixed-line-ending` hook caught on the first attempt. And on a machine with a
+  global `core.hooksPath`, `pre-commit install` writes a hook git then ignores,
+  so it is inert without saying so; `CONTRIBUTING.md` gives the one command
+  that tells you which case you are in.
 - `CITATION.cff`, validated against Citation File Format 1.2.0, so GitHub shows
   the "Cite this repository" button and the metadata has one authoritative
   home. It ships in the sdist. The BibTeX entry in GUIDE section 9 stays,
