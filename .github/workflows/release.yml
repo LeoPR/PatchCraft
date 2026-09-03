@@ -102,12 +102,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macos-13 is the Intel runner; macos-latest is arm64.
+          # macos-15-intel is the Intel runner; macos-latest is arm64. It is
+          # NOT macos-13, which left the runner table: an unavailable label
+          # does not fail, it queues forever, and it queued for 20 minutes
+          # while every other cell finished in under one.
           - { os: windows-latest, name: win_amd64, archs: AMD64 }
           - { os: ubuntu-latest, name: manylinux_x86_64, archs: x86_64 }
           - { os: ubuntu-24.04-arm, name: manylinux_aarch64, archs: aarch64 }
           - { os: macos-latest, name: macosx_arm64, archs: arm64 }
-          - { os: macos-13, name: macosx_x86_64, archs: x86_64 }
+          - { os: macos-15-intel, name: macosx_x86_64, archs: x86_64 }
     steps:
       - uses: actions/checkout@v4
         with:
