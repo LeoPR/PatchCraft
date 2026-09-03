@@ -162,6 +162,7 @@ No external project has consumed it yet, and no CUDA path in this library has ev
 | Why the API looks like this | [docs/ADR/](docs/ADR) |
 | What changed in each release | [CHANGELOG.md](CHANGELOG.md) |
 | To clone, test and contribute | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| To find your way around the repository | [MAP.md](MAP.md) |
 
 ## License and citation
 

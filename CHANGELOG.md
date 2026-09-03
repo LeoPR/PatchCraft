@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `MAP.md`, one page of wayfinding: an annotated tree of the repository and a
+  want-to/go-to table. It follows the shape the sibling projects use, and it
+  opens by saying what the repository actually is, which is 20 public names
+  over eight modules plus the evidence that they behave as documented. Every
+  link and anchor in it is checked, and every path it names exists.
 - `.pre-commit-config.yaml`, running the gates CI runs. `ruff-format` is
   deliberately absent: the project has never used it and adopting it would
   reformat 36 of 65 files in a commit that changed no behaviour. Two things

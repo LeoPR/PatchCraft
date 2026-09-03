@@ -162,6 +162,7 @@ Nenhum projeto externo consumiu a biblioteca ainda, e nenhum caminho CUDA dela j
 | Por que a API tem essa cara | [docs/ADR/](docs/ADR) |
 | O que mudou em cada versão | [CHANGELOG.md](CHANGELOG.md) |
 | Como clonar, testar e contribuir | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Como se localizar no repositório | [MAP.md](MAP.md) |
 
 ## Licença e citação
 

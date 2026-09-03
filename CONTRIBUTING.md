@@ -135,6 +135,7 @@ PatchCraft/
 ├── README.pt-BR.md                 the same call page in Portuguese
 ├── README.pypi.md                  the PyPI page (long_description), links absolute
 ├── CONTRIBUTING.md                 this file
+├── MAP.md                          one-page wayfinding: the tree, and a want-to/go-to table
 ├── CHANGELOG.md                    Keep-a-Changelog format
 ├── LICENSE                         MIT
 ├── .python-version                 3.13

@@ -18,7 +18,7 @@
 # for anything unexpected, which is the reminder to come back here.
 
 include LICENSE CITATION.cff
-include CHANGELOG.md CONTRIBUTING.md
+include CHANGELOG.md CONTRIBUTING.md MAP.md
 include README.md README.pt-BR.md README.pypi.md
 include pyproject.toml setup.py uv.lock .python-version
 include .pre-commit-config.yaml
