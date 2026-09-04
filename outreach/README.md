@@ -19,7 +19,7 @@ source first.
 
 | Path | What it is |
 |---|---|
-| [`2026-09-03-lancamento.md`](2026-09-03-lancamento.md) / [`2026-09-03-release.en.md`](2026-09-03-release.en.md) | the current news source (PT / EN) |
+| [`2026-09-04-lancamento.md`](2026-09-04-lancamento.md) / [`2026-09-04-release.en.md`](2026-09-04-release.en.md) | the current news source (PT / EN) |
 | [`linkedin/`](linkedin/) | LinkedIn: `post.*` (short), `artigo.*` (long technical) |
 
 Portuguese is the canonical language here, unlike the rest of the project, because the
@@ -47,15 +47,20 @@ the whole benchmark table. The measurements live in `docs/PERFORMANCE.md` and th
   pure-torch path, and saying so keeps the discussion on the measurement rather than on
   whether the comparison was fair;
 - saying "faster" without a geometry, a machine and a torch version attached;
-- superlatives. The hook is the retraction, not the advantage.
+- superlatives. The hook is the silent defect, not the advantage and not the retraction.
 
-**The risk worth knowing.** These texts lead with the fact that the library published a
-false claim about its own numerics. That is the most interesting thing in them and also the
-easiest to read as a weakness. My view is that it works in the project's favour, because a
-reader who works with numerics recognises what it means for an author to measure a claim,
-find it wrong and publish the correction with the sweep behind it. But the choice is yours,
-and both texts stand without it: cut the retraction section and the piece becomes an
-ordinary "here is a small library" post, which is a weaker text and a safer one.
+**Where the retraction goes, and why it moved.** Until 2026-09-04 these texts opened with
+the fact that the library had published a false claim about its own numerics. That was the
+wrong place for it, for a reason that has nothing to do with courage: the reader has never
+seen the old claim. They have no before. So the retraction describes a state they did not
+witness, and the only thing it actually transmits on first contact is that the library got
+something wrong, delivered before the reader knows what the library is for.
+
+It is now inside the section on the falsification suite, where it earns its place as the
+answer to "why is that test shaped like that". The material did not get softer and no
+number left; it stopped being the headline. What leads instead is the silent defect, which
+is the one item in these texts that the reader may have in their own code at the moment
+they read it.
 
 **Do not soften the limits section.** It is short, it is true, and it is the part that makes
 the rest credible.

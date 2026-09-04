@@ -1,7 +1,7 @@
 <!-- l10n: doc_id=patchcraft-outreach-linkedin-artigo · lang=pt-BR · canonical -->
 **Português** · [English](artigo.en.md)
 
-# Recortar uma imagem em pedaços e remontar: o que eu errei escrevendo isso
+# Recortar uma imagem em pedaços e remontar sem perder pixel no caminho
 
 *Artigo técnico. Cada número aqui tem um comando que o reproduz no repositório. Onde a
 biblioteca não ajuda, o texto diz que não ajuda.*
@@ -10,8 +10,10 @@ biblioteca não ajuda, o texto diz que não ajuda.*
 
 Recortar uma imagem em patches, rodar alguma coisa em cada pedaço e remontar parece uma
 tarefa de vinte linhas. Eu escrevi essas vinte linhas mais vezes do que gostaria de admitir,
-e foi por isso que virou biblioteca. Este texto é sobre o que aprendi depois, que é mais
-interessante do que a biblioteca.
+e as reescrevi errado o suficiente para valer a pena escrever uma vez com teste em volta.
+
+Este texto começa pelos dois erros que essas vinte linhas cometem em silêncio, porque são
+a razão de a biblioteca existir e porque você pode estar com um deles agora.
 
 ## Dois defeitos que não avisam
 
@@ -28,19 +30,10 @@ Nenhum dos dois é difícil de corrigir. Os dois são fáceis de não perceber, 
 diferença que justifica escrever uma vez, com teste em volta, em vez de reescrever a cada
 projeto.
 
-## A parte em que eu estava errado
+## O contrato numérico, e por que ele é avaliável antes da chamada
 
 A biblioteca faz uma afirmação numérica: em que condições a ida e a volta devolvem o mesmo
-tensor, bit a bit. Ela estava escrita nas docstrings, na teoria, no guia e nas três capas.
-
-Estava errada.
-
-A versão antiga dizia que a exatidão dependia de a contagem máxima de sobreposição ser
-pequena, e que fora dessa condição o erro ficava em torno de 1 ULP. Medindo, o erro cresce
-com a contagem de cobertura de cada pixel e chega a 19 ULP em float32. A afirmação não era
-conservadora demais, era otimista demais, que é a direção ruim para um contrato.
-
-O contrato correto é mais simples e mais forte:
+tensor, bit a bit.
 
 > A ida e volta é exata se e somente se **todo** valor do mapa de cobertura for potência de
 > dois. Fora disso, o erro por pixel é limitado por `(k+1)·eps·|v|`, com `k` a contagem de
@@ -49,11 +42,17 @@ O contrato correto é mais simples e mais forte:
 A razão é uma só: dividir um float por uma potência de dois é a única divisão que nunca
 arredonda. `stride == patch_size` sempre satisfaz isso, porque toda contagem vale 1.
 
-Repare que a versão anterior olhava para o máximo do mapa, e a correta olha para todos os
-valores dele. Testei as duas contra uma varredura de geometrias retangulares: a regra do
-máximo erra 3936 de 14969 casos, e a regra da potência de dois erra 8. Os 8 erram na direção
-segura, prometendo menos do que entregam. Um contrato pode prometer de menos. Não pode
-prometer demais.
+O que faz disso um contrato, e não uma promessa, é a segunda metade: a condição se calcula a
+partir da geometria, sem rodar nada. Quem vai chamar sabe de antemão em que regime está.
+
+Essa formulação é a segunda. A primeira foi publicada, medida e encontrada falsa, e é por
+isso que as duas seções seguintes existem. A versão antiga dependia de a contagem máxima de
+sobreposição ser pequena, e dizia que fora dessa condição o erro ficava em torno de 1 ULP;
+medindo, ele cresce com a cobertura de cada pixel e chega a 19 ULP em float32. Ela olhava
+para o máximo do mapa, e a correta olha para todos os valores dele. Sobre uma varredura de
+geometrias retangulares, a regra do máximo erra 3936 de 14969 casos e a da potência de dois
+erra 8, todos na direção segura de prometer menos do que entregam. Um contrato pode prometer
+de menos. Não pode prometer demais.
 
 ## Por que a suíte não pegou
 
@@ -121,13 +120,14 @@ tensor que não esteja na CPU e devolve o trabalho ao torch.
 Três das cinco wheels aceleradas nunca tiveram o kernel executado em CI. As de macOS e
 aarch64 são construídas e têm o conteúdo conferido, e isso é tudo.
 
-E as duas afirmações que este texto corrige já estiveram publicadas como verdadeiras. É
+E a afirmação numérica desta página já esteve publicada em outra forma, como verdadeira. É
 razoável supor que exista uma terceira que eu ainda não medi.
 
 ## Prático
 
-Python 3.12 a 3.14, torch 2.6 ou mais novo, MIT, pré-1.0. São 1534 testes, com CI em
-{Ubuntu, Windows} x {3.12, 3.13, 3.14} e um job acelerado nos dois sistemas. A superfície
+Python 3.12 a 3.14, torch 2.6 ou mais novo, MIT, pré-1.0. São 1619 testes passando e 1656
+coletados, com CI em {Ubuntu, Windows} x {3.12, 3.13, 3.14} e um job acelerado nos dois
+sistemas. A superfície
 pública são 20 nomes, congelados por teste.
 
 ```

@@ -1,7 +1,7 @@
 <!-- l10n: doc_id=patchcraft-outreach-linkedin-artigo · lang=en · translation_of=artigo.pt-BR.md · source_lang=pt-BR -->
 **English** · [Português](artigo.pt-BR.md)
 
-# Cutting an image into pieces and putting it back: what I got wrong writing it
+# Cutting an image into pieces and putting it back without losing pixels on the way
 
 *Technical article. Every number here has a command that reproduces it in the repository.
 Where the library does not help, the text says it does not help.*
@@ -10,8 +10,10 @@ Where the library does not help, the text says it does not help.*
 
 Cutting an image into patches, running something on each piece and putting it back looks
 like a twenty-line job. I have written those twenty lines more times than I would like to
-admit, which is why it became a library. This text is about what I learned afterwards,
-which is more interesting than the library.
+admit, and got them wrong often enough to be worth writing once with tests around them.
+
+This text starts with the two mistakes those twenty lines make in silence, because they are
+why the library exists and because you may be carrying one of them right now.
 
 ## Two defects that never announce themselves
 
@@ -27,20 +29,10 @@ that partly black image without complaining.
 Neither is hard to fix. Both are easy to miss, and that difference is what justifies writing
 it once, with tests around it, rather than rewriting it per project.
 
-## The part where I was wrong
+## The numeric contract, and why it is evaluable before the call
 
 The library makes a numerical claim: under what conditions the round trip returns the same
-tensor, bit for bit. It was written in the docstrings, in the theory, in the guide and on
-all three cover pages.
-
-It was wrong.
-
-The old version said exactness depended on the maximum overlap count being small, and that
-outside that condition the error stayed around 1 ULP. Measured, the error grows with each
-pixel's coverage count and reaches 19 ULP in float32. The claim was not too conservative,
-it was too optimistic, which is the bad direction for a contract.
-
-The correct contract is both simpler and stronger:
+tensor, bit for bit.
 
 > The round trip is exact if and only if **every** value in the coverage count map is a
 > power of two. Outside that, the per-pixel error is bounded by `(k+1)·eps·|v|`, with `k`
@@ -48,6 +40,19 @@ The correct contract is both simpler and stronger:
 
 There is one reason for it: dividing a float by a power of two is the one division that
 never rounds. `stride == patch_size` always satisfies it, because every count is 1.
+
+What makes this a contract rather than a promise is the second half: the condition is
+computed from the geometry alone, without running anything. The caller knows which regime
+they are in beforehand.
+
+This wording is the second one. The first was published, measured and found false, and that
+is why the next two sections exist. The old version depended on the maximum overlap count
+being small, and said the error outside that condition stayed around 1 ULP; measured, it
+grows with each pixel's coverage and reaches 19 ULP in float32. It looked at the maximum of
+the map, where the correct one looks at every value of it. Over a sweep of rectangular
+geometries, the maximum rule mispredicts 3936 of 14969 cases and the power-of-two rule
+mispredicts 8, all of them in the safe direction of promising less than they deliver. A
+contract may under-promise. It may not over-promise.
 
 Notice that the previous version looked at the maximum of the map and the correct one looks
 at all of its values. I tested both against a sweep of rectangular geometries: the maximum
@@ -121,13 +126,14 @@ tensor that is not on the CPU and hands the work back to torch.
 Three of the five accelerated wheels have never had their kernel executed in CI. The macOS
 and aarch64 ones are built and have their contents checked, and that is all.
 
-And the two claims this text corrects were once published as true. It is reasonable to
-assume there is a third I have not measured yet.
+And the numerical claim on this page was once published in another form, as true. It is
+reasonable to assume there is a third I have not measured yet.
 
 ## Practical
 
-Python 3.12 to 3.14, torch 2.6 or newer, MIT, pre-1.0. There are 1534 tests, with CI on
-{Ubuntu, Windows} x {3.12, 3.13, 3.14} plus an accelerated job on both systems. The public
+Python 3.12 to 3.14, torch 2.6 or newer, MIT, pre-1.0. 1619 tests pass and 1656 are
+collected, with CI on {Ubuntu, Windows} x {3.12, 3.13, 3.14} plus an accelerated job on
+both systems. The public
 surface is 20 names, frozen by test.
 
 ```

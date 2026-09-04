@@ -19,7 +19,8 @@ antes.
 
 | Caminho | O que é |
 |---|---|
-| [`2026-09-03-lancamento.md`](2026-09-03-lancamento.md) / [`2026-09-03-release.en.md`](2026-09-03-release.en.md) | a fonte de notícia atual (PT / EN) |
+| [`2026-09-04-lancamento.md`](2026-09-04-lancamento.md) / [`2026-09-04-release.en.md`](2026-09-04-release.en.md) | a fonte de notícia atual (PT / EN) |
+| `2026-09-03-*.md` | a fonte anterior, registro da 0.5.1; datada, não se reescreve |
 | [`linkedin/`](linkedin/) | LinkedIn: `post.*` (curto), `artigo.*` (longo técnico) |
 
 Aqui o português é a língua canônica, ao contrário do resto do projeto, porque o público a
@@ -35,7 +36,7 @@ que estes textos se dirigem lê português primeiro. O inglês é a tradução.
 
 ## Antes de publicar
 
-**Todo número foi verificado**, e não estimado, e reconferido em 2026-09-03: os 3840 pixels
+**Todo número foi verificado**, e não estimado, e reconferido em 2026-09-04: os 3840 pixels
 deixados em zero, o reshape que preserva a forma e perde os pixels, as 126.736 geometrias
 enumeradas, os 3936 erros em 14969 da regra antiga contra 8 da nova, e a tabela inteira do
 benchmark. As medições estão em `docs/PERFORMANCE.md` e nas entradas `0.5.0` e `0.5.1` do
@@ -47,15 +48,19 @@ changelog.
   torch puro do PatchCraft, e dizer isso mantém a conversa sobre a medição em vez de sobre
   se a comparação foi justa;
 - dizer "mais rápido" sem uma geometria, uma máquina e uma versão de torch junto;
-- superlativo. O gancho é a retratação, não a vantagem.
+- superlativo. O gancho é o defeito silencioso, não a vantagem e não a retratação.
 
-**O risco que vale conhecer.** Estes textos abrem com o fato de que a biblioteca publicou
-uma afirmação falsa sobre a própria numérica. É a coisa mais interessante deles e também a
-mais fácil de ler como fraqueza. Eu acho que joga a favor do projeto, porque quem trabalha
-com numérica reconhece o que significa um autor medir uma afirmação, descobrir que estava
-errada e publicar a correção com a varredura por trás. Mas a escolha é sua, e os dois
-textos ficam de pé sem isso: corte a seção da retratação e a peça vira um "aqui está uma
-biblioteca pequena" comum, que é um texto mais fraco e mais seguro.
+**Onde a retratação fica, e por que ela mudou de lugar.** Até 2026-09-04 estes textos
+abriam pelo fato de a biblioteca ter publicado uma afirmação falsa sobre a própria numérica.
+Era o lugar errado, por um motivo que não tem nada a ver com coragem: o leitor nunca viu a
+afirmação antiga. Ele não tem o antes. Então a retratação descreve um estado que ele não
+presenciou, e a única coisa que ela de fato transmite no primeiro contato é que a biblioteca
+errou, entregue antes de o leitor saber para que a biblioteca serve.
+
+Ela agora fica dentro da seção da suíte de falsificação, onde ganha o lugar como resposta a
+"por que esse teste tem essa forma". O material não ficou mais macio e nenhum número saiu;
+ele deixou de ser manchete. Quem abre é o defeito silencioso, que é o único item destes
+textos que o leitor pode ter no código dele no momento em que lê.
 
 **Não suavize a seção de limites.** Ela é curta, é verdadeira, e é a parte que dá
 credibilidade ao resto.
