@@ -12,10 +12,15 @@
 > care, and hands over the link. The theory belongs in the article, the full account in
 > the repository.
 >
-> **Image to go with it:** [`coverage.en.png`](coverage.en.png), 1200x752, produced by
-> `python tools/make_outreach_figure.py`. It shows the three steps from the third
-> paragraph, with the coverage maps computed by torch's own `fold`/`unfold`. The SVG of
-> the same drawing sits beside it, for editing.
+> **Images to go with it**, both 1200x848, produced by
+> `python tools/make_outreach_figure.py`, each with its SVG beside it for editing. They
+> form a pair and go in this order:
+>
+> 1. [`coverage.en.png`](coverage.en.png), the problem. The three steps from the third
+>    paragraph, with the coverage map torch's own `fold`/`unfold` produces for each.
+> 2. [`patchcraft.en.png`](patchcraft.en.png), the answer. The same three geometries with
+>    what the library returns, the literal `ValueError` text for the one that does not
+>    close, and the ten stride widths `tilings` reports as legal for patch 32.
 
 ---
 

@@ -11,10 +11,15 @@
 > assunto, diz o que o `fold`/`unfold` faz, mostra rapidamente os casos que pedem cuidado,
 > e entrega o link. A teoria fica no artigo; a íntegra, no repositório.
 >
-> **Imagem para acompanhar:** [`cobertura.pt-BR.png`](cobertura.pt-BR.png), 1200x752,
-> gerada por `python tools/make_outreach_figure.py`. Ela mostra os três passos do terceiro
-> parágrafo, com os mapas de cobertura calculados pelo `fold`/`unfold` do torch. O SVG do
-> mesmo desenho está ao lado, para editar.
+> **Imagens para acompanhar**, 1200x848 as duas, geradas por
+> `python tools/make_outreach_figure.py`, com o SVG de cada uma ao lado para editar.
+> Formam um par e vão nessa ordem:
+>
+> 1. [`cobertura.pt-BR.png`](cobertura.pt-BR.png), o problema. Os três passos do terceiro
+>    parágrafo, com o mapa de cobertura que o `fold`/`unfold` do torch produz em cada um.
+> 2. [`patchcraft.pt-BR.png`](patchcraft.pt-BR.png), a resposta. As mesmas três geometrias
+>    com o que a biblioteca devolve, o texto literal do `ValueError` na que não fecha, e as
+>    dez larguras de passo que o `tilings` aponta como legais para patch 32.
 
 ---
 

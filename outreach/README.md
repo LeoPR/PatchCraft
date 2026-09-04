@@ -24,8 +24,14 @@ source first.
 
 The figures are not drawn by hand. `tools/make_outreach_figure.py` computes each panel with
 torch's own `fold` and `unfold` and writes the PNG for uploading plus the SVG of the same
-drawing for editing, one pair per language. Running the script regenerates everything, so a
-figure obeys the same rule the numbers in the text do: there is a command that reproduces it.
+drawing for editing. Running the script regenerates everything, so a figure obeys the same
+rule the numbers in the text do: there is a command that reproduces it.
+
+There are two per language, and they form a pair in the order `coverage` then `patchcraft`:
+the first is the problem, the coverage maps of three steps; the second is the answer, the
+same three geometries with what the library returns. In the second, the error text is what
+`reconstruct` actually raises and the list of usable steps is what `tilings` returns.
+Nothing there was written by hand for the figure.
 
 Portuguese is the canonical language here, unlike the rest of the project, because the
 audience these texts are aimed at reads Portuguese first. English is the translation.

@@ -25,8 +25,14 @@ antes.
 
 As figuras não são desenhadas à mão. O `tools/make_outreach_figure.py` calcula cada painel
 com o `fold` e o `unfold` do torch e escreve o PNG para subir mais o SVG do mesmo desenho
-para editar, um par por língua. Rodar o script regenera tudo, então a figura obedece à
-mesma regra dos números do texto: existe um comando que a reproduz.
+para editar. Rodar o script regenera tudo, então a figura obedece à mesma regra dos números
+do texto: existe um comando que a reproduz.
+
+São duas por língua, e formam um par na ordem `cobertura` depois `patchcraft`: a primeira é
+o problema, os mapas de cobertura de três passos; a segunda é a resposta, as mesmas três
+geometrias com o que a biblioteca devolve. Na segunda, o texto do erro é o que o
+`reconstruct` levanta de verdade, e a lista de passos utilizáveis é a que o `tilings`
+retorna. Nada ali foi escrito à mão para a figura.
 
 Aqui o português é a língua canônica, ao contrário do resto do projeto, porque o público a
 que estes textos se dirigem lê português primeiro. O inglês é a tradução.
