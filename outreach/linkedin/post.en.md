@@ -49,7 +49,10 @@ for the overlapping path.
 
 `pip install patchcraft`. Python 3.12 to 3.14, torch 2.6 or newer, MIT, pre-1.0.
 
-The measurements and the documentation are open:
+There is a longer article with the measurements and the figures, in Portuguese:
+👉 https://www.linkedin.com/pulse/patchcraft-desmontar-e-montar-imagens-leonardo-marques-de-souza-q0mvf/
+
+The code, the measurements and the documentation of what does not work:
 👉 https://github.com/LeoPR/PatchCraft
 
 #Python #PyTorch #OpenSource #ComputerVision #SoftwareEngineering

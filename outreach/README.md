@@ -22,6 +22,13 @@ source first.
 | [`2026-09-04-lancamento.md`](2026-09-04-lancamento.md) / [`2026-09-04-release.en.md`](2026-09-04-release.en.md) | the current news source (PT / EN) |
 | [`linkedin/`](linkedin/) | LinkedIn: `post.*` (short), `artigo.*` (long technical), `page.md` (illustrated) and the figures |
 
+**Published on 2026-09-04**, the Portuguese article is at
+<https://www.linkedin.com/pulse/patchcraft-desmontar-e-montar-imagens-leonardo-marques-de-souza-q0mvf/>.
+The published title is `PatchCraft: desmontar e montar imagens`, with the file's own title
+demoted to the subtitle, and that order is the better one: the project name first is what
+works in search and for someone scrolling, and the long sentence explains once the reader
+already knows what the subject is. Worth keeping as the rule for the next one.
+
 **To publish the article**, use `linkedin/artigo-linkedin.en.md`, the same article generated
 without the two things the LinkedIn editor cannot do: inline code and tables. The table
 becomes the `4-tabela` image, extracted from the article itself so the numbers cannot drift,

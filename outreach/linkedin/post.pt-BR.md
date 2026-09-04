@@ -48,7 +48,10 @@ caminho com sobreposição.
 
 `pip install patchcraft`. Python 3.12 a 3.14, torch 2.6 ou mais novo, MIT, pré-1.0.
 
-As medições e a documentação estão abertas:
+Escrevi um artigo com as medições, as figuras e os limites de onde isto se aplica hoje:
+👉 https://www.linkedin.com/pulse/patchcraft-desmontar-e-montar-imagens-leonardo-marques-de-souza-q0mvf/
+
+O código, as medições e a documentação do que não funciona:
 👉 https://github.com/LeoPR/PatchCraft
 
 #Python #PyTorch #OpenSource #VisaoComputacional #EngenhariaDeSoftware

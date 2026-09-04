@@ -23,6 +23,13 @@ antes.
 | `2026-09-03-*.md` | a fonte anterior, registro da 0.5.1; datada, não se reescreve |
 | [`linkedin/`](linkedin/) | LinkedIn: `post.*` (curto), `artigo.*` (longo técnico), `pagina.md` (ilustrada) e as figuras |
 
+**Publicado em 2026-09-04**, o artigo em português está em
+<https://www.linkedin.com/pulse/patchcraft-desmontar-e-montar-imagens-leonardo-marques-de-souza-q0mvf/>.
+O título publicado é `PatchCraft: desmontar e montar imagens`, com o título do arquivo
+virando subtítulo, e essa ordem é melhor: o nome do projeto primeiro rende na busca e em
+quem passa o olho, e a frase longa explica depois de a pessoa já saber do que se trata.
+Vale como regra para o próximo.
+
 **Para publicar o artigo**, use `linkedin/artigo-linkedin.pt-BR.md`, que é o mesmo artigo
 gerado sem as duas coisas que o editor do LinkedIn não faz: crase no meio da frase e tabela.
 A tabela vira a imagem `4-tabela`, extraída do próprio artigo para os números não divergirem,
