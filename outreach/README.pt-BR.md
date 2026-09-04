@@ -45,10 +45,8 @@ que estes textos se dirigem lê português primeiro. O inglês é a tradução.
 - **Post do LinkedIn** (`linkedin/post.*`): cerca de 3.000 caracteres, e só as duas ou três
   primeiras linhas aparecem antes do "ver mais". Essas linhas não podem conter jargão: o
   público do LinkedIn é largo, e uma primeira frase que só fala com quem já conhece o
-  assunto filtra em vez de convidar. O texto tem uma ideia que o atravessa do começo ao
-  fim, e cada parágrafo a avança: aqui, a falha silenciosa, da qual os dois defeitos são
-  instâncias e a retratação é a mesma falha uma camada acima. Contexto antes de jargão,
-  densidade sem tom professoral, e um fecho que volta à abertura. Hashtags no fim e sem acento,
+  assunto filtra em vez de convidar. Contexto antes de jargão, densidade sem tom
+  professoral, e um fecho que fecha em vez de parar. Hashtags no fim e sem acento,
   porque hashtag acentuada quebra a busca do LinkedIn.
 - **Artigo do LinkedIn** (`linkedin/artigo.*`): formato longo, com títulos e tabelas
   renderizando, bom para a versão que carrega os números. Termina com o link do repositório.
@@ -69,17 +67,21 @@ changelog.
 - dizer "mais rápido" sem uma geometria, uma máquina e uma versão de torch junto;
 - superlativo. O gancho é o defeito silencioso, não a vantagem e não a retratação.
 
-**Onde a retratação fica, e por que ela mudou de lugar.** Até 2026-09-04 estes textos
-abriam pelo fato de a biblioteca ter publicado uma afirmação falsa sobre a própria numérica.
-Era o lugar errado, por um motivo que não tem nada a ver com coragem: o leitor nunca viu a
-afirmação antiga. Ele não tem o antes. Então a retratação descreve um estado que ele não
-presenciou, e a única coisa que ela de fato transmite no primeiro contato é que a biblioteca
-errou, entregue antes de o leitor saber para que a biblioteca serve.
+**Superfície não carrega histórico de desenvolvimento.** Estes textos dizem o que a
+biblioteca faz hoje. O caminho até aqui, incluindo a afirmação numérica que foi publicada,
+medida e retratada, fica no CHANGELOG, no ADR 0003 e nos estudos datados, que é onde alguém
+vai procurar de propósito.
 
-Ela agora fica dentro da seção da suíte de falsificação, onde ganha o lugar como resposta a
-"por que esse teste tem essa forma". O material não ficou mais macio e nenhum número saiu;
-ele deixou de ser manchete. Quem abre é o defeito silencioso, que é o único item destes
-textos que o leitor pode ter no código dele no momento em que lê.
+A razão é do leitor, não de coragem: quem chega agora nunca viu a versão antiga. Contar a
+correção não descreve nada que a pessoa tenha presenciado, e a única coisa que transmite no
+primeiro contato é que a biblioteca errou, antes de ela saber para que a biblioteca serve.
+Pior quando o defeito relatado era nos testes, porque aí o leitor termina sem saber nada
+sobre o produto e com a dúvida de se a suíte funciona.
+
+O teste disso, para o próximo texto: cada parágrafo tem que responder "o que isso me diz
+sobre usar a biblioteca?". Uma medição antiga pode ficar, desde que entre como argumento
+para a regra atual e não como relato do que houve. A comparação entre a regra do máximo e a
+da potência de dois é o exemplo: ela explica por que o contrato é o que é.
 
 **Não suavize a seção de limites.** Ela é curta, é verdadeira, e é a parte que dá
 credibilidade ao resto.

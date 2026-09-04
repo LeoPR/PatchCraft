@@ -45,12 +45,9 @@ audience these texts are aimed at reads Portuguese first. English is the transla
 - **LinkedIn post** (`linkedin/post.*`): about 3,000 characters, and only the first two or
   three lines show before "see more". Those lines cannot carry jargon: the LinkedIn
   audience is wide, and a first sentence that only speaks to people who already know the
-  subject filters instead of inviting. The text has one idea that runs from start to
-  finish, and every paragraph advances it: here, silent failure, of which the two defects
-  are instances and the retraction is the same failure one layer up. Context before jargon,
-  density without a lecturing tone, and a close that returns to the opening. Hashtags at the
-  end, without
-  accents, because accented hashtags break LinkedIn search.
+  subject filters instead of inviting. Context before jargon, density without a lecturing
+  tone, and a close that closes rather than stops. Hashtags at the end, without accents,
+  because accented hashtags break LinkedIn search.
 - **LinkedIn article** (`linkedin/artigo.*`): long form, headings and tables render, good
   for the version that carries the numbers. End with the repository link.
 
@@ -70,18 +67,23 @@ the whole benchmark table. The measurements live in `docs/PERFORMANCE.md` and th
 - saying "faster" without a geometry, a machine and a torch version attached;
 - superlatives. The hook is the silent defect, not the advantage and not the retraction.
 
-**Where the retraction goes, and why it moved.** Until 2026-09-04 these texts opened with
-the fact that the library had published a false claim about its own numerics. That was the
-wrong place for it, for a reason that has nothing to do with courage: the reader has never
-seen the old claim. They have no before. So the retraction describes a state they did not
-witness, and the only thing it actually transmits on first contact is that the library got
-something wrong, delivered before the reader knows what the library is for.
+**The surface carries no development history.** These texts say what the library does
+today. The road here, including the numerical claim that was published, measured and
+retracted, lives in the CHANGELOG, in ADR 0003 and in the dated studies, which is where
+someone goes on purpose to look for it.
 
-It is now inside the section on the falsification suite, where it earns its place as the
-answer to "why is that test shaped like that". The material did not get softer and no
-number left; it stopped being the headline. What leads instead is the silent defect, which
-is the one item in these texts that the reader may have in their own code at the moment
-they read it.
+The reason is about the reader, not about courage: whoever arrives now never saw the old
+version. Telling them about the correction describes nothing they witnessed, and the only
+thing it conveys on first contact is that the library got something wrong, before they know
+what the library is for. Worse when the defect being reported was in the tests, because
+then the reader finishes knowing nothing about the product and wondering whether the suite
+works.
+
+The test of this, for the next text: every paragraph has to answer "what does this tell me
+about using the library?". An old measurement may stay, as long as it enters as an argument
+for the current rule rather than as an account of what happened. The comparison between the
+maximum rule and the power-of-two rule is the example: it explains why the contract is what
+it is.
 
 **Do not soften the limits section.** It is short, it is true, and it is the part that makes
 the rest credible.

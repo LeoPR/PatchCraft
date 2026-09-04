@@ -8,11 +8,9 @@ Regra: nenhum texto de canal muda sem esta fonte mudar antes. Nada aqui é estim
 cada número tem um comando que o reproduz.
 
 Substitui [`2026-09-03-lancamento.md`](2026-09-03-lancamento.md), que fica como registro
-da 0.5.1. **A ordem das manchetes mudou, e essa é a diferença principal entre as duas.**
-A fonte anterior abria pela retratação. Quem lê o anúncio nunca viu a afirmação antiga,
-então a retratação não descreve nada que a pessoa tenha presenciado: ela só transmite que
-a biblioteca errou, antes de dizer para que ela serve. O defeito silencioso vem primeiro
-agora, porque é o único item da lista que o leitor pode ter no código dele neste momento.
+da 0.5.1 e não se reescreve. **A diferença entre as duas é que esta só traz o que a
+biblioteca faz hoje.** O histórico de desenvolvimento saiu, e continua onde pertence: no
+CHANGELOG, no ADR 0003 e nos estudos datados.
 
 ## O que a biblioteca é
 
@@ -51,7 +49,7 @@ arredonda. `stride == patch_size` sempre satisfaz, porque toda contagem vale 1.
 O que torna isso um contrato e não uma promessa é a segunda metade: a condição se calcula
 a partir da geometria, sem rodar nada. Quem vai chamar sabe de antemão em que regime está.
 
-### 3. A suíte cujo trabalho é derrubar o contrato
+### 3. Como o contrato é verificado
 
 Um teste com a função explícita de falsificar a afirmação acima. Ele enumera as 126.736
 geometrias legais do espaço **sem consultar o predicado**, para que o enumerador e a coisa
@@ -59,17 +57,17 @@ testada sejam independentes, e procura os dois contraexemplos: um caso dentro da
 não seja exato, e um caso fora que seja exato por sorte. A varredura completa fica atrás de
 `PATCHCRAFT_SWEEP_FULL=1`.
 
-Ele existe nessa forma por um motivo concreto, e aqui é onde a retratação entra, como
-procedência e não como manchete: uma versão anterior deste contrato foi publicada, medida,
-encontrada falsa e corrigida em público. Dizia que o erro fora da regra ficava em torno de
-1 ULP, quando chega a 19 ULP em float32. A regra antiga olhava o máximo do mapa de
-cobertura; sobre 14.969 geometrias retangulares ela erra 3.936 casos, e a regra da potência
-de dois erra 8, todos na direção segura de prometer menos do que entrega.
+**Por que a regra é essa e não uma mais frouxa.** A alternativa óbvia seria só manter a
+sobreposição máxima pequena. Sobre 14.969 geometrias retangulares, a regra do máximo erra
+3.936 casos; a da potência de dois erra 8, e os 8 erram prometendo menos do que entregam.
+Um contrato pode prometer de menos, e não pode prometer demais, porque fora da regra o erro
+cresce com a cobertura e chega a 19 ULP em float32 sem nada sinalizar.
 
-E a suíte não pegou o erro porque os testes montavam as imagens com `torch.arange`. Dado
-inteiro fecha a ida e volta exato onde dado aleatório não fecha. O teste passava porque
-estava fazendo a pergunta errada com muita confiança, e essa é a parte transferível para
-qualquer outro projeto.
+**Um detalhe do gerador de dados**, transferível para quem testar patches em qualquer
+lugar: as imagens são ruído de mantissa cheia sorteado direto no dtype alvo, nunca uma
+rampa inteira. Dado inteiro, num float, fecha a ida e volta exato em geometrias onde dado
+aleatório não fecha, então uma suíte construída com `torch.arange` passa sem verificar
+nada.
 
 ### 4. O acelerador nativo, e por que o ganho não é contagem de núcleos
 
