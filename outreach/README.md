@@ -20,7 +20,12 @@ source first.
 | Path | What it is |
 |---|---|
 | [`2026-09-04-lancamento.md`](2026-09-04-lancamento.md) / [`2026-09-04-release.en.md`](2026-09-04-release.en.md) | the current news source (PT / EN) |
-| [`linkedin/`](linkedin/) | LinkedIn: `post.*` (short), `artigo.*` (long technical) |
+| [`linkedin/`](linkedin/) | LinkedIn: `post.*` (short), `artigo.*` (long technical), and the figures |
+
+The figures are not drawn by hand. `tools/make_outreach_figure.py` computes each panel with
+torch's own `fold` and `unfold` and writes the PNG for uploading plus the SVG of the same
+drawing for editing, one pair per language. Running the script regenerates everything, so a
+figure obeys the same rule the numbers in the text do: there is a command that reproduces it.
 
 Portuguese is the canonical language here, unlike the rest of the project, because the
 audience these texts are aimed at reads Portuguese first. English is the translation.

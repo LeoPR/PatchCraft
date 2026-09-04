@@ -21,7 +21,12 @@ antes.
 |---|---|
 | [`2026-09-04-lancamento.md`](2026-09-04-lancamento.md) / [`2026-09-04-release.en.md`](2026-09-04-release.en.md) | a fonte de notícia atual (PT / EN) |
 | `2026-09-03-*.md` | a fonte anterior, registro da 0.5.1; datada, não se reescreve |
-| [`linkedin/`](linkedin/) | LinkedIn: `post.*` (curto), `artigo.*` (longo técnico) |
+| [`linkedin/`](linkedin/) | LinkedIn: `post.*` (curto), `artigo.*` (longo técnico), e as figuras |
+
+As figuras não são desenhadas à mão. O `tools/make_outreach_figure.py` calcula cada painel
+com o `fold` e o `unfold` do torch e escreve o PNG para subir mais o SVG do mesmo desenho
+para editar, um par por língua. Rodar o script regenera tudo, então a figura obedece à
+mesma regra dos números do texto: existe um comando que a reproduz.
 
 Aqui o português é a língua canônica, ao contrário do resto do projeto, porque o público a
 que estes textos se dirigem lê português primeiro. O inglês é a tradução.
