@@ -22,20 +22,37 @@ widening internally gives back neither the memory nor the time.
 Every number this decision rests on is measured and lives in
 [`STUDIES/2026-09-03-precision-measurements.md`](../STUDIES/2026-09-03-precision-measurements.md).
 
-## Decision
+## What is decided here, and what is not
 
+This document mixes two kinds of statement, and separating them is the point of the
+rescoping.
 
-Three fine-grained knobs, each naming one existing policy, plus one preset under a hard
-constraint. **Nothing here is implemented. This ADR records the design and the order.**
+**The names are not a decision.** Which identifier a parameter carries is a fact about the
+ecosystem the caller already has imported, not a preference of this project. Choosing one by
+taste would be guessing, and a guess on a frozen surface is permanent. So the names below are
+**determined by precedent** and verified against the installed libraries, not proposed for
+approval. Section 1 states them; there is nothing to approve there.
 
-### The knobs
+**What is a decision is whether to add any of them, and when.** Three of the steps in the
+effort table put a new keyword on a surface that 1.0 freezes, and each is a permanent
+commitment. The order also embeds a real choice, which section 4 states plainly rather than
+burying. That is what this ADR is asking, and it is asking it later rather than now.
 
+**Nothing here is implemented.**
+
+## 1. The names, determined by precedent
 
 | Name | Type | Values | Default | Governs | Borrowed from |
 |---|---|---|---|---|---|
 | `accum_dtype` | `torch.dtype \| None`, keyword-only | any dtype at least as wide as the input, of the same kind | `None`, meaning today's rule | where the numerator and count map live in `reconstruct` and `stitch`. Does not change the return dtype. | `numpy.sum(dtype=)`, documented as "the accumulator in which the elements are summed", and `torch.sum(dtype=)` |
 | `rounding_mode` | `Literal["trunc","floor","nearest_even"] \| None` | as listed | `None` | the single rounding event on `stitch`'s final divide, once `stitch` accepts integers. Not offered on `reconstruct`. | `torch.div(rounding_mode=)`, same name, two of three values; the tie-break vocabulary from stdlib `decimal` |
 | `antialias` | `bool \| None` | `True`, `False`, `None` | `None`, meaning whatever the backend does today | whether the torch `resize` backend prefilters before downsampling | `torch.nn.functional.interpolate` and `torchvision.transforms.v2.functional.resize`, verbatim |
+
+Verified against the installed libraries on 2026-09-03, so "borrowed" is a checked fact:
+`numpy.sum` and `torch.sum` both take `dtype=`, `torch.div` takes `rounding_mode=` and
+documents exactly `None`, `"trunc"` and `"floor"`, and both `torch.nn.functional.interpolate`
+and `torchvision.transforms.v2.functional.resize` take `antialias=`. `numpy.ufunc.accumulate`
+also exists, which is the collision that rules out `accumulate=`.
 
 `None` is a sentinel on every one of them, never a spelled-out default. Without it a preset
 cannot distinguish "unspecified" from "explicitly asked for the current value", and the
@@ -50,8 +67,7 @@ same `v`, so the sum is exactly `k*v` and `k*v // k == v` for every `k`, in ever
 `reconstruct` does not round. A knob there would advertise a decision the function does not
 make.
 
-### The preset
-
+## 2. The preset, and the one constraint that makes it safe
 
 `effort: Literal["balanced", "fast"] | None = None`, keyword-only, on `reconstruct`,
 `stitch`, `extract` and `Patchify.__init__`. `Patchify` is the reason it exists: inside a
@@ -95,8 +111,7 @@ order is irrelevant.** After x265, which promises exactly that in prose. Not mut
 exclusion: `torch.compile` raises on preset-plus-options and the bill is visible, because
 `max-autotune-no-cudagraphs` exists as a whole extra public name purely to work around it.
 
-### Amendment to ADR 0003
-
+## 3. Amendment to ADR 0003
 
 **The exactness predicate is a property of the geometry *and the accumulator*, not of the
 geometry alone.** ADR 0003 states the round trip is bit-exact iff every coverage count is a
@@ -114,11 +129,9 @@ which is a stronger guarantee than the library currently advertises.
 are not powers of two, for the reason given above: the sum is exactly `k*v`. Gating an
 integer path on the float predicate would be a category error.
 
-## Consequences
-
+## 4. The decision being asked: whether, and when
 
 ### Effort, each step independently shippable
-
 
 | Step | Size | Breaks frozen surface | When |
 |---|---|---|---|
@@ -132,8 +145,12 @@ integer path on the float predicate would be a category error.
 | 6. `effort=` and `effort_options()` | 1 day of code, 3+ of contract | yes, signature, four sites | after 1.0, after 1 and 2 have shipped |
 | 7. Bool support, where the inverse is a majority vote | 3 to 4 days | it is a 21st public name | 1.1 at the earliest, a function rather than a parameter |
 
-### Order
+### Order, and the choice inside it
 
+The order below embeds a real alternative, and it is the substance of what is being asked.
+It recommends freezing 1.0 at 20 names with no new parameters, and only then waiting for a
+user to appear. **The defensible opposite is to add the knobs before the freeze**, because
+after it each one costs a minor release. Neither is settled by any measurement in the study.
 
 Record the design. Fix the three defects as bugs on their own merits, because folding them
 into a `precise` tier would sell the absence of a bug as a quality level. **Step A landed on
@@ -148,7 +165,6 @@ only if one appears do the knobs follow, and the preset last of all.
 
 ### What not to do
 
-
 - Do not gate the integer path on the power-of-two predicate. It is a float predicate.
 - Do not let any preset change a returned value.
 - Do not ship step 1 without step 2. `extract` accepting `uint8` while `reconstruct` rejects
@@ -160,7 +176,6 @@ only if one appears do the knobs follow, and the preset last of all.
   zero-argument signature.
 
 ### Open questions, for the decision this ADR defers
-
 
 1. Does `accum_dtype` change only where the sum lives, or also what comes back?
    `reconstruct` casts back to `patches.dtype`; `metrics` returns `float64` unconditionally.

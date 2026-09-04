@@ -8,6 +8,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- ADR 0004 now separates what is determined from what is being asked. The
+  owner's point settled it: naming is a fact about the ecosystem the caller
+  already imports, not a preference of this project, and choosing by taste
+  would be a guess made permanent by a frozen surface. So the three names are
+  stated as determined by precedent, verified on 2026-09-03 against the
+  installed libraries: `numpy.sum` and `torch.sum` take `dtype=`, `torch.div`
+  takes `rounding_mode=` and documents exactly `None`, `"trunc"` and `"floor"`,
+  both `interpolate` and torchvision's `resize` take `antialias=`, and
+  `numpy.ufunc.accumulate` exists, which is the collision that rules out
+  `accumulate=`. What the ADR asks is narrowed to whether to add any of them
+  and when, with the alternative inside the recommended order stated rather
+  than buried: freeze 1.0 first and wait for a user, or add the knobs before
+  the freeze because afterwards each costs a minor.
 - `docs/STUDIES/2026-09-03-precision-measurements.md`. ADR 0004 was carrying
   its own evidence, which made a 227-line document that read as a lab notebook
   where a decision was wanted. The measurements moved here, the ADR kept the
