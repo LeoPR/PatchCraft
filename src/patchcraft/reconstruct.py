@@ -40,8 +40,11 @@ def reconstruct(
     Outside the rule the per-pixel error is bounded by ``(k + 1) * eps * |v|``,
     where ``k`` is that pixel's coverage count, so the error grows with the
     overlap, so there is no fixed ULP figure (measured up to 19 ULP at k=81 in
-    float32). Widening the dtype does not help, because the deciding axis is
-    the geometry rather than the precision.
+    float32). Widening the *input* dtype does not help, because the deciding
+    axis is the geometry rather than the precision; widening the accumulator
+    does (a float64 accumulator is exact on every legal geometry measured, a
+    float32 one only on the power-of-two ones), and the accumulator is not a
+    parameter today. See THEORY section 9.2 and ADR 0004.
 
     Rejects (per §9.2): ``dilation != 1``; ``stride > patch_size`` in any axis
     (partial coverage would synthesize pixel values, which PatchCraft refuses);

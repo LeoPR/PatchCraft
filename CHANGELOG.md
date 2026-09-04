@@ -94,6 +94,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **ADR 0004 step 0 is done**, which the ADR names as the only item that must
+  land before 1.0: the `reconstruct` docstring's "widening the dtype does not
+  help" now says *input* dtype, and that widening the accumulator does help,
+  with the measurement. It was the one live site; earlier counts of seven
+  included historical and study files that are not edited.
+- **`WeightKind` is declared an open set** in the GUIDE symbol table and in
+  CONTRIBUTING's versioning policy. The choice was made and pinned by test long
+  ago; what did not exist was the sentence a consumer reads before writing an
+  exhaustive `match`.
+- Four one-line corrections found by the 2026-09-04 audit: FOCO §1 counted
+  "four things" over a list of five; MAP and CONTRIBUTING said ten invariants
+  after I10 made it eleven; AGENTS.md claimed both rescoped ADRs "shrank by a
+  third" when ADR 0003 grew; and `tilings`' docstring promised an ordering by
+  `(patch_size, stride)` that the function does not produce. The docstring now
+  states the measured order (patch size ascending, exact tile first within each)
+  rather than the function changing, because nothing depends on the order and
+  a change would be behaviour.
 - **ADR 0003 is accepted, after being rescoped to what it actually governs.**
   Its first draft decided two things at once: a rule about how an exactness
   claim is written, and a three-letter vocabulary plus naming policy for six

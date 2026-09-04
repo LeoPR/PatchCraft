@@ -120,7 +120,9 @@ def tilings(
     Returns
     -------
     list[TilingSpec]
-        Sorted by ``(patch_size[0], stride[0])`` ascending. Always at least
+        Sorted by ``patch_size[0]`` ascending; within one patch size the exact
+        tile (``stride == patch_size``) comes first, then strides ``1..p-1``
+        ascending. Always at least
         one entry: ``(p=min(H, W), s=p)`` when image is square.
 
     Raises

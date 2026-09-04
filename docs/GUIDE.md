@@ -748,7 +748,7 @@ The table below is the one place that records what each call allocates, which is
 | `Patchify` | the same geometry, at construction | a callable returning `(L, C, ph, pw)` | nothing beyond the geometry, no cache and no buffer |
 | `reconstruct` | `patches`, `image_shape`, `stride`, `dilation` | `(C, H, W)` | one image plus one count map |
 | `stitch` | the same, plus keyword-only `weight=`, default `"uniform"` | `(C, H, W)` | one image, one weight map, one `(ph, pw)` kernel, and on the pure-torch path a full weighted copy of the patch stack, which is the largest of the four and which the accelerated path skips |
-| `WeightKind` | nothing, it is a `Literal` type alias | `"uniform"`, `"hann"` or `"gaussian"` | nothing |
+| `WeightKind` | nothing, it is a `Literal` type alias | `"uniform"`, `"hann"` or `"gaussian"` today; the set is **open**, so a new member may arrive in a `0.y` / minor release and an exhaustive `match` on it should carry a fallback | nothing |
 | `pair` | `lr_image`, `hr_image`, `lr_patch_size`, `scale_factor`, `stride` | `PatchPair` | both patch stacks plus `L` metadata records |
 | `PatchPair`, `PatchMeta` | frozen dataclasses | patches and grid coordinates | metadata stays on CPU, always |
 | `num_patches` | `image_shape`, `patch_size`, `stride` | `(num_h, num_w)` | nothing, it is arithmetic |

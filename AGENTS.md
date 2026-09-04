@@ -109,7 +109,7 @@ and for the same reason, which is that writing down everything you learned feels
 like thoroughness and reads as a lab notebook. ADR 0003 mixed a rule with a
 vocabulary for six transforms that never shipped; ADR 0004 mixed the names,
 which precedent decides, with whether to spend a frozen surface on them, which
-only the owner decides. Both shrank by a third once separated, and both were
+only the owner decides. Both came out clearer once separated, and both were
 caught by the owner asking what the document was for.
 
 ### I11. Do not invent what already exists

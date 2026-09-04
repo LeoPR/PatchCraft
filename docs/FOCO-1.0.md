@@ -29,7 +29,7 @@ Scripts: `...\scratchpad\final_check.py`, `final_check2.py`, rodados com `.venv/
 
 ## 1. O que 1.0 congela
 
-Quatro coisas, e apenas essas quatro.
+Cinco coisas, e apenas essas cinco.
 
 1. **Os 19 nomes e suas assinaturas.** Nome, ordem dos parâmetros, keyword-only, tipo de retorno. Inclui os campos e a ordem dos quatro carregadores de dados (`TilingSpec`, `PairedTilingSpec`, `PatchPair`, `PatchMeta`). Duas correções de fato que o texto precisa refletir: `tilings` e `paired_tilings` retornam `list`, não tupla, e `scale_factor` retorna `int | None`.
 2. **`WeightKind` é um `Literal`, não um carregador de dados** (`stitch.py:26`). Congelá-lo fecha o conjunto de janelas: acrescentar uma quarta depois de 1.0 muda um tipo público e quebra qualquer consumidor com verificação de exaustividade sob `mypy --strict`. Isso não é crescimento aditivo por keyword-only. A política de compatibilidade tem que declarar o conjunto **aberto** (novas janelas são adição compatível, o consumidor não pode assumir exaustividade) ou **fechado**. Recomendo aberto, escrito.

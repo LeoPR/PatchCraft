@@ -15,7 +15,7 @@ PatchCraft/
 │   README.pt-BR.md ........... the same page in Portuguese
 │   README.pypi.md ............ the PyPI page; links absolute, because relative ones break there
 ├── MAP.md .................... this file
-├── AGENTS.md ................. the rules, agent-agnostic and canonical; ten invariants
+├── AGENTS.md ................. the rules, agent-agnostic and canonical; eleven invariants
 ├── CLAUDE.md ................. thin; points at AGENTS.md and holds tool-specific notes
 ├── STATUS.md ................. the snapshot: where things are now, and who each item waits on
 ├── CHANGELOG.md .............. every release, each change with the measurement behind it

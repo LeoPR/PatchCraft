@@ -22,12 +22,15 @@ builds the Rust kernel and runs the whole suite through it.
 
 ## What is in flight
 
-**An unreleased set of five entries**, the nine before them having shipped as
-0.5.3. One is a fix, `Cache` not expanding a leading `~`; the rest are the
-acceptance and rescoping of ADR 0003, the restructuring of ADR 0004 and the
-study split out of it, and invariant I10, which is the rule those two
-rescopings produced. Under the versioning rule none of it moves a contract, so
-it is a `0.5.4`.
+**An unreleased set of eight entries**, the nine before them having shipped as
+0.5.3. Two are fixes: `Cache` not expanding a leading `~`, and `resize`
+raising a raw torch error on 13 of the 25 resample-mode x integer-dtype
+combinations, which also uncovered and fixed a silent `int32` truncation older
+than it. The rest are documentation: ADR 0003 accepted, ADR 0004 restructured
+and its step 0 done, invariant I10, `WeightKind` declared open where a
+consumer reads it, and four one-line corrections from the 2026-09-04 audit.
+The two fixes stop the implementation violating a contract that did not move,
+so this is a `0.5.4`.
 
 ## What is blocked, and on whom
 

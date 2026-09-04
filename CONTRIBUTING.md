@@ -136,7 +136,7 @@ PatchCraft/
 ├── README.pypi.md                  the PyPI page (long_description), links absolute
 ├── CONTRIBUTING.md                 this file
 ├── MAP.md                          one-page wayfinding: the tree, and a want-to/go-to table
-├── AGENTS.md                       the canonical rules; ten invariants, each earned
+├── AGENTS.md                       the canonical rules; eleven invariants, each earned
 ├── CLAUDE.md                       thin pointer to AGENTS.md plus tool-specific notes
 ├── STATUS.md                       the snapshot; what is in flight and what waits on whom
 ├── CHANGELOG.md                    Keep-a-Changelog format
@@ -254,6 +254,11 @@ is the announcement that something may break, and a `0.y.z` bump is the
 promise that nothing does.
 
 That fixes what each digit is for here:
+
+One consequence worth stating on its own, because a consumer cannot infer it
+from a `Literal`: **`WeightKind` is an open set.** Adding a member is additive
+and lands in a `0.y` before 1.0 and a minor after it; removing or renaming one
+is a break. Code that matches on it exhaustively should keep a fallback arm.
 
 The question that decides it is not "did a returned value change". A bug fix
 changes returned values by definition, and if that forced a `0.Y.0` then a
