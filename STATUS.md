@@ -6,12 +6,13 @@
 
 ## Where the project is
 
-**0.5.2 is on PyPI**, published through Trusted Publishing on a tag push: one
+**0.5.3 is on PyPI**, published through Trusted Publishing on a tag push: one
 sdist, five `cp312-abi3` platform wheels carrying the Rust accelerator, and one
 universal `py3-none-any` wheel. There is no extra to enable and no second
 package.
 
-**1557 tests pass**, plus two full-sweep gates behind `PATCHCRAFT_SWEEP_FULL=1`
+**1560 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
+deselected, plus two full-sweep gates behind `PATCHCRAFT_SWEEP_FULL=1`
 that enumerate all 126,736 legal geometries. CI is green on
 {Ubuntu, Windows} x {3.12, 3.13, 3.14} on the pure path, plus a two-OS job that
 builds the Rust kernel and runs the whole suite through it.
@@ -21,11 +22,12 @@ builds the Rust kernel and runs the whole suite through it.
 
 ## What is in flight
 
-**An unreleased set of nine entries.** All of it documentation, tooling and
-packaging: the `bfloat16` correction that closed B5, `CITATION.cff`,
-`.pre-commit-config.yaml`, `MAP.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, the
-issue forms, `AGENTS.md` and this file. Under the versioning rule none of it
-moves a contract, so it is a `0.5.3`.
+**An unreleased set of five entries**, the nine before them having shipped as
+0.5.3. One is a fix, `Cache` not expanding a leading `~`; the rest are the
+acceptance and rescoping of ADR 0003, the restructuring of ADR 0004 and the
+study split out of it, and invariant I10, which is the rule those two
+rescopings produced. Under the versioning rule none of it moves a contract, so
+it is a `0.5.4`.
 
 ## What is blocked, and on whom
 
@@ -37,16 +39,24 @@ legal geometries a `float32` accumulator is exact on 45, precisely the
 power-of-two ones, and a `float64` accumulator on all 76. The three-letter
 vocabulary its first draft proposed is deferred until a transform needs it.
 
-**ADR 0004 is `Proposed` by design.** It records the precision and effort
-parameters and was written to be decided later. Step A of its plan shipped in
-0.5.2. **Waits on the owner, deliberately.**
+**ADR 0004 is `Proposed`, and asks nothing.** It records the precision and
+effort parameters as a design that is not built; the status reflects that none
+of it is implemented, not that a decision is pending. The one question it
+appeared to hold, whether to add the knobs before the 1.0 freeze or after,
+rested on the premise that adding one afterwards is expensive. It is not: each
+is a keyword-only argument with a default, so adding one is additive and is a
+minor release, and `reconstruct` has no positional-only parameters to make the
+order matter. Step A of its plan shipped in 0.5.2. **Waits on nobody.**
 
-**One decision surfaced by the security audit.** `Cache` validates its
-`namespace` only as a non-empty string and joins it into a path, so
-`Cache(root, namespace="../elsewhere")` writes outside `root`. THEORY §9.5
-never constrained the argument's shape, so tightening it changes behaviour on a
-public constructor rather than fixing a violation. Documented as a trust
-boundary in [SECURITY.md](SECURITY.md). **Waits on the owner.**
+**The `Cache` path question is closed, and it was not a decision.** It was
+posed as whether to reject a `namespace` containing `..`. The answer is no:
+inventing path security is not this library's job, and no library in the
+ecosystem does it, verified against `torch.hub.set_dir`, pytest's cacheprovider
+and pip. Asking the question found the real defect, which was the opposite
+shape: `Cache` was missing the one thing all of them do, so `Cache("~/cache")`
+created a directory literally named `~`. Fixed in the unreleased set, with no
+validation added. [SECURITY.md](SECURITY.md) and THEORY §9.5 now say the path
+is the caller's and that only `~` is expanded.
 
 ## 1.0 blockers
 
@@ -54,8 +64,10 @@ boundary in [SECURITY.md](SECURITY.md). **Waits on the owner.**
 executable rather than by regenerating it: every `>>>` on the page now runs in
 the suite, so it cannot go stale silently again.
 
-What that leaves before 1.0 is not a blocker but a decision, and it is ADR 0003,
-above.
+**And that leaves no decision before 1.0 either.** ADR 0003 is accepted and
+ADR 0004 asks nothing, so what stands between here and 1.0 is the project's own
+gate rather than an open question: an external consumer, which it does not have
+yet.
 
 | | |
 |---|---|

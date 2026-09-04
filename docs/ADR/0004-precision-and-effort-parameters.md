@@ -33,10 +33,15 @@ taste would be guessing, and a guess on a frozen surface is permanent. So the na
 **determined by precedent** and verified against the installed libraries, not proposed for
 approval. Section 1 states them; there is nothing to approve there.
 
-**What is a decision is whether to add any of them, and when.** Three of the steps in the
-effort table put a new keyword on a surface that 1.0 freezes, and each is a permanent
-commitment. The order also embeds a real choice, which section 4 states plainly rather than
-burying. That is what this ADR is asking, and it is asking it later rather than now.
+**What remains is not a choice either, and section 4 says why.** The order looked like it
+posed one, add the knobs before the 1.0 freeze or after, but that rested on a false premise:
+a keyword-only argument with a default is additive, so adding one after 1.0 costs a minor
+release and nothing else. With the premise checked and gone, YAGNI, the absence of any
+external consumer, and Strata §9's default verdict all point the same way.
+
+**So this ADR asks nothing.** It records a design that is not built, the names precedent
+determines, the constraint that would make a preset safe, and the order. It stays `Proposed`
+because none of it is implemented, not because a decision is pending.
 
 **Nothing here is implemented.**
 
@@ -129,7 +134,11 @@ which is a stronger guarantee than the library currently advertises.
 are not powers of two, for the reason given above: the sum is exactly `k*v`. Gating an
 integer path on the float predicate would be a category error.
 
-## 4. The decision being asked: whether, and when
+## 4. The order, and why it is not a decision
+
+Every knob in the table below is marked "after 1.0", and was already marked so before this
+section was rewritten. The question of *whether and when*, which an earlier revision put in
+this heading, was posed on top of a table that had already answered it.
 
 ### Effort, each step independently shippable
 
@@ -147,10 +156,20 @@ integer path on the float predicate would be a category error.
 
 ### Order, and the choice inside it
 
-The order below embeds a real alternative, and it is the substance of what is being asked.
-It recommends freezing 1.0 at 20 names with no new parameters, and only then waiting for a
-user to appear. **The defensible opposite is to add the knobs before the freeze**, because
-after it each one costs a minor release. Neither is settled by any measurement in the study.
+The order below was written as if it embedded a real alternative, adding the knobs before
+the freeze rather than after. **It does not, and the reason is worth recording because it is
+the kind of false choice this document was rescoped to remove.**
+
+That alternative rested on the premise that a knob added after 1.0 is expensive. It is not.
+Every one of these is a keyword-only argument with a default, so every existing call site
+keeps working and SemVer makes it a minor release rather than a major one. Checked against
+the real signature: `reconstruct` has no positional-only parameters, so nothing about adding
+one later is harder than adding it now.
+
+With that premise gone, both sides point the same way. Nobody has asked for any of these,
+there is no external consumer, and Strata §9 gives no change as the default verdict of an
+honest evaluation unless a defect pays for the fix. So: freeze first, add later if a caller
+appears, and the later costs one minor release per knob.
 
 Record the design. Fix the three defects as bugs on their own merits, because folding them
 into a `precise` tier would sell the absence of a bug as a quality level. **Step A landed on

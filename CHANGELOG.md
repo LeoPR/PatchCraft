@@ -34,19 +34,29 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   document was for. `docs/ADR/0001` and `0002` were checked and do not have the
   problem: they are context, decision, consequences and alternatives, at a
   hundred lines each.
-- ADR 0004 now separates what is determined from what is being asked. The
-  owner's point settled it: naming is a fact about the ecosystem the caller
-  already imports, not a preference of this project, and choosing by taste
-  would be a guess made permanent by a frozen surface. So the three names are
-  stated as determined by precedent, verified on 2026-09-03 against the
-  installed libraries: `numpy.sum` and `torch.sum` take `dtype=`, `torch.div`
-  takes `rounding_mode=` and documents exactly `None`, `"trunc"` and `"floor"`,
-  both `interpolate` and torchvision's `resize` take `antialias=`, and
-  `numpy.ufunc.accumulate` exists, which is the collision that rules out
-  `accumulate=`. What the ADR asks is narrowed to whether to add any of them
-  and when, with the alternative inside the recommended order stated rather
-  than buried: freeze 1.0 first and wait for a user, or add the knobs before
-  the freeze because afterwards each costs a minor.
+- **ADR 0004 separates what is determined from what is chosen, and what is left
+  is nothing.** The owner's point settled the first half: naming is a fact about
+  the ecosystem the caller already imports, not a preference of this project,
+  and choosing by taste would be a guess made permanent by a frozen surface. So
+  the three names are stated as determined by precedent, verified on 2026-09-03
+  against the installed libraries: `numpy.sum` and `torch.sum` take `dtype=`,
+  `torch.div` takes `rounding_mode=` and documents exactly `None`, `"trunc"` and
+  `"floor"`, both `interpolate` and torchvision's `resize` take `antialias=`,
+  and `numpy.ufunc.accumulate` exists, which is the collision that rules out
+  `accumulate=`.
+
+  That narrowing left one apparent question, whether to add the knobs before the
+  1.0 freeze or after, on the stated ground that afterwards each costs a minor
+  release. Applying I10 to it dissolved it, because the premise is false: every
+  one of these is a keyword-only argument with a default, so adding one is
+  additive and can never be a major, and `reconstruct` has no positional-only
+  parameters to make the order matter. Nothing about adding one later is harder
+  than adding one now. With the premise gone, YAGNI, the absence of any external
+  consumer and Strata §9's default verdict all point the same way, and the ADR's
+  own table had already marked every knob "after 1.0" before the question was
+  written on top of it. The document now records a design that is not built, and
+  stays `Proposed` because none of it is implemented rather than because
+  anything is pending.
 - `docs/STUDIES/2026-09-03-precision-measurements.md`. ADR 0004 was carrying
   its own evidence, which made a 227-line document that read as a lab notebook
   where a decision was wanted. The measurements moved here, the ADR kept the
