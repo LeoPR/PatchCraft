@@ -25,8 +25,7 @@ reshape intuitivo para `(L, C, ph, pw)` entrega a forma certa com os pixels erra
 `assert` de shape passa, o treino roda, a perda desce um pouco menos, e não há mensagem de
 erro em lugar nenhum.
 
-O segundo mora no passo entre um patch e o próximo, o `stride`, que é como ele aparece na
-documentação do torch e é o termo que uso daqui em diante. Numa imagem de 128 por 128, com patch 32 e stride 20, a grade
+O segundo mora no stride, a distância que a janela anda de um patch para o próximo. Numa imagem de 128 por 128, com patch 32 e stride 20, a grade
 para no pixel 112 e deixa 3840 dos 16384 pixels em zero. Um `fold` escrito à mão devolve
 essa imagem parcialmente preta sem reclamar.
 

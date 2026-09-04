@@ -11,14 +11,13 @@
 > assunto, diz o que o `fold`/`unfold` faz, mostra rapidamente os casos que pedem cuidado,
 > e entrega o link. A teoria fica no artigo; a íntegra, no repositório.
 >
->**Imagem para acompanhar:** [`figuras/pt-BR/pagina.png`](figuras/pt-BR/pagina.png), uma
-> página só, com o SVG ao lado para editar, gerada por
-> `python tools/make_outreach_figures.py`. Nada nela é desenhado: os painéis são os tensores
-> que cada caminho devolve, e o dígito é do MNIST.
+>**Imagens para acompanhar**, em [`figuras/pt-BR/`](figuras/pt-BR/), com o SVG de cada uma
+> ao lado para editar, geradas por `python tools/make_outreach_figures.py`. Nada é desenhado:
+> cada painel é o tensor que aquele caminho devolve, e o dígito é do MNIST.
 >
-> Três blocos, na ordem do texto: o recorte e o reshape que embaralha; a comparação por
-> passo entre o `fold`/`unfold` à mão e o PatchCraft, com o mapa de erro explicado; e o caso
-> típico, um dígito 28x28 com patch 7, onde a geometria fecha exata.
+> A página com o texto que liga as três está em [`pagina.md`](pagina.md), separada das
+> imagens de propósito, para você montar na ordem que quiser:
+> `1-recorte.png`, `2-stride.png` e `3-mnist.png`.
 
 ---
 
@@ -31,9 +30,8 @@ fim. Esses pedaços se chamam patches.
 
 O PyTorch traz duas funções para isso. O `unfold` percorre a imagem com uma janela e
 devolve todas as janelas empilhadas. O `fold` faz o caminho inverso, somando cada janela de
-volta na posição de origem. A distância que a janela anda entre um patch e o próximo chama-se
-passo, ou `stride`, que é o nome que você vai ver em toda documentação. Para recortes
-simples, com a janela andando um tamanho inteiro por vez, as duas funções resolvem.
+volta na posição de origem. A distância que a janela anda de um patch para o próximo é o
+stride. Para recortes simples, com o stride igual ao tamanho da janela, as duas resolvem.
 
 Fora desse caso aparecem detalhes que pedem cuidado. O `unfold` devolve os patches num
 formato empacotado, e reorganizá-lo para a ordem intuitiva embaralha os pixels sem mudar a

@@ -33,14 +33,19 @@ devolvem de fato, o erro no canto do painel aproximado é a diferença real ampl
 ficar visível, o texto da recusa é o que o `reconstruct` levanta, e os mapas de cobertura
 saem do `fold` e do `unfold` do torch sobre um tensor de uns.
 
-É uma página só por língua, `pagina.png` e `page.png`, em três blocos: o recorte e o
-reshape que embaralha, a comparação por passo entre o `fold`/`unfold` escrito à mão e o
-PatchCraft, e o caso típico num dígito do MNIST. Onde os dois caminhos dão o mesmo tensor, a
-página diz isso em vez de repetir a imagem, porque a diferença ali não é a conta, é o
-contrato.
+São três por língua, numeradas na ordem de leitura: `1-recorte` mostra o `unfold` e o
+reshape que embaralha, `2-stride` compara o `fold` escrito à mão com o PatchCraft em quatro
+strides, e `3-mnist` mostra o caso típico num dígito.
 
-O MNIST é baixado na primeira execução, e a página degrada sem ele: o terceiro bloco some e
-o script avisa, em vez de falhar.
+**O texto fica fora das imagens**, em `linkedin/pagina.md` e `linkedin/page.md`, que é a
+página montada com as figuras vinculadas. Assim o texto é editável e as imagens podem ser
+reordenadas ou usadas soltas, em vez de estarem gravadas nos pixels.
+
+Onde os dois caminhos dão o mesmo tensor, a figura diz isso uma vez para as duas colunas em
+vez de repetir a explicação, porque a diferença ali não é a conta, é o contrato.
+
+O MNIST é baixado na primeira execução, e as figuras degradam sem ele: a terceira some, a
+página sai sem aquela seção, e o script avisa em vez de falhar.
 
 Aqui o português é a língua canônica, ao contrário do resto do projeto, porque o público a
 que estes textos se dirigem lê português primeiro. O inglês é a tradução.

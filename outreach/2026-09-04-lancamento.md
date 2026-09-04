@@ -30,7 +30,7 @@ O primeiro é o reshape. O `F.unfold` devolve `(1, C*ph*pw, L)`, e o reshape int
 `(L, C, ph, pw)` entrega a forma certa com os pixels errados. O `assert` de shape passa, o
 treino roda, a perda desce um pouco menos, e nada reclama.
 
-O segundo é o passo entre um patch e o próximo, o `stride`, quando ele não cobre a imagem. Numa imagem 128 por 128 com patch 32 e stride
+O segundo é o stride, a distância de um patch para o próximo, quando ele não cobre a imagem. Numa imagem 128 por 128 com patch 32 e stride
 20, a grade para no pixel 112 e deixa 3840 dos 16384 pixels em zero. Um `fold` escrito à
 mão devolve essa imagem parcialmente preta sem erro.
 

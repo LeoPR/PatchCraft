@@ -12,14 +12,13 @@
 > care, and hands over the link. The theory belongs in the article, the full account in
 > the repository.
 >
->**Image to go with it:** [`figuras/en/page.png`](figuras/en/page.png), a single page, with
-> the SVG beside it for editing, produced by `python tools/make_outreach_figures.py`. None of
-> it is drawn: the panels are the tensors each path returns, and the digit is from MNIST.
+>**Images to go with it**, in [`figuras/en/`](figuras/en/), each with its SVG beside it for
+> editing, produced by `python tools/make_outreach_figures.py`. Nothing is drawn: each panel
+> is the tensor that path returns, and the digit is from MNIST.
 >
-> Three blocks, in the order of the text: the cut and the reshape that scrambles; the
-> per-stride comparison between hand-written `fold`/`unfold` and PatchCraft, with the error
-> map explained; and the typical case, a 28x28 digit at patch 7, where the geometry closes
-> exactly.
+> The page whose prose ties the three together is [`page.md`](page.md), kept separate from
+> the images on purpose so they can be assembled in any order:
+> `1-cut.png`, `2-stride.png` and `3-mnist.png`.
 
 ---
 

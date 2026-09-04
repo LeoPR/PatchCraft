@@ -33,14 +33,20 @@ None of them is an illustration. The image panels are the tensors `extract` and
 difference amplified until it is visible, the refusal text is what `reconstruct` raises, and
 the coverage maps come from torch's own fold and unfold over a tensor of ones.
 
-It is one page per language, `pagina.png` and `page.png`, in three blocks: the cut and the
-reshape that scrambles, the per-stride comparison between hand-written `fold`/`unfold` and
-PatchCraft, and the typical case on an MNIST digit. Where both paths return the same tensor
-the page says so instead of repeating the image, because the difference there is not the
-arithmetic, it is the contract.
+There are three per language, numbered in reading order: `1-cut` shows `unfold` and the
+reshape that scrambles, `2-stride` compares the hand-written `fold` with PatchCraft across
+four strides, and `3-mnist` shows the typical case on a digit.
 
-MNIST is downloaded on first use, and the page degrades without it: the third block is
-dropped and the script says so rather than failing.
+**The prose lives outside the images**, in `linkedin/pagina.md` and `linkedin/page.md`, the
+assembled page with the figures linked. That keeps the text editable and lets the images be
+reordered or used on their own, rather than being baked into the pixels.
+
+Where both paths return the same tensor the figure says so once for the two columns instead
+of repeating the explanation, because the difference there is not the arithmetic, it is the
+contract.
+
+MNIST is downloaded on first use, and the figures degrade without it: the third one is
+dropped, the page ships without that section, and the script says so rather than failing.
 
 Portuguese is the canonical language here, unlike the rest of the project, because the
 audience these texts are aimed at reads Portuguese first. English is the translation.
