@@ -49,8 +49,18 @@ antes e declarar o regime, não somar diferente.
 
 No stride 12 a volta é aproximada. As contagens de cobertura dele incluem 3, 6 e 9, e dividir
 um float por um número que não é potência de dois arredonda. O mapa do erro desenha exatamente
-a grade dessas regiões, que são as âmbar da primeira linha. O erro é de 1,2e-7, é pequeno, e é
-declarado no contrato em vez de descoberto depois.
+a grade dessas regiões, que são as âmbar da primeira linha.
+
+A figura marca esse caso como `≈ 0` porque é o que ele significa na prática, e aqui vai o
+número com a medida ao lado. O erro máximo é `1,1921e-07`, o que dá 151,5 dB de PSNR quando
+40 dB já costuma ser tratado como visualmente sem perda. Ele cabe 32.897 vezes dentro de um
+degrau de 8 bits, então convertendo as duas imagens para `uint8` elas saem bit a bit
+idênticas; só em 16 bits a diferença aparece.
+
+Nada disso torna o erro irrelevante, e é por isso que o contrato o declara: quem soma
+milhares de patches, ou encadeia a operação, acumula. O ponto é que "aproximada" aqui
+significa abaixo do que qualquer olho ou arquivo de 8 bits registra, e não uma imagem
+degradada.
 
 No stride 20 os dois caminhos divergem de verdade. A grade termina no pixel 112 de 128, e o
 `fold` escrito à mão devolve uma imagem com 3840 pixels em zero, sem levantar nada. O

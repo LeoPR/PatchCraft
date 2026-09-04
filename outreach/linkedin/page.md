@@ -50,8 +50,18 @@ the regime, not summing differently.
 
 At stride 12 the round trip is approximate. Its coverage counts include 3, 6 and 9, and
 dividing a float by anything that is not a power of two rounds. The error map draws exactly
-the grid of those regions, which are the amber ones in the first row. The error is 1.2e-7, it
-is small, and it is declared in the contract rather than discovered afterwards.
+the grid of those regions, which are the amber ones in the first row.
+
+The figure marks that case `≈ 0` because that is what it means in practice, and here is the
+number with a measure beside it. The maximum error is `1.1921e-07`, which is 151.5 dB of
+PSNR, where 40 dB is already treated as visually lossless. It fits 32,897 times inside one
+8-bit step, so converting both images to `uint8` makes them bit for bit identical; the
+difference only appears at 16 bits.
+
+None of that makes the error irrelevant, which is why the contract declares it: anyone
+summing thousands of patches, or chaining the operation, accumulates. The point is that
+"approximate" here means below anything an eye or an 8-bit file records, not a degraded
+image.
 
 At stride 20 the two paths genuinely diverge. The grid ends at pixel 112 of 128, and the
 hand-written `fold` returns an image with 3840 pixels at zero, raising nothing. `reconstruct`

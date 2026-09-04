@@ -676,13 +676,26 @@ def fig_stride(lang: str) -> None:
     back = reconstruct(
         extract(img, patch_size=PATCH, stride=st), image_shape=(3, SIZE, SIZE), stride=st
     )
-    heat, _peak = error_map(back, img)
+    heat, peak = error_map(back, img)
+    # A bare 1.2e-7 says nothing about whether it matters, so the caption
+    # carries the amplification that makes it visible and the fact that both
+    # images are bit-identical once they are 8 bits, which is measured here.
+    gain = f"{1.0 / peak / 1e6:.1f}".replace(".", s["decimal"])
+    eight_bit_same = torch.equal(
+        (img * 255).round().to(torch.uint8), (back * 255).round().to(torch.uint8)
+    )
+    assert eight_bit_same
     x = xs[2]
     c.box((x, craft_y), (x + panel, craft_y + panel), fill=BAND, outline=RULE)
     c.text((x + 18, craft_y + 16), s["diff_title"], 15, INK, bold=True)
-    inner = 148
-    c.framed(heat, (x + (panel - inner) // 2, craft_y + 44), inner)
-    c.text((x + 18, craft_y + 204), s["diff_cap"], 13, MUTED)
+    inner = 108
+    c.framed(heat, (x + (panel - inner) // 2, craft_y + 40), inner)
+    c.block(
+        (x + 18, craft_y + 158),
+        [line.format(gain) for line in s["diff_cap"]],
+        size=13,
+        lead=17,
+    )
     c.text((x, craft_y + panel + 12), s["caps"][1], 16, WARN, bold=True)
 
     x = xs[3]
@@ -763,7 +776,12 @@ FIG = {
             "de cobertura é potência de dois.",
         ],
         "diff_title": "o erro, ampliado",
-        "diff_cap": "diferença real x 8,4 milhões",
+        "decimal": ",",
+        "diff_cap": [
+            "a diferença real, ampliada",
+            "{} milhões de vezes.",
+            "Em 8 bits, idênticas.",
+        ],
         "refusal": [
             "*ValueError",
             "partial coverage",
@@ -773,7 +791,7 @@ FIG = {
             "O fold à mão devolve,",
             "e sem avisar.",
         ],
-        "caps": ("exatas, erro 0", "aproximada, 1.2e-7", "recusada"),
+        "caps": ("exatas, erro 0", "aproximada, ≈ 0", "recusada"),
         "mnist_cap": ("o dígito, 28x28", "patch 7, stride 7: 4x4 = 16", "o patch de índice 5"),
         "md_mnist": """
 ## 3. Numa imagem típica
@@ -838,8 +856,18 @@ antes e declarar o regime, não somar diferente.
 
 No stride 12 a volta é aproximada. As contagens de cobertura dele incluem 3, 6 e 9, e dividir
 um float por um número que não é potência de dois arredonda. O mapa do erro desenha exatamente
-a grade dessas regiões, que são as âmbar da primeira linha. O erro é de 1,2e-7, é pequeno, e é
-declarado no contrato em vez de descoberto depois.
+a grade dessas regiões, que são as âmbar da primeira linha.
+
+A figura marca esse caso como `≈ 0` porque é o que ele significa na prática, e aqui vai o
+número com a medida ao lado. O erro máximo é `1,1921e-07`, o que dá 151,5 dB de PSNR quando
+40 dB já costuma ser tratado como visualmente sem perda. Ele cabe 32.897 vezes dentro de um
+degrau de 8 bits, então convertendo as duas imagens para `uint8` elas saem bit a bit
+idênticas; só em 16 bits a diferença aparece.
+
+Nada disso torna o erro irrelevante, e é por isso que o contrato o declara: quem soma
+milhares de patches, ou encadeia a operação, acumula. O ponto é que "aproximada" aqui
+significa abaixo do que qualquer olho ou arquivo de 8 bits registra, e não uma imagem
+degradada.
 
 No stride 20 os dois caminhos divergem de verdade. A grade termina no pixel 112 de 128, e o
 `fold` escrito à mão devolve uma imagem com 3840 pixels em zero, sem levantar nada. O
@@ -896,7 +924,12 @@ Repositório: https://github.com/LeoPR/PatchCraft
             "every coverage count is a power of two.",
         ],
         "diff_title": "the error, amplified",
-        "diff_cap": "real difference x 8.4 million",
+        "decimal": ".",
+        "diff_cap": [
+            "the real difference,",
+            "amplified {} million times.",
+            "At 8 bits, identical.",
+        ],
         "refusal": [
             "*ValueError",
             "partial coverage",
@@ -906,7 +939,7 @@ Repositório: https://github.com/LeoPR/PatchCraft
             "The hand-written fold",
             "returns one, silently.",
         ],
-        "caps": ("exact, error 0", "approximate, 1.2e-7", "refused"),
+        "caps": ("exact, error 0", "approximate, ≈ 0", "refused"),
         "mnist_cap": ("the digit, 28x28", "patch 7, stride 7: 4x4 = 16", "the patch at index 5"),
         "md_mnist": """
 ## 3. On a typical image
@@ -972,8 +1005,18 @@ the regime, not summing differently.
 
 At stride 12 the round trip is approximate. Its coverage counts include 3, 6 and 9, and
 dividing a float by anything that is not a power of two rounds. The error map draws exactly
-the grid of those regions, which are the amber ones in the first row. The error is 1.2e-7, it
-is small, and it is declared in the contract rather than discovered afterwards.
+the grid of those regions, which are the amber ones in the first row.
+
+The figure marks that case `≈ 0` because that is what it means in practice, and here is the
+number with a measure beside it. The maximum error is `1.1921e-07`, which is 151.5 dB of
+PSNR, where 40 dB is already treated as visually lossless. It fits 32,897 times inside one
+8-bit step, so converting both images to `uint8` makes them bit for bit identical; the
+difference only appears at 16 bits.
+
+None of that makes the error irrelevant, which is why the contract declares it: anyone
+summing thousands of patches, or chaining the operation, accumulates. The point is that
+"approximate" here means below anything an eye or an 8-bit file records, not a degraded
+image.
 
 At stride 20 the two paths genuinely diverge. The grid ends at pixel 112 of 128, and the
 hand-written `fold` returns an image with 3840 pixels at zero, raising nothing. `reconstruct`
