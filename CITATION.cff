@@ -6,8 +6,8 @@ authors:
   - given-names: Leonardo
     family-names: Marques de Souza
     email: leonardo.marques.souza@gmail.com
-version: "0.5.3"
-date-released: "2026-09-03"
+version: "0.5.4"
+date-released: "2026-09-04"
 repository-code: "https://github.com/LeoPR/PatchCraft"
 license: MIT
 abstract: >

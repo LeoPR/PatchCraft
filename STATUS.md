@@ -1,4 +1,4 @@
-# STATUS: 2026-09-03
+# STATUS: 2026-09-04
 
 > The snapshot. Where things are *right now*, and who each open item waits on.
 > Where things **are** is [MAP.md](MAP.md); the rules are [AGENTS.md](AGENTS.md);
@@ -6,7 +6,7 @@
 
 ## Where the project is
 
-**0.5.3 is on PyPI**, published through Trusted Publishing on a tag push: one
+**0.5.4 is on PyPI**, published through Trusted Publishing on a tag push: one
 sdist, five `cp312-abi3` platform wheels carrying the Rust accelerator, and one
 universal `py3-none-any` wheel. There is no extra to enable and no second
 package.
@@ -22,15 +22,13 @@ builds the Rust kernel and runs the whole suite through it.
 
 ## What is in flight
 
-**An unreleased set of eight entries**, the nine before them having shipped as
-0.5.3. Two are fixes: `Cache` not expanding a leading `~`, and `resize`
+**Nothing unreleased.** 0.5.4 closed the nine entries that had accumulated
+since 0.5.3: two fixes, `Cache` not expanding a leading `~` and `resize`
 raising a raw torch error on 13 of the 25 resample-mode x integer-dtype
-combinations, which also uncovered and fixed a silent `int32` truncation older
-than it. The rest are documentation: ADR 0003 accepted, ADR 0004 restructured
-and its step 0 done, invariant I10, `WeightKind` declared open where a
-consumer reads it, and four one-line corrections from the 2026-09-04 audit.
-The two fixes stop the implementation violating a contract that did not move,
-so this is a `0.5.4`.
+combinations, the second of which also uncovered a silent `int32` truncation
+older than itself. The other seven are documentation, and they close every
+item the 2026-09-04 audit left open, including ADR 0004's step 0 and the
+`WeightKind` compatibility sentence.
 
 ## What is blocked, and on whom
 

@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-09-04
+
 ### Fixed
 
 - **13 of the 25 resample-mode x integer-dtype combinations raised a raw torch
@@ -893,7 +895,8 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) covers installation, the car-vs-track metaphor,
   validation lab.
 
-[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.3...HEAD
+[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.4...HEAD
+[0.5.4]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.4
 [0.5.3]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.3
 [0.5.2]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.2
 [0.5.1]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.1
