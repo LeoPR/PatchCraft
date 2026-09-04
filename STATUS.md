@@ -29,14 +29,13 @@ moves a contract, so it is a `0.5.3`.
 
 ## What is blocked, and on whom
 
-**ADR 0003 is still `Proposed`, and it is the item with the most held behind
-it.** It defines the reversibility contract, and
-[FOCO-1.0.md](docs/FOCO-1.0.md) makes accepting it part of the 1.0 freeze. It
-now carries a measured amendment waiting to be read: the exactness predicate is
-a property of the geometry **and the accumulator**, not of the geometry alone.
-Over 76 legal geometries a `float32` accumulator is exact on 45, precisely the
-power-of-two ones, and a `float64` accumulator is exact on all 76. **Waits on
-the owner.**
+**ADR 0003 is accepted**, rescoped first. It ratifies one rule, that an
+exactness claim is declared per regime with a condition the caller can evaluate
+before calling, and it carries the accumulator amendment in its body: the
+predicate is a property of the geometry **and** the accumulator, since over 76
+legal geometries a `float32` accumulator is exact on 45, precisely the
+power-of-two ones, and a `float64` accumulator on all 76. The three-letter
+vocabulary its first draft proposed is deferred until a transform needs it.
 
 **ADR 0004 is `Proposed` by design.** It records the precision and effort
 parameters and was written to be decided later. Step A of its plan shipped in

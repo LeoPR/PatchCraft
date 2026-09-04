@@ -6,6 +6,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **ADR 0003 is accepted, after being rescoped to what it actually governs.**
+  Its first draft decided two things at once: a rule about how an exactness
+  claim is written, and a three-letter vocabulary plus naming policy for six
+  transforms that were under consideration. A month later the rule was
+  governing the code and the vocabulary had been used nowhere: `R1`, `R2` and
+  `R3` appear in no docstring, no contract section and no page a reader opens,
+  and none of rotation, flips, padding, DCT, quantization or dithering shipped.
+  What is now accepted is the rule, that an exactness claim is declared per
+  regime with a condition the caller can evaluate before calling, with the four
+  measured regime axes in its body including the accumulator amendment from
+  ADR 0004. The vocabulary is deferred until the first transform that needs it.
+  The document also states plainly what its title had obscured: inexact
+  operations are not restricted, since `resize` and windowed `stitch` are
+  exactly what users come for, and what is forbidden is a docstring implying an
+  exactness the operation does not have.
+
+
 ## [0.5.3] - 2026-09-03
 
 ### Added

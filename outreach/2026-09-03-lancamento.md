@@ -90,5 +90,5 @@ PATCHCRAFT_SWEEP_FULL=1 pytest tests/test_exactness.py
 
 - Repositório: https://github.com/LeoPR/PatchCraft
 - Desempenho, com máquina, versões e data: `docs/PERFORMANCE.md`
-- O contrato de exatidão: `docs/ADR/0003-reversibility-classes.md`, ainda em `Proposed`
+- O contrato de exatidão: `docs/ADR/0003-reversibility-classes.md`, aceito em 2026-09-03
 - O que o projeto se recusa a afirmar: `docs/GUIDE.md` seção 8

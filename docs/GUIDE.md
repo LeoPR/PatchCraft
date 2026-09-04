@@ -443,7 +443,7 @@ The maximum is 4, the geometry is legal and fully covering, and the round trip s
 
 ### Where this rule is written down
 
-[ADR 0003](ADR/0003-reversibility-classes.md) is where the exactness boundary is being turned into contract, and it is still **Proposed** (acceptance is part of the 1.0 freeze). The wording itself has since landed across the project, where docstrings, SCOPE, THEORY, USAGE and the READMEs all came to state the count-map rule with the per-pixel bound, closing blocker B1 in [FOCO-1.0.md](FOCO-1.0.md).
+[ADR 0003](ADR/0003-reversibility-classes.md) is where the exactness boundary is written as contract, **accepted on 2026-09-03**. What it ratifies is one rule, that an exactness claim is declared per regime with a condition the caller can evaluate before calling, and not a vocabulary: the three-letter classes its first draft proposed were deferred, because they were written for six transforms that never shipped. The wording itself has since landed across the project, where docstrings, SCOPE, THEORY, USAGE and the READMEs all came to state the count-map rule with the per-pixel bound, closing blocker B1 in [FOCO-1.0.md](FOCO-1.0.md).
 
 Treat this section as the measured truth, and the ADR as the formal statement of the same rule.
 
