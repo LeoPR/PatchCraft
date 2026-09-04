@@ -8,16 +8,15 @@ biblioteca não ajuda, o texto diz que não ajuda.*
 
 ---
 
-Existe um tipo de erro que nenhum teste pega: o código roda, a saída tem a forma certa, e o
-número está um pouco errado. Ninguém fica sabendo. O modelo só aprende um pouco pior, e "um
-pouco pior" não dispara alarme. Este texto é sobre um caso desses, e sobre o que foi preciso
-para transformá-lo em algo que avisa.
+Para o computador, uma imagem é uma matriz de números, e manipular a imagem é fazer contas
+sobre essa matriz. Uma imagem grande raramente entra inteira numa rede neural: ela é cortada
+em pedaços, cada pedaço é processado, e no fim tudo é colado de volta. Os pedaços se chamam
+patches.
 
-O caso é o seguinte. Uma imagem grande raramente entra inteira numa rede neural. Ela é
-cortada em pedaços, cada pedaço é processado, e no fim tudo é colado de volta. Os pedaços se
-chamam patches, e recortar e colar parece uma tarefa de vinte linhas. Eu escrevi essas vinte
-linhas mais vezes do que gostaria de admitir, e em cada projeto elas erraram em silêncio de
-um dos dois jeitos abaixo.
+O PyTorch traz o `unfold` e o `fold` para isso, e para recortes simples as duas funções
+resolvem. Fora desse caso aparecem detalhes que pedem cuidado, e dois deles devolvem a
+imagem errada sem levantar erro nenhum. Este texto trata desses detalhes e do que o
+PatchCraft faz com cada um.
 
 ## Dois defeitos que não avisam
 
@@ -49,37 +48,19 @@ arredonda. `stride == patch_size` sempre satisfaz isso, porque toda contagem val
 O que faz disso um contrato, e não uma promessa, é a segunda metade: a condição se calcula a
 partir da geometria, sem rodar nada. Quem vai chamar sabe de antemão em que regime está.
 
-Essa formulação é a segunda. A primeira foi publicada, medida e encontrada falsa, e é por
-isso que as duas seções seguintes existem. A versão antiga dependia de a contagem máxima de
-sobreposição ser pequena, e dizia que fora dessa condição o erro ficava em torno de 1 ULP;
-medindo, ele cresce com a cobertura de cada pixel e chega a 19 ULP em float32. Ela olhava
-para o máximo do mapa, e a correta olha para todos os valores dele. Sobre uma varredura de
-geometrias retangulares, a regra do máximo erra 3936 de 14969 casos e a da potência de dois
-erra 8, todos na direção segura de prometer menos do que entregam. Um contrato pode prometer
-de menos. Não pode prometer demais.
+A regra parece severa, e a alternativa óbvia é mais frouxa: bastaria manter a sobreposição
+máxima pequena. Ela não funciona, e a diferença é grande. Sobre uma varredura de 14.969
+geometrias retangulares, a regra do máximo erra 3.936 casos; a da potência de dois erra 8, e
+os 8 erram prometendo menos do que entregam.
 
-## Por que a suíte não pegou, e o que mudou nela
-
-Isso foi corrigido na 0.5.0, em agosto de 2026, junto com a afirmação errada. Conto porque
-a causa serve para qualquer outro projeto, não porque ainda esteja aberto.
-
-Os testes de round-trip construíam as imagens com `torch.arange`. Dado inteiro, num float,
-fecha a ida e volta exato em geometrias onde dado aleatório não fecha, porque não há
-mantissa suficiente sendo usada para o arredondamento aparecer. A suíte passava, e passava
-porque estava fazendo a pergunta errada com muita confiança. Um teste verde não é a mesma
-coisa que uma afirmação verificada, e a distância entre as duas foi exatamente esta.
-
-A correção não foi só trocar a frase. O gerador de dados virou um helper auditado, que
-sorteia ruído de mantissa cheia direto no dtype alvo e é proibido de derivar float32 a
-partir de float64, e ele passou a valer para os treze casos de round-trip de uma vez.
-
-**Onde isso está hoje**, para quem for olhar o repositório e não ficar em dúvida: são 1619
-testes passando, a regra em vigor é a do parágrafo anterior, e a varredura da seção
-seguinte roda em toda CI. Um `pytest` no clone reproduz esse número.
+É essa assimetria que decide qual das duas vale. Um contrato pode prometer de menos. Não
+pode prometer demais, porque quem confia nele não tem como perceber a diferença: fora da
+regra o erro por pixel cresce com a cobertura, e chega a 19 ULP em float32 sem nada
+sinalizar.
 
 ## O teste que existe para derrubar a afirmação
 
-Depois de corrigir, escrevi um teste com a função explícita de falsificar o contrato novo.
+O contrato acima tem, na suíte, um teste cuja função explícita é falsificá-lo.
 
 Ele enumera as 126.736 geometrias legais do espaço sem consultar o predicado, para que o
 enumerador e a coisa testada sejam independentes. Sobre uma amostra semeada, procura os
@@ -88,9 +69,10 @@ e um caso fora da regra que seja exato em todas as sementes, o que indicaria que
 está estreito demais. A varredura completa das 126.736 fica atrás de uma variável de
 ambiente, porque leva pouco mais de um minuto.
 
-Repare que é a mesma falha silenciosa da abertura, uma camada acima. O código estava certo;
-a garantia sobre o código estava errada, e passava nos testes pelo mesmo motivo que os dois
-defeitos do início passavam: a pergunta feita não era a que importava.
+Um detalhe do gerador de dados vale para quem for testar patches em qualquer lugar: as
+imagens são ruído de mantissa cheia sorteado direto no dtype alvo, nunca uma rampa inteira.
+Dado inteiro, num float, fecha a ida e volta exato em geometrias onde dado aleatório não
+fecha, então uma suíte construída com `torch.arange` passa sem estar verificando nada.
 
 Acho que uma biblioteca numérica vale menos pela garantia que anuncia e mais pelo teste que
 mantém apontado contra a própria garantia.
@@ -119,9 +101,10 @@ compara os dois resultados com `torch.equal` **antes** de reportar qualquer temp
 diferirem, ele imprime a tabela, diz que diferiram e sai com erro. Um benchmark de duas
 contas diferentes não é um benchmark.
 
-Uma armadilha que essa disciplina pegou: o install editável estava compilando o kernel em
-debug, porque a ferramenta segue o comando de build a menos que você mande o contrário.
-Isso transformava um ganho de 14x em 2,1x. Eu quase publiquei os números do binário errado.
+Uma armadilha que vale conhecer para quem for medir um kernel nativo: um install editável
+compila em debug por padrão, porque a ferramenta segue o comando de build a menos que você
+mande o contrário. Aqui isso transformava um ganho de 14x em 2,1x, e nada na saída avisa
+qual binário está rodando.
 
 ## O que o projeto não afirma
 
@@ -134,8 +117,8 @@ tensor que não esteja na CPU e devolve o trabalho ao torch.
 Três das cinco wheels aceleradas nunca tiveram o kernel executado em CI. As de macOS e
 aarch64 são construídas e têm o conteúdo conferido, e isso é tudo.
 
-E a afirmação numérica desta página já esteve publicada em outra forma, como verdadeira. É
-razoável supor que exista uma terceira que eu ainda não medi.
+E cada afirmação desta página é medida, o que não é o mesmo que provada. É razoável supor
+que exista uma que eu ainda não medi.
 
 ## Prático
 

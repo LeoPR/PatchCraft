@@ -8,16 +8,15 @@ Where the library does not help, the text says it does not help.*
 
 ---
 
-There is a kind of bug no test catches: the code runs, the output has the right shape, and
-the number is slightly wrong. Nobody finds out. The model just learns a little worse, and "a
-little worse" sets off no alarm. This text is about one such case, and about what it took to
-turn it into something that speaks up.
+To a computer an image is a matrix of numbers, and working on the image means doing
+arithmetic on that matrix. A large image rarely goes into a neural network whole: it is cut
+into pieces, each piece is processed, and at the end everything is glued back. The pieces
+are called patches.
 
-The case is this. A large image rarely goes into a neural network whole. It is cut into
-pieces, each piece is processed, and at the end everything is glued back. The pieces are
-called patches, and cutting and glueing look like a twenty-line job. I have written those
-twenty lines more times than I would like to admit, and in every project they went wrong in
-silence in one of the two ways below.
+PyTorch ships `unfold` and `fold` for this, and for simple cuts the two are enough. Beyond
+that case, details start asking for care, and two of them return the wrong image without
+raising anything. This text is about those details and about what PatchCraft does with
+each.
 
 ## Two defects that never announce themselves
 
@@ -49,14 +48,15 @@ What makes this a contract rather than a promise is the second half: the conditi
 computed from the geometry alone, without running anything. The caller knows which regime
 they are in beforehand.
 
-This wording is the second one. The first was published, measured and found false, and that
-is why the next two sections exist. The old version depended on the maximum overlap count
-being small, and said the error outside that condition stayed around 1 ULP; measured, it
-grows with each pixel's coverage and reaches 19 ULP in float32. It looked at the maximum of
-the map, where the correct one looks at every value of it. Over a sweep of rectangular
-geometries, the maximum rule mispredicts 3936 of 14969 cases and the power-of-two rule
-mispredicts 8, all of them in the safe direction of promising less than they deliver. A
-contract may under-promise. It may not over-promise.
+The rule looks severe, and the obvious alternative is looser: just keep the maximum overlap
+count small. It does not work, and the gap is wide. Over a sweep of 14,969 rectangular
+geometries, the maximum rule mispredicts 3,936 cases; the power-of-two rule mispredicts 8,
+and those 8 err by promising less than they deliver.
+
+That asymmetry is what settles which of the two is worth having. A contract may
+under-promise. It may not over-promise, because whoever trusts it has no way to notice the
+difference: outside the rule the per-pixel error grows with the coverage and reaches 19 ULP
+in float32 with nothing to signal it.
 
 Notice that the previous version looked at the maximum of the map and the correct one looks
 at all of its values. I tested both against a sweep of rectangular geometries: the maximum
@@ -64,28 +64,9 @@ rule mispredicts 3936 of 14969 cases, the power-of-two rule mispredicts 8. Those
 the safe direction, promising less than they deliver. A contract may under-promise. It may
 not over-promise.
 
-## Why the suite missed it, and what changed in it
-
-This was fixed in 0.5.0, in August 2026, together with the wrong claim. I tell it because
-the cause transfers to any other project, not because anything here is still open.
-
-The round-trip tests built their images with `torch.arange`. Integer data in a float
-round-trips exactly on geometries where random data does not, because not enough mantissa
-is in play for the rounding to show. The suite passed, and it passed because it was asking
-the wrong question with great confidence. A green test is not the same thing as a verified
-claim, and the gap between the two was exactly this.
-
-The fix was not just changing the sentence. The data generator became an audited helper
-that draws full-mantissa noise directly in the target dtype and is forbidden from deriving
-float32 from float64, and it came to govern all thirteen round-trip cases at once.
-
-**Where this stands today**, so that nobody opening the repository has to wonder: 1619 tests
-pass, the rule in force is the one in the paragraph above, and the sweep described in the
-next section runs in every CI job. A `pytest` on a clone reproduces that number.
-
 ## The test that exists to bring the claim down
 
-After correcting it, I wrote a test whose explicit job is to falsify the new contract.
+The contract above has, in the suite, a test whose explicit job is to falsify it.
 
 It enumerates the 126,736 legal geometries of the space without consulting the predicate,
 so that the enumerator and the thing under test are independent. Over a seeded sample it
@@ -97,6 +78,11 @@ environment variable, because it takes a little over a minute.
 Notice that it is the same silent failure as the opening, one layer up. The code was right;
 the guarantee about the code was wrong, and it passed the tests for the same reason the two
 defects at the start did: the question being asked was not the one that mattered.
+
+One detail of the data generator is worth carrying anywhere patches get tested: the images
+are full-mantissa noise drawn directly in the target dtype, never an integer ramp. Integer
+data in a float round-trips exactly on geometries where random data does not, so a suite
+built with `torch.arange` passes without verifying anything.
 
 I think a numerical library is worth less for the guarantee it announces and more for the
 test it keeps pointed at that guarantee.
@@ -125,9 +111,10 @@ compares the two results with `torch.equal` **before** reporting any timing. If 
 it prints the table, says so, and exits non-zero. A benchmark of two different computations
 is not a benchmark.
 
-One trap that discipline caught: the editable install was compiling the kernel in debug,
-because the tooling follows the build command unless told otherwise. That turned a 14x
-speedup into 2.1x. I nearly published the numbers of the wrong binary.
+One trap worth knowing if you benchmark a native kernel: an editable install compiles in
+debug by default, because the tooling follows the build command unless told otherwise. Here
+that turned a 14x speedup into 2.1x, and nothing in the output tells you which binary is
+running.
 
 ## What the project does not claim
 
@@ -140,8 +127,8 @@ tensor that is not on the CPU and hands the work back to torch.
 Three of the five accelerated wheels have never had their kernel executed in CI. The macOS
 and aarch64 ones are built and have their contents checked, and that is all.
 
-And the numerical claim on this page was once published in another form, as true. It is
-reasonable to assume there is a third I have not measured yet.
+And every claim on this page is measured, which is not the same as proven. It is reasonable
+to assume there is one I have not measured yet.
 
 ## Practical
 
