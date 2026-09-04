@@ -4,39 +4,54 @@
 # Short LinkedIn post
 
 > Ready to publish. Every number was measured and reproduces in the repository.
-> The hook is the silent defect, the one thing here the reader might have in their own
-> code right now. Source: [`../2026-09-04-release.en.md`](../2026-09-04-release.en.md).
+> Source: [`../2026-09-04-release.en.md`](../2026-09-04-release.en.md).
+>
+> **Structure, in order:** one paragraph of context with no jargon, one that names the
+> subject, the turn, the two defects, the library, the contract, the test, the close. The
+> first two lines are the only ones that show before "see more", so they cannot contain a
+> single word the reader has to know already.
 
 ---
 
-**If you cut images into patches with `F.unfold`, there is a good chance you are
-scrambling the pixels and getting no error at all.**
+**Every large image that goes into a neural network is cut into pieces first.**
 
-Torch's `F.unfold` returns `(1, C*ph*pw, L)`. The intuitive reshape into `(L, C, ph, pw)`
-gives you the right shape with the wrong pixels. The shape `assert` passes, training runs,
-the loss falls a little less, and there is no message anywhere.
+It does not fit in memory whole, and even when it does, much of the work comes out better
+piece by piece. So you cut it up, process each piece, and glue everything back at the end.
+Those pieces have a name: patches.
 
-Its neighbour is the stride that does not cover the image. On a 128 by 128 image with patch
-32 and stride 20, the grid stops at pixel 112 and leaves 3840 of the 16384 pixels at zero.
-A hand-rolled `fold` returns that partly black image, also without complaining.
+It looks like a twenty-line problem. I have written those twenty lines more times than I
+would like to admit, and got them wrong often enough to start distrusting them.
 
-I wrote those twenty lines more times than I would like to admit, which is why they became
-a library. PatchCraft cuts an image into patches and puts it back, with tests around both
-defects above.
+Here is how they go wrong.
 
-What it claims about the numerics is a condition you evaluate **before** you call: the
-round trip is bit-exact if and only if every value in the coverage count map is a power of
-two, and outside that the per-pixel error is bounded by `(k+1)·eps·|v|`. That is computed
-from the geometry alone, without running anything.
+On the cutting side, the torch function that does this job hands the pieces back in a
+packed layout. The intuitive rearrangement into the layout you actually want gives you the
+right shape with the wrong pixels. The shape `assert` passes. Training runs. The loss falls
+a little less. Nothing warns you.
 
-And there is a test whose explicit job is to bring that claim down. It enumerates the
-126,736 legal geometries of the space without consulting the predicate, and hunts the two
-counterexamples: a case inside the rule that is not exact, and a case outside it that is
-exact by luck.
+On the glueing side, the step from one piece to the next may not cover the whole image. On
+a 128 by 128 image, with a piece of 32 and a step of 20, the grid stops at pixel 112 and
+leaves 3840 of the 16384 pixels at zero. Almost a quarter of the image comes back black,
+and the function returns it without raising anything.
 
-It has that shape because an earlier version of this contract was published, measured and
-found false. I think a numerical library is worth less for the guarantee it announces and
-more for the test it keeps pointed at its own guarantee.
+Neither one is hard to fix. Both are easy to miss, and that difference is what justifies
+writing it once, with tests around it, instead of rewriting it every project.
+
+That is what I did, and it is called PatchCraft.
+
+What it claims about its own arithmetic is a condition you evaluate **before** you call:
+cutting and reassembling returns exactly the same bits if, and only if, every pixel is
+covered by a number of pieces that is a power of two. Outside that, the error has a written
+bound. You settle it by looking at the geometry, on paper, without running anything.
+
+And there is a test whose job is to bring that claim down. It sweeps the 126,736 possible
+geometries without consulting the rule, hunting for the case that contradicts it.
+
+It has that shape because the first version of that claim was published, measured and found
+false.
+
+I think a numerical library is worth less for the guarantee it announces and more for the
+test it keeps pointed at its own guarantee.
 
 Python 3.12 to 3.14, MIT, pre-1.0. `pip install patchcraft`
 

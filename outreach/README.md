@@ -28,7 +28,12 @@ audience these texts are aimed at reads Portuguese first. English is the transla
 ## Channel limits
 
 - **LinkedIn post** (`linkedin/post.*`): about 3,000 characters, and only the first two or
-  three lines show before "see more", so the hook goes first. Hashtags at the end, without
+  three lines show before "see more". Those lines cannot carry jargon: the LinkedIn
+  audience is wide, and a first sentence that only speaks to people who already know the
+  subject filters instead of inviting. The post opens with a short paragraph of context
+  with no technical term, a second that names the subject, and only then the turn. It has a
+  beginning, a middle and an end, and the close returns to the idea the opening raised
+  rather than simply stopping. Hashtags at the end, without
   accents, because accented hashtags break LinkedIn search.
 - **LinkedIn article** (`linkedin/artigo.*`): long form, headings and tables render, good
   for the version that carries the numbers. End with the repository link.

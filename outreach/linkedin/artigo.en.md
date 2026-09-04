@@ -8,6 +8,10 @@ Where the library does not help, the text says it does not help.*
 
 ---
 
+A large image rarely goes into a neural network whole. It is cut into pieces, each piece is
+processed, and at the end everything is glued back. Those pieces are called patches, and the
+cutting and the glueing are what this text is about.
+
 Cutting an image into patches, running something on each piece and putting it back looks
 like a twenty-line job. I have written those twenty lines more times than I would like to
 admit, and got them wrong often enough to be worth writing once with tests around them.

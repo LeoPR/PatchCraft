@@ -8,6 +8,10 @@ biblioteca não ajuda, o texto diz que não ajuda.*
 
 ---
 
+Uma imagem grande raramente entra inteira numa rede neural. Ela é cortada em pedaços, cada
+pedaço é processado, e no fim tudo é colado de volta. Esses pedaços se chamam patches, e o
+recorte e a colagem são o assunto deste texto.
+
 Recortar uma imagem em patches, rodar alguma coisa em cada pedaço e remontar parece uma
 tarefa de vinte linhas. Eu escrevi essas vinte linhas mais vezes do que gostaria de admitir,
 e as reescrevi errado o suficiente para valer a pena escrever uma vez com teste em volta.
