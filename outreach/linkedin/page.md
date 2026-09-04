@@ -21,8 +21,20 @@ PyTorch's `unfold` slides a window across the image and returns every window sta
 in the order it looks. It flattens channel, patch row and patch column into a single
 dimension, shaped `(1, C·ph·pw, L)`, and leaves the number of patches at the end.
 
-Reading that directly as `(L, C, ph, pw)` gives the right shape and the wrong order. That is
-the panel on the right: the same pixels, in moved positions, and nothing raised.
+Reading that directly as `(L, C, ph, pw)` asks for the right shape, and the tensor does have
+that shape, so nothing complains. What changes is the order the numbers are read out of the
+buffer, and the result is the panel on the right.
+
+It is worth being exact about what happened there, because the look of it misleads in both
+directions. **It is not loss: it is a permutation.** The set of values is identical to the
+original image, pixel for pixel, and nothing was destroyed or rounded. What was lost is only
+the correspondence between each value and its position, and 99.6% of the values end up
+somewhere that is not theirs. Every pixel position in the image receives a value that was
+not its own.
+
+That is why the defect is silent rather than a loud accident. The tensor still has the right
+shape, the right dtype and the same distribution of values, so it passes any sanity check,
+training runs, and the loss falls a little less.
 
 The way back, `fold`, adds each window into the place it came from. Where patches overlap it
 adds more than once, so putting the image back means dividing each pixel by the number of

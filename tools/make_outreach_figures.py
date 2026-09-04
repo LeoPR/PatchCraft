@@ -606,9 +606,15 @@ def fig_cut(lang: str) -> None:
     """The unfold, and the reshape that keeps the shape and moves the pixels."""
     s = FIG[lang]
     img = test_image()
+    bad = naive_reshape(img)
+    # Measured here rather than written down. The reshape is a permutation, so
+    # the number that means something is how much of the data lands elsewhere,
+    # not how far any one value moves. Counted per channel value.
+    moved = float((bad != img).float().mean()) * 100
     side, gap, m = 340, 30, 55
     c = Fig(432, 2 * side + gap + 2 * m)
-    for i, (t, cap) in enumerate([(img, s["cut_cap"][0]), (naive_reshape(img), s["cut_cap"][1])]):
+    caps = (s["cut_cap"][0], s["cut_cap"][1].format(moved))
+    for i, (t, cap) in enumerate([(img, caps[0]), (bad, caps[1])]):
         x = m + i * (side + gap)
         c.text((x, 12), s["cut_lab"][i], 19, INK, bold=True)
         c.framed(t, (x, 44), side)
@@ -723,7 +729,7 @@ FIG = {
         "mnist_stem": "3-mnist",
         "page_stem": "pagina",
         "cut_lab": ("original", "reshape intuitivo"),
-        "cut_cap": ("a imagem de entrada", "mesma forma, erro 0,996"),
+        "cut_cap": ("a imagem de entrada", "mesma forma, {:.1f}% dos valores fora do lugar"),
         "stride_first": "stride 32",
         "stride_rest": "stride {}",
         "row_cov": [
@@ -804,8 +810,19 @@ O `unfold` do PyTorch percorre a imagem com uma janela e devolve todas as janela
 mas não na ordem que parece. Ele achata canal, linha e coluna do patch numa dimensão só, na
 forma `(1, C·ph·pw, L)`, e deixa o número de patches no fim.
 
-Ler isso direto como `(L, C, ph, pw)` dá a forma certa e a ordem errada. É o painel da
-direita: os mesmos pixels, em posições trocadas, e nenhum erro levantado.
+Ler isso direto como `(L, C, ph, pw)` pede a forma certa, e o tensor tem mesmo essa forma,
+então nada reclama. O que muda é a ordem em que os números são lidos do buffer, e o
+resultado é o painel da direita.
+
+Vale ser exato sobre o que aconteceu ali, porque a aparência engana nos dois sentidos. **Não
+é perda: é uma permutação.** O conjunto de valores é idêntico ao da imagem original, pixel
+por pixel, e nada foi destruído nem arredondado. O que se perdeu foi só a correspondência
+entre cada valor e a posição dele, e 99,6% dos valores acabam numa posição que não é a sua.
+Toda posição de pixel da imagem recebe um valor que não era o dela.
+
+É por isso que o defeito é silencioso e não um acidente barulhento. O tensor continua tendo
+a forma certa, o dtype certo e a mesma distribuição de valores, então ele passa em qualquer
+verificação de sanidade, o treino roda, e a perda desce um pouco menos.
 
 A volta, o `fold`, soma cada janela no lugar de origem. Onde os patches se sobrepõem ela soma
 mais de uma vez, então remontar exige dividir cada pixel pelo número de vezes que ele foi
@@ -845,7 +862,7 @@ Repositório: https://github.com/LeoPR/PatchCraft
         "mnist_stem": "3-mnist",
         "page_stem": "page",
         "cut_lab": ("original", "intuitive reshape"),
-        "cut_cap": ("the input image", "same shape, error 0.996"),
+        "cut_cap": ("the input image", "same shape, {:.1f}% of the values moved"),
         "stride_first": "stride 32",
         "stride_rest": "stride {}",
         "row_cov": [
@@ -926,8 +943,20 @@ PyTorch's `unfold` slides a window across the image and returns every window sta
 in the order it looks. It flattens channel, patch row and patch column into a single
 dimension, shaped `(1, C·ph·pw, L)`, and leaves the number of patches at the end.
 
-Reading that directly as `(L, C, ph, pw)` gives the right shape and the wrong order. That is
-the panel on the right: the same pixels, in moved positions, and nothing raised.
+Reading that directly as `(L, C, ph, pw)` asks for the right shape, and the tensor does have
+that shape, so nothing complains. What changes is the order the numbers are read out of the
+buffer, and the result is the panel on the right.
+
+It is worth being exact about what happened there, because the look of it misleads in both
+directions. **It is not loss: it is a permutation.** The set of values is identical to the
+original image, pixel for pixel, and nothing was destroyed or rounded. What was lost is only
+the correspondence between each value and its position, and 99.6% of the values end up
+somewhere that is not theirs. Every pixel position in the image receives a value that was
+not its own.
+
+That is why the defect is silent rather than a loud accident. The tensor still has the right
+shape, the right dtype and the same distribution of values, so it passes any sanity check,
+training runs, and the loss falls a little less.
 
 The way back, `fold`, adds each window into the place it came from. Where patches overlap it
 adds more than once, so putting the image back means dividing each pixel by the number of
