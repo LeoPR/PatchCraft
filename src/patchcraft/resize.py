@@ -99,6 +99,30 @@ def _resize_pil(
     return pil_image.resize((w, h), pil_resample)
 
 
+# float32 carries 24 mantissa bits, so it represents every integer in
+# [-2**24, 2**24] exactly and loses bits past that: 2**24 + 1 comes back as
+# 2**24. The whole range of uint8, int8 and int16 fits, and int32's does not.
+_FLOAT32_EXACT_INT_MAX = 2**24
+
+
+def _promotion_dtype(dtype: torch.dtype) -> torch.dtype:
+    """The narrowest float that represents every value of ``dtype`` exactly.
+
+    An integer tensor has to be promoted before ``F.interpolate``, which
+    implements none of these modes for integers. Promoting through a float too
+    narrow to hold the input would trade the loud error for a silent
+    truncation, which is the defect class this library exists to prevent, so
+    the choice is made from the dtype's range rather than fixed. ``float64``
+    mirrors :mod:`patchcraft.metrics`, which promotes to it for the same
+    reason. ``int64`` is the one dtype no float covers: values above 2**53 are
+    not exactly representable anywhere, and THEORY section 9.4 says so.
+    """
+    info = torch.iinfo(dtype)
+    if info.min >= -_FLOAT32_EXACT_INT_MAX and info.max <= _FLOAT32_EXACT_INT_MAX:
+        return torch.float32
+    return torch.float64
+
+
 def _resize_torch(
     tensor: torch.Tensor,
     target_size: tuple[int, int],
@@ -121,8 +145,8 @@ def _resize_torch(
 
     original_dtype = tensor.dtype
     x = tensor.unsqueeze(0)
-    if mode in {"bilinear", "bicubic"} and not x.is_floating_point():
-        x = x.to(torch.float32)
+    if not x.is_floating_point():
+        x = x.to(_promotion_dtype(original_dtype))
 
     kwargs: dict[str, Any] = {"size": target_size, "mode": mode}
     if mode in {"bilinear", "bicubic"}:
@@ -158,7 +182,13 @@ def resize(
     Dtype notes. Integer tensors on the ``"torch"`` backend are interpolated
     in float and cast back with round + clamp to the dtype range, because
     bicubic legitimately overshoots the input range and a bare cast wraps
-    (``-9.0 -> 247`` in uint8). Float tensors on the ``"pil"`` backend pass
+    (``-9.0 -> 247`` in uint8). This holds for every accepted resample mode,
+    not only the two that overshoot: ``F.interpolate`` implements none of them
+    for integers. The promotion is to the narrowest float that represents the
+    dtype's whole range exactly, ``float32`` for ``uint8``, ``int8`` and
+    ``int16`` and ``float64`` for ``int32``. ``int64`` is the exception no
+    float covers: values above ``2**53`` are not exactly representable and do
+    not survive the round trip. Float tensors on the ``"pil"`` backend pass
     through a uint8 hop and are clamped to ``[0, 1]`` on the way in;
     values outside that range are not preserved by this backend.
 

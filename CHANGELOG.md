@@ -8,6 +8,34 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **13 of the 25 resample-mode x integer-dtype combinations raised a raw torch
+  error** instead of resizing. THEORY §9.4 accepts any integer tensor on the
+  `torch` backend and promises interpolation in float with round + clamp on the
+  way back, unconditionally. `_resize_torch` guarded the promotion with
+  `mode in {"bilinear", "bicubic"}`, so an integer tensor reached
+  `F.interpolate` unpromoted under `nearest`, `area` and `nearest-exact` and
+  surfaced `NotImplementedError: "adaptive_avg_pool2d" not implemented for
+  'Int'`, naming an internal op the caller never called. The outbound half of
+  the same function already did the right thing for every integer dtype with no
+  condition on the mode, so only the inbound guard was ever wrong.
+
+  The suite could not catch it because the two parametrizations that would have
+  never crossed: `test_torch_accepts_all_resamples` sweeps all five modes on
+  `torch.rand`, and every integer test used the default mode. The regression is
+  that crossing, 50 cases, plus the upsampling direction because `area` is
+  `adaptive_avg_pool2d` and behaves differently going up.
+
+  Fixing it by promoting everything through `float32` would have traded the
+  loud error for the silent truncation this library exists to prevent, so the
+  promotion width is now derived from the dtype's range: the narrowest float
+  that represents it exactly, `float32` for `uint8`, `int8` and `int16` and
+  `float64` for `int32`. That mirrors `patchcraft.metrics`, which already
+  promotes to `float64` for the same reason. **This also fixes a silent defect
+  that predates the one above**: on the bilinear path an `int32` tensor was
+  already being promoted through `float32`, so `2**24 + 1` came back as
+  `2**24`. Measured on 2026-09-04, on every mode. `int64` remains the one dtype
+  no float covers, and §9.4 now says so rather than implying otherwise.
+
 - **`Cache("~/cache")` created a directory literally named `~`** in the working
   directory instead of using the home directory. `Path(root)` was used without
   `expanduser`. Every established library expands and then stops: verified that

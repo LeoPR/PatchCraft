@@ -131,6 +131,79 @@ class TestIntegerDtypeCast:
         assert int(out.max()) <= int(img.max())
 
 
+_TORCH_MODES = ["nearest", "bilinear", "bicubic", "area", "nearest-exact"]
+_INTEGER_DTYPES = [torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64]
+
+
+class TestIntegerDtypeAcrossResamples:
+    """Regression: THEORY §9.4 accepts *any* integer tensor on the torch
+    backend, but `_resize_torch` promoted to float only for bilinear and
+    bicubic. The other three accepted modes reached `F.interpolate` with an
+    integer tensor and raised a raw torch error naming an internal op the
+    caller never called: `"adaptive_avg_pool2d" not implemented for 'Int'`.
+    13 of the 25 mode x dtype combinations were affected.
+
+    Two parametrizations already existed and could not catch it, because they
+    never crossed: `test_torch_accepts_all_resamples` sweeps every mode on
+    `torch.rand` (float), and the integer tests all use the default mode
+    (bilinear). This class is that crossing."""
+
+    @pytest.mark.parametrize("resample", _TORCH_MODES)
+    @pytest.mark.parametrize("dtype", _INTEGER_DTYPES)
+    def test_every_mode_accepts_every_integer_dtype(
+        self, resample: str, dtype: torch.dtype
+    ) -> None:
+        img = torch.randint(0, 100, (1, 8, 8), dtype=dtype)
+        out = resize(img, target_size=(4, 4), backend="torch", resample=resample)
+        assert out.dtype == dtype
+        assert out.shape == (1, 4, 4)
+
+    @pytest.mark.parametrize("resample", _TORCH_MODES)
+    @pytest.mark.parametrize("dtype", _INTEGER_DTYPES)
+    def test_upsampling_too(self, resample: str, dtype: torch.dtype) -> None:
+        """`area` is `adaptive_avg_pool2d`, which behaves differently going up."""
+        img = torch.randint(0, 100, (1, 4, 4), dtype=dtype)
+        out = resize(img, target_size=(8, 8), backend="torch", resample=resample)
+        assert out.dtype == dtype
+        assert out.shape == (1, 8, 8)
+
+
+class TestIntegerPromotionIsExact:
+    """The float a value is promoted through must represent that value
+    exactly, or the fix for the error above would trade a loud exception for
+    the silent truncation this library exists to prevent.
+
+    `float32` carries 24 mantissa bits, so it is exact for `uint8`, `int8` and
+    `int16`, whose whole ranges fit. It is *not* exact for `int32`: promoting
+    2**24 + 1 through it returns 2**24. Measured on 2026-09-04, this was
+    already happening silently on the bilinear path."""
+
+    @pytest.mark.parametrize("resample", _TORCH_MODES)
+    def test_int32_above_float32_mantissa_survives(self, resample: str) -> None:
+        """A constant image resizes to the same constant under every mode, so
+        any difference is the promotion losing bits rather than the resample."""
+        value = 2**24 + 1
+        img = torch.full((1, 8, 8), value, dtype=torch.int32)
+        out = resize(img, target_size=(4, 4), backend="torch", resample=resample)
+        assert int(out.flatten()[0]) == value
+
+    def test_int32_large_value_survives(self) -> None:
+        value = 2**30 + 7
+        img = torch.full((1, 8, 8), value, dtype=torch.int32)
+        out = resize(img, target_size=(4, 4), backend="torch", resample="bilinear")
+        assert int(out.flatten()[0]) == value
+
+    @pytest.mark.parametrize("dtype", [torch.uint8, torch.int8, torch.int16])
+    def test_narrow_dtypes_keep_their_extremes(self, dtype: torch.dtype) -> None:
+        """Every value of these dtypes is exact in float32, so the whole range
+        round-trips and the narrow path stays on the cheaper float."""
+        info = torch.iinfo(dtype)
+        for value in (info.min, info.max):
+            img = torch.full((1, 8, 8), value, dtype=dtype)
+            out = resize(img, target_size=(4, 4), backend="torch", resample="nearest")
+            assert int(out.flatten()[0]) == value
+
+
 class TestCrossBackend:
     def test_pil_in_torch_backend_returns_pil(self) -> None:
         img = _rgb_pil(16, 16)

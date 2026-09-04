@@ -146,7 +146,7 @@ O round-trip é exato quando todo valor do mapa de cobertura é potência de doi
 
 **Pré-1.0**, e o badge acima mostra a versão atual. Enquanto o primeiro dígito for zero, quem marca a fronteira de compatibilidade é o do meio: um `0.y.z` novo é seguro de pegar, e é num `0.y` novo que um valor de saída ou uma assinatura pode mudar. O [CHANGELOG.md](CHANGELOG.md) registra cada uma dessas mudanças com a medição por trás dela.
 
-São 1571 testes coletados, com CI verde em {Ubuntu, Windows} x {Python 3.12, 3.13, 3.14}, e com `ruff check` e `mypy --strict` na mesma execução. O pacote é tipado e distribui o `py.typed`.
+São 1656 testes coletados, com CI verde em {Ubuntu, Windows} x {Python 3.12, 3.13, 3.14}, e com `ruff check` e `mypy --strict` na mesma execução. O pacote é tipado e distribui o `py.typed`.
 
 Nenhum projeto externo consumiu a biblioteca ainda, e nenhum caminho CUDA dela jamais executou. [O manual](docs/GUIDE.md#8-what-this-project-does-not-claim) lista o que mais este projeto se recusa a afirmar.
 

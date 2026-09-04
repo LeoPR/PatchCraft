@@ -146,7 +146,7 @@ The round trip is exact when every value in the count map is a power of two, whi
 
 **Pre-1.0**, and the badge above is the current release. While the leading digit is zero the middle one is the compatibility boundary, so `0.y.z` is safe to take and a new `0.y` is where an output value or a signature is allowed to move. [CHANGELOG.md](CHANGELOG.md) records every such change with the measurement behind it.
 
-1571 tests collected and CI is green on {Ubuntu, Windows} x {Python 3.12, 3.13, 3.14}, with `ruff check` and `mypy --strict` in the same run. The package is typed and ships `py.typed`.
+1656 tests collected and CI is green on {Ubuntu, Windows} x {Python 3.12, 3.13, 3.14}, with `ruff check` and `mypy --strict` in the same run. The package is typed and ships `py.typed`.
 
 No external project has consumed it yet, and no CUDA path in this library has ever executed. [The guide](docs/GUIDE.md#8-what-this-project-does-not-claim) lists what else this project declines to claim.
 
