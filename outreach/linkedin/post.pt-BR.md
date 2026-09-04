@@ -11,20 +11,14 @@
 > assunto, diz o que o `fold`/`unfold` faz, mostra rapidamente os casos que pedem cuidado,
 > e entrega o link. A teoria fica no artigo; a íntegra, no repositório.
 >
->**Imagens para acompanhar**, em [`figuras/pt-BR/`](figuras/pt-BR/), PNG para subir e SVG
-> ao lado para editar, todas geradas por `python tools/make_outreach_figures.py`. Nenhuma é
-> desenhada: os painéis são os tensores de verdade, os erros são medidos, e a recusa traz o
-> texto que a biblioteca levanta. Vão nesta ordem:
+>**Imagem para acompanhar:** [`figuras/pt-BR/pagina.png`](figuras/pt-BR/pagina.png), uma
+> página só, com o SVG ao lado para editar, gerada por
+> `python tools/make_outreach_figures.py`. Nada nela é desenhado: os painéis são os tensores
+> que cada caminho devolve, e o dígito é do MNIST.
 >
-> 1. [`fold-unfold.png`](figuras/pt-BR/fold-unfold.png), o problema, e é a mais forte das
->    três porque se lê sem legenda. A mesma imagem por quatro caminhos: original, o reshape
->    intuitivo que devolve a forma certa embaralhada, o passo 20 com a faixa preta, e o
->    passo 32 feito certo.
-> 2. [`patchcraft.png`](figuras/pt-BR/patchcraft.png), a resposta, nos três regimes que a
->    biblioteca tem de fato: idêntica no passo 32 e no 16, aproximada no passo 12 com o erro
->    real ampliado no canto, e recusa no passo 20 que o `unfold` aceitaria.
-> 3. [`cobertura.png`](figuras/pt-BR/cobertura.png), o mecanismo por trás das duas, se
->    quiser explicar por que o passo 12 sai aproximado e o 16 não.
+> Três blocos, na ordem do texto: o recorte e o reshape que embaralha; a comparação por
+> passo entre o `fold`/`unfold` à mão e o PatchCraft, com o mapa de erro explicado; e o caso
+> típico, um dígito 28x28 com patch 7, onde a geometria fecha exata.
 
 ---
 
@@ -37,15 +31,16 @@ fim. Esses pedaços se chamam patches.
 
 O PyTorch traz duas funções para isso. O `unfold` percorre a imagem com uma janela e
 devolve todas as janelas empilhadas. O `fold` faz o caminho inverso, somando cada janela de
-volta na posição de origem. Para recortes simples, com a janela andando um tamanho inteiro
-por vez, as duas resolvem.
+volta na posição de origem. A distância que a janela anda entre um patch e o próximo chama-se
+passo, ou `stride`, que é o nome que você vai ver em toda documentação. Para recortes
+simples, com a janela andando um tamanho inteiro por vez, as duas funções resolvem.
 
 Fora desse caso aparecem detalhes que pedem cuidado. O `unfold` devolve os patches num
 formato empacotado, e reorganizá-lo para a ordem intuitiva embaralha os pixels sem mudar a
-forma do tensor. Quando o passo é menor que a janela, os patches se sobrepõem e o `fold`
+forma do tensor. Quando o stride é menor que a janela, os patches se sobrepõem e o `fold`
 soma as sobreposições, então remontar exige dividir cada pixel pelo número de vezes que ele
-foi coberto. E quando o passo não fecha a imagem, a grade para antes da borda e o resto
-volta em zero.
+foi coberto. E quando o stride não fecha a imagem, a grade para antes da borda e o
+resto volta em zero.
 
 O PatchCraft cobre esses casos. Valida a geometria antes de recortar, divide pela cobertura
 na remontagem, recusa configurações que descartariam pixels em silêncio, e documenta em que

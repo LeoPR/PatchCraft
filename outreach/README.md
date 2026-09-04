@@ -33,9 +33,14 @@ None of them is an illustration. The image panels are the tensors `extract` and
 difference amplified until it is visible, the refusal text is what `reconstruct` raises, and
 the coverage maps come from torch's own fold and unfold over a tensor of ones.
 
-There are three: `fold-unfold` shows the problem, `patchcraft` shows the library's three
-regimes (identical, approximate, refused) and `coverage` shows the mechanism that explains
-the other two.
+It is one page per language, `pagina.png` and `page.png`, in three blocks: the cut and the
+reshape that scrambles, the per-stride comparison between hand-written `fold`/`unfold` and
+PatchCraft, and the typical case on an MNIST digit. Where both paths return the same tensor
+the page says so instead of repeating the image, because the difference there is not the
+arithmetic, it is the contract.
+
+MNIST is downloaded on first use, and the page degrades without it: the third block is
+dropped and the script says so rather than failing.
 
 Portuguese is the canonical language here, unlike the rest of the project, because the
 audience these texts are aimed at reads Portuguese first. English is the translation.

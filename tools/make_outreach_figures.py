@@ -130,6 +130,24 @@ def coverage_map(stride: int, patch: int = PATCH, size: int = SIZE) -> torch.Ten
     return full
 
 
+
+def count_colour(v: int, vmax: int) -> tuple[int, int, int]:
+    """Blue for a power-of-two coverage count, amber for anything else.
+
+    The split is the contract drawn in colour: the round trip is exact
+    exactly when every count is a power of two, so a panel with amber in it
+    is a panel that cannot come back bit for bit.
+    """
+    if v == 0:
+        return LOSS
+    t = math.log2(max(v, 1)) / max(math.log2(max(vmax, 2)), 1.0)
+    if v & (v - 1) == 0:
+        a, b = (223, 236, 248), (30, 80, 130)
+    else:
+        a, b = (250, 226, 180), (170, 105, 15)
+    return tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))  # type: ignore[return-value]
+
+
 def runs(values: list) -> list[tuple[int, int]]:
     """Boundaries of each maximal constant run, so the map draws as few rects."""
     out: list[tuple[int, int]] = []
@@ -529,9 +547,353 @@ def build_cover(lang: str) -> None:
     c.save(lang, s["stem"])
 
 
+# --------------------------------------------------------------------------
+# The page: everything in one figure
+# --------------------------------------------------------------------------
+
+PAGE = {
+    "pt-BR": {
+        "stem": "pagina",
+        "title": "Recortar uma imagem em patches, processar, e remontar",
+        "sub1": (
+            "Uma imagem 128x128 cortada em pedaços de 32x32. Tudo aqui foi calculado, "
+            "não desenhado:"
+        ),
+        "sub2": "os painéis são os tensores que saem de cada caminho.",
+        "s1": "1. O recorte (unfold) e a remontagem (fold)",
+        "s1cap": ("a imagem de entrada", "reshape intuitivo: erro 0,996"),
+        "s1text": [
+            "*O que o unfold devolve não está na ordem que parece.",
+            "Ele empilha cada janela numa coluna só, de forma",
+            "(1, C·ph·pw, L): canal, linha e coluna do patch ficam",
+            "achatados juntos, e o número de patches (L) vai no fim.",
+            "",
+            "*Ler isso direto como (L, C, ph, pw) dá a forma certa",
+            "e a ordem errada. É o painel ao lado: mesmos pixels,",
+            "posições trocadas, nenhum erro levantado.",
+            "",
+            "A volta (fold) soma cada janela no lugar de origem, e",
+            "onde há sobreposição soma mais de uma vez, então",
+            "remontar exige dividir pela cobertura.",
+        ],
+        "s2": "2. O passo (stride) entre um patch e o próximo decide o resultado",
+        "stride_label": "passo (stride) {}",
+        "row0": [
+            "*Cobertura",
+            "quantos patches",
+            "cobrem cada pixel.",
+            "Azul: potência de 2.",
+            "Âmbar: não é.",
+            "Vermelho: nenhum.",
+        ],
+        "rowA": [
+            "*fold/unfold à mão",
+            "somar e dividir",
+            "pela cobertura,",
+            "sem validar nada",
+            "e sem dizer o",
+            "que saiu.",
+        ],
+        "rowB": [
+            "*PatchCraft",
+            "a mesma conta,",
+            "com a geometria",
+            "conferida antes e",
+            "o regime dito",
+            "no contrato.",
+        ],
+        "same": [
+            "*= mesmo resultado",
+            "A conta é a mesma.",
+            "O que muda é que",
+            "aqui o contrato diz,",
+            "antes da chamada,",
+            "que esta geometria",
+            "volta exata.",
+        ],
+        "refusal": [
+            "*ValueError",
+            "partial coverage",
+            "forbidden.",
+            "",
+            "Não devolve imagem.",
+            "O fold à mão devolve,",
+            "e sem avisar.",
+        ],
+        "diff_title": "o erro, ampliado",
+        "diff_cap": "diferença real x 8,4 milhões",
+        "caps": ("exata, erro 0", "exata, erro 0", "aproximada, 1.2e-7", "recusada"),
+        "diffnote": [
+            "*Por que o passo 12 não fecha exato: as contagens de cobertura dele incluem 3, 6 e 9, "
+            "e dividir",
+            "um float por um número que não é potência de dois arredonda. O mapa do erro desenha "
+            "exatamente a",
+            "grade dessas regiões, que são as âmbar da primeira linha. O erro é pequeno, e é "
+            "declarado.",
+        ],
+        "s3": "3. Numa imagem típica: um dígito do MNIST, 28x28",
+        "s3cap": ("o dígito, 28x28", "patch 7, passo 7: 4x4 = 16", "o patch de índice 5"),
+        "s3text": [
+            "*28 dividido por 7 dá 4 exato, então",
+            "essa geometria cobre o dígito sem",
+            "sobra e sem sobreposição: toda",
+            "contagem de cobertura vale 1, e a",
+            "volta é bit a bit idêntica.",
+            "",
+            "É o caso mais comum e o único sem",
+            "nada a decidir. Os problemas da",
+            "seção acima aparecem quando o passo",
+            "deixa de dividir o lado da imagem.",
+        ],
+        "foot": "Reproduz com: python tools/make_outreach_figures.py",
+    },
+    "en": {
+        "stem": "page",
+        "title": "Cutting an image into patches, processing, and putting it back",
+        "sub1": (
+            "A 128x128 image cut into 32x32 pieces. Everything here was computed, "
+            "not drawn:"
+        ),
+        "sub2": "the panels are the tensors each path actually returns.",
+        "s1": "1. The cut (unfold) and the reassembly (fold)",
+        "s1cap": ("the input image", "intuitive reshape: error 0.996"),
+        "s1text": [
+            "*What unfold returns is not in the order it looks.",
+            "It stacks every window into one column, shaped",
+            "(1, C·ph·pw, L): channel, patch row and patch column",
+            "flattened together, with the patch count (L) at the end.",
+            "",
+            "*Reading that directly as (L, C, ph, pw) gives the",
+            "right shape and the wrong order. That is the panel",
+            "beside it: same pixels, moved, nothing raised.",
+            "",
+            "The way back (fold) adds each window where it came",
+            "from, and where patches overlap it adds more than once,",
+            "so putting the image back means dividing by the coverage.",
+        ],
+        "s2": "2. The stride between one patch and the next decides the result",
+        "stride_label": "stride {}",
+        "row0": [
+            "*Coverage",
+            "how many patches",
+            "cover each pixel.",
+            "Blue: power of 2.",
+            "Amber: it is not.",
+            "Red: none at all.",
+        ],
+        "rowA": [
+            "*fold/unfold by hand",
+            "sum and divide by",
+            "the coverage, with",
+            "nothing validated",
+            "and nothing said",
+            "about the result.",
+        ],
+        "rowB": [
+            "*PatchCraft",
+            "the same arithmetic,",
+            "with the geometry",
+            "checked first and",
+            "the regime stated",
+            "in the contract.",
+        ],
+        "same": [
+            "*= same result",
+            "The arithmetic is the",
+            "same. What changes is",
+            "that the contract says,",
+            "before the call, that",
+            "this geometry comes",
+            "back exact.",
+        ],
+        "refusal": [
+            "*ValueError",
+            "partial coverage",
+            "forbidden.",
+            "",
+            "It returns no image.",
+            "The hand-written fold",
+            "returns one, silently.",
+        ],
+        "diff_title": "the error, amplified",
+        "diff_cap": "real difference x 8.4 million",
+        "caps": ("exact, error 0", "exact, error 0", "approximate, 1.2e-7", "refused"),
+        "diffnote": [
+            "*Why stride 12 does not come back exact: its coverage counts include 3, 6 and 9, "
+            "and dividing a",
+            "float by anything that is not a power of two rounds. The error map draws exactly the "
+            "grid of those",
+            "regions, which are the amber ones in the first row. The error is small, and it is "
+            "declared.",
+        ],
+        "s3": "3. On a typical image: one MNIST digit, 28x28",
+        "s3cap": ("the digit, 28x28", "patch 7, stride 7: 4x4 = 16", "the patch at index 5"),
+        "s3text": [
+            "*28 divided by 7 is exactly 4, so this",
+            "geometry covers the digit with nothing",
+            "left over and no overlap: every",
+            "coverage count is 1, and the round",
+            "trip is bit for bit identical.",
+            "",
+            "It is the commonest case and the only",
+            "one with nothing to decide. The",
+            "problems above appear when the stride",
+            "stops dividing the side of the image.",
+        ],
+        "foot": "Reproduce with: python tools/make_outreach_figures.py",
+    },
+}
+
+MARGIN = 58
+PAGE_H = 1512
+
+
+def mnist_digit() -> torch.Tensor | None:
+    """One real MNIST digit, downloaded on first use. None if unreachable."""
+    try:
+        import os
+
+        import numpy as np
+        from torchvision import datasets
+
+        root = Path(os.environ.get("PATCHCRAFT_DATASETS", r"Z:\caches\datasets")) / "mnist"
+        ds = datasets.MNIST(root=str(root), train=False, download=True)
+        arr = np.array(ds[0][0], dtype="float32") / 255.0
+        return torch.from_numpy(arr)[None].repeat(3, 1, 1)
+    except Exception as exc:
+        print(f"  (MNIST unavailable, third block skipped: {exc})")
+        return None
+
+
+def patch_grid_overlay(gray: torch.Tensor, patch: int) -> torch.Tensor:
+    """The digit with the patch boundaries drawn on it."""
+    out = gray.clone()
+    for k in range(patch, gray.shape[-1], patch):
+        out[0, k - 1 : k + 1, :] = 1.0
+        out[1, k - 1 : k + 1, :] = 0.45
+        out[2, k - 1 : k + 1, :] = 0.10
+        out[0, :, k - 1 : k + 1] = 1.0
+        out[1, :, k - 1 : k + 1] = 0.45
+        out[2, :, k - 1 : k + 1] = 0.10
+    return out
+
+
+class Page(Canvas):
+    def rule(self, y: int, title: str) -> None:
+        self.box((MARGIN, y), (W - MARGIN, y + 1), fill=RULE)
+        self.text((MARGIN, y + 12), title, 22, INK, bold=True)
+
+    def block(self, xy, lines, size=17, colour=MUTED, lead=25, width=None):
+        x, y = xy
+        for line in lines:
+            bold = line.startswith("*")
+            self.text((x, y), line.lstrip("*"), size, INK if bold else colour, bold=bold)
+            y += lead
+        return y
+
+
+def build_page(lang: str) -> None:
+    s = PAGE[lang]
+    img = test_image()
+    c = Page(PAGE_H)
+    c.title(s["title"], MARGIN)
+    c.text((MARGIN, 96), s["sub1"], 19, MUTED)
+    c.text((MARGIN, 122), s["sub2"], 19, MUTED)
+
+    # ---- 1. the cut and the reassembly ----
+    c.rule(168, s["s1"])
+    p1 = 190
+    for i, (t, cap) in enumerate([(img, s["s1cap"][0]), (naive_reshape(img), s["s1cap"][1])]):
+        x = MARGIN + i * (p1 + 22)
+        c.paste(t, (x, 216), p1)
+        c.box((x, 216), (x + p1, 216 + p1), outline=RULE)
+        c.text((x, 216 + p1 + 10), cap, 15, LOSS if i else MUTED, bold=bool(i))
+    c.block((MARGIN + 2 * (p1 + 22) + 18, 216), s["s1text"], size=16, lead=21)
+
+    # ---- 2. the stride decides the result ----
+    c.rule(474, s["s2"])
+    col_x, panel, gap = 232, 176, 30
+    xs = [col_x + i * (panel + gap) for i in range(4)]
+    strides = (32, 16, 12, 20)
+    for x, st in zip(xs, strides, strict=True):
+        c.text((x, 524), s["stride_label"].format(st), 18, INK, bold=True)
+
+    cov = 100
+    c.block((MARGIN, 556), s["row0"], size=14, lead=19)
+    scale = cov / SIZE
+    for x, st in zip(xs, strides, strict=True):
+        rows = coverage_map(st).tolist()
+        vmax = int(max(max(r) for r in rows))
+        for ya, yb in runs([tuple(r) for r in rows]):
+            for xa, xb in runs(rows[ya]):
+                c.box(
+                    (x + xa * scale, 556 + ya * scale),
+                    (x + xb * scale, 556 + yb * scale),
+                    fill=count_colour(int(rows[ya][xa]), vmax),
+                )
+        c.box((x, 556), (x + cov, 556 + cov), outline=RULE)
+
+    c.block((MARGIN, 686), s["rowA"], size=14, lead=19)
+    for x, st in zip(xs, strides, strict=True):
+        c.paste(hand_fold(img, st), (x, 676), panel)
+        c.box((x, 676), (x + panel, 676 + panel), outline=RULE)
+
+    c.block((MARGIN, 882), s["rowB"], size=14, lead=19)
+    caps, colours = [], []
+    for x, st in zip(xs, strides, strict=True):
+        try:
+            back = reconstruct(
+                extract(img, patch_size=PATCH, stride=st), image_shape=(3, SIZE, SIZE), stride=st
+            )
+        except ValueError:
+            c.box((x, 872), (x + panel, 872 + panel), fill=BAND, outline=RULE)
+            c.box((x, 872), (x + 5, 872 + panel), fill=LOSS)
+            c.block((x + 16, 904), s["refusal"], size=14, colour=INK, lead=20)
+            caps.append(s["caps"][3])
+            colours.append(LOSS)
+            continue
+
+        heat, peak = error_map(back, img)
+        c.box((x, 872), (x + panel, 872 + panel), fill=BAND, outline=RULE)
+        if peak == 0:
+            c.block((x + 16, 906), s["same"], size=14, colour=MUTED, lead=20)
+            caps.append(s["caps"][0])
+            colours.append(GOOD)
+        else:
+            c.text((x + 16, 886), s["diff_title"], 14, INK, bold=True)
+            side = 104
+            c.paste(heat, (x + (panel - side) // 2, 908), side)
+            c.box(
+                (x + (panel - side) // 2, 908),
+                (x + (panel - side) // 2 + side, 908 + side),
+                outline=RULE,
+            )
+            c.text((x + 16, 1022), s["diff_cap"], 13, MUTED)
+            caps.append(s["caps"][2])
+            colours.append(WARN)
+    for x, cap, col in zip(xs, caps, colours, strict=True):
+        c.text((x, 1058), cap, 16, col, bold=True)
+    c.block((MARGIN, 1094), s["diffnote"], size=14, lead=19)
+
+    # ---- 3. a typical image ----
+    c.rule(1176, s["s3"])
+    digit = mnist_digit()
+    p3 = 172
+    if digit is not None:
+        patches = extract(digit, patch_size=7, stride=7)
+        shots = [digit, patch_grid_overlay(digit, 7), patches[5]]
+        for i, (t, cap) in enumerate(zip(shots, s["s3cap"], strict=True)):
+            x = MARGIN + i * (p3 + 22)
+            c.paste(t, (x, 1224), p3)
+            c.box((x, 1224), (x + p3, 1224 + p3), outline=RULE)
+            c.text((x, 1224 + p3 + 10), cap, 14, MUTED)
+        c.block((MARGIN + 3 * (p3 + 22) + 16, 1224), s["s3text"], size=15, lead=21)
+
+    c.text((MARGIN, PAGE_H - 40), s["foot"], 15, MUTED)
+    c.save(lang, s["stem"])
+
+
 if __name__ == "__main__":
     for language in STRINGS:
         print(language)
-        build_cover(language)
-        build_naive(language)
-        build_craft(language)
+        build_page(language)

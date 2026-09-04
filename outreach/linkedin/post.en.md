@@ -12,21 +12,14 @@
 > care, and hands over the link. The theory belongs in the article, the full account in
 > the repository.
 >
->**Images to go with it**, in [`figuras/en/`](figuras/en/), PNG for uploading and SVG
-> beside it for editing, all produced by `python tools/make_outreach_figures.py`. None is
-> drawn: the panels are the real tensors, the errors are measured, and the refusal carries
-> the text the library raises. They go in this order:
+>**Image to go with it:** [`figuras/en/page.png`](figuras/en/page.png), a single page, with
+> the SVG beside it for editing, produced by `python tools/make_outreach_figures.py`. None of
+> it is drawn: the panels are the tensors each path returns, and the digit is from MNIST.
 >
-> 1. [`fold-unfold.png`](figuras/en/fold-unfold.png), the problem, and the strongest of the
->    three because it reads without a caption. The same image down four paths: the original,
->    the intuitive reshape that returns the right shape scrambled, stride 20 with its black
->    band, and stride 32 done right.
-> 2. [`patchcraft.png`](figuras/en/patchcraft.png), the answer, across the three regimes the
->    library actually has: identical at stride 32 and 16, approximate at stride 12 with the
->    real error amplified in the corner, and refused at stride 20, which `unfold` would
->    happily accept.
-> 3. [`coverage.png`](figuras/en/coverage.png), the mechanism behind the other two, if you
->    want to explain why stride 12 comes out approximate and stride 16 does not.
+> Three blocks, in the order of the text: the cut and the reshape that scrambles; the
+> per-stride comparison between hand-written `fold`/`unfold` and PatchCraft, with the error
+> map explained; and the typical case, a 28x28 digit at patch 7, where the geometry closes
+> exactly.
 
 ---
 

@@ -33,9 +33,14 @@ devolvem de fato, o erro no canto do painel aproximado é a diferença real ampl
 ficar visível, o texto da recusa é o que o `reconstruct` levanta, e os mapas de cobertura
 saem do `fold` e do `unfold` do torch sobre um tensor de uns.
 
-São três: `fold-unfold` mostra o problema, `patchcraft` mostra os três regimes da
-biblioteca (idêntico, aproximado, recusado) e `cobertura` mostra o mecanismo que explica
-os outros dois.
+É uma página só por língua, `pagina.png` e `page.png`, em três blocos: o recorte e o
+reshape que embaralha, a comparação por passo entre o `fold`/`unfold` escrito à mão e o
+PatchCraft, e o caso típico num dígito do MNIST. Onde os dois caminhos dão o mesmo tensor, a
+página diz isso em vez de repetir a imagem, porque a diferença ali não é a conta, é o
+contrato.
+
+O MNIST é baixado na primeira execução, e a página degrada sem ele: o terceiro bloco some e
+o script avisa, em vez de falhar.
 
 Aqui o português é a língua canônica, ao contrário do resto do projeto, porque o público a
 que estes textos se dirigem lê português primeiro. O inglês é a tradução.
