@@ -88,16 +88,23 @@ kernel existir.
 O benchmark compara os dois caminhos com `torch.equal` antes de reportar qualquer tempo, e
 sai com erro se eles diferirem.
 
-## Estado, dito por inteiro
+## Onde isto se aplica hoje
 
 São 1619 testes passando e 1656 coletados, com CI em {Ubuntu, Windows} x {Python 3.12,
 3.13, 3.14} no caminho puro mais um job acelerado nos dois sistemas. A superfície pública
 são 20 nomes, congelados por teste com `inspect.signature`.
 
-Nenhum projeto externo consumiu a biblioteca ainda, e esse é o critério que ela própria
-escolheu para se dizer estável. Nenhum caminho CUDA dela jamais executou, nem na CI nem
-fora dela. Três das cinco wheels aceleradas nunca tiveram o kernel executado em CI: as de
-macOS e aarch64 são construídas e conferidas, e só.
+**Em CPU.** O acelerador só aceita tensor na CPU e devolve o resto ao torch, então numa GPU
+a biblioteca funciona e não acelera. Esse caminho nunca executou, então em CUDA vale tratar
+tudo como o caminho em torch puro: correto, e sem o ganho da tabela.
+
+**Em Linux e Windows x86-64** o kernel roda na CI a cada commit, e é onde os números foram
+medidos. As wheels de macOS e aarch64 carregam o kernel construído e conferido, mas ele
+nunca foi executado em CI, então nessas vale medir contra os próprios dados.
+
+**Antes da 1.0**, e sem consumidor externo, que é o critério que o projeto escolheu para se
+dizer estável: o dígito do meio ainda pode mexer no que sai, e cada mudança entra no
+changelog com a medição atrás.
 
 ## Reprodução
 
@@ -112,4 +119,4 @@ PATCHCRAFT_SWEEP_FULL=1 pytest tests/test_exactness.py
 - Repositório: https://github.com/LeoPR/PatchCraft
 - Desempenho, com máquina, versões e data: `docs/PERFORMANCE.md`
 - O contrato de exatidão: `docs/ADR/0003-reversibility-classes.md`, aceito em 2026-09-03
-- O que o projeto se recusa a afirmar: `docs/GUIDE.md` seção 8
+- Os limites, com as medições: `docs/GUIDE.md` seção 8

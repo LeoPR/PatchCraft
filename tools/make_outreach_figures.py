@@ -761,7 +761,7 @@ FIG = {
                 "cobertura, fold à mão e PatchCraft, em quatro strides",
             ),
             (
-                "que exista uma que eu ainda não medi.",
+                "razoável supor que exista um que eu ainda não medi.",
                 "3-mnist",
                 "um dígito do MNIST, a grade de patches, e um patch",
             ),
@@ -963,7 +963,7 @@ Repositório: https://github.com/LeoPR/PatchCraft
                 "coverage, the hand-written fold and PatchCraft, across four strides",
             ),
             (
-                "to assume there is one I have not measured yet.",
+                "is reasonable to assume there is one I have not measured yet.",
                 "3-mnist",
                 "an MNIST digit, the patch grid, and one patch",
             ),

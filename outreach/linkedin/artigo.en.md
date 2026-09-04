@@ -116,19 +116,24 @@ debug by default, because the tooling follows the build command unless told othe
 that turned a 14x speedup into 2.1x, and nothing in the output tells you which binary is
 running.
 
-## What the project does not claim
+## Where this applies today
 
-No external project has consumed the library yet, and that is the criterion it chose for
-itself before calling the shape settled.
+**On CPU.** The accelerator only takes CPU tensors and hands everything else back to torch,
+so on a GPU the library works and does not accelerate. That path has never executed, in CI
+or anywhere else, so under CUDA treat what is here as the pure torch path: correct, without
+the gain in the table above.
 
-No CUDA path in it has ever executed, in CI or anywhere else. The accelerator declines any
-tensor that is not on the CPU and hands the work back to torch.
+**On Linux and Windows x86-64**, the Rust kernel runs in CI on every commit, and that is
+where the numbers on this page were measured. The macOS and aarch64 wheels carry the kernel,
+built and with their contents checked, but it has never been executed in CI. On those two it
+is worth checking against your own data before trusting the speedup.
 
-Three of the five accelerated wheels have never had their kernel executed in CI. The macOS
-and aarch64 ones are built and have their contents checked, and that is all.
+**Before 1.0**, and with no external consumer yet, which is the criterion the project chose
+for calling its shape settled. In practice that means the middle digit can still move the
+output, and that every change enters the changelog with the measurement behind it.
 
-And every claim on this page is measured, which is not the same as proven. It is reasonable
-to assume there is one I have not measured yet.
+One last thing: every number on this page is measured, which is not the same as proven. It
+is reasonable to assume there is one I have not measured yet.
 
 ## Practical
 

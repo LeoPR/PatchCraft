@@ -106,19 +106,24 @@ compila em debug por padrão, porque a ferramenta segue o comando de build a men
 mande o contrário. Aqui isso transformava um ganho de 14x em 2,1x, e nada na saída avisa
 qual binário está rodando.
 
-## O que o projeto não afirma
+## Onde isto se aplica hoje
 
-Nenhum projeto externo consumiu a biblioteca ainda, e esse é o critério que ela própria
-escolheu para se dizer estável.
+**Em CPU.** O acelerador só aceita tensor na CPU e devolve o resto ao torch, então numa GPU
+a biblioteca funciona e não acelera. Esse caminho nunca executou, nem na CI nem fora dela,
+então em CUDA trate o que está aqui como o caminho em torch puro: correto, e sem o ganho da
+tabela acima.
 
-Nenhum caminho CUDA dela jamais executou, nem na CI nem fora. O acelerador recusa qualquer
-tensor que não esteja na CPU e devolve o trabalho ao torch.
+**Em Linux e Windows x86-64**, o kernel Rust roda na CI a cada commit, e é onde os números
+desta página foram medidos. As wheels de macOS e aarch64 carregam o kernel, construído e com
+o conteúdo conferido, mas ele nunca foi executado em CI. Nessas duas vale conferir contra os
+seus próprios dados antes de confiar no ganho.
 
-Três das cinco wheels aceleradas nunca tiveram o kernel executado em CI. As de macOS e
-aarch64 são construídas e têm o conteúdo conferido, e isso é tudo.
+**Antes da 1.0**, e sem consumidor externo ainda, que é o critério que o projeto escolheu
+para se dizer estável. Na prática isso quer dizer que o dígito do meio ainda pode mexer no
+que sai, e que cada mudança entra no changelog com a medição atrás.
 
-E cada afirmação desta página é medida, o que não é o mesmo que provada. É razoável supor
-que exista uma que eu ainda não medi.
+Vale uma última: cada número desta página é medido, o que não é o mesmo que provado. É
+razoável supor que exista um que eu ainda não medi.
 
 ## Prático
 
