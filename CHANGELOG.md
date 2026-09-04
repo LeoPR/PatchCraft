@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- The rule that produced the two rescopings is recorded as invariant I10 in
+  `AGENTS.md`: an ADR carries the choice, not the research behind it. Before
+  writing one, split what is determined from what is chosen and keep only the
+  second; if the chosen part comes out empty it was a finding, and a dated
+  study is where it goes. Both ADRs written this month failed it on the first
+  draft, in the same way, and both were caught by the owner asking what the
+  document was for. `docs/ADR/0001` and `0002` were checked and do not have the
+  problem: they are context, decision, consequences and alternatives, at a
+  hundred lines each.
 - ADR 0004 now separates what is determined from what is being asked. The
   owner's point settled it: naming is a fact about the ecosystem the caller
   already imports, not a preference of this project, and choosing by taste

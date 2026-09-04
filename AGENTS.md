@@ -89,7 +89,30 @@ literal directory of that name on Linux.
 `tools/check_dist.py` holds the matching allowlist. Adding a top-level
 directory means updating both. The gate will tell you; do not silence it.
 
-### I10. Do not invent what already exists
+### I10. An ADR carries the choice, not the research behind it
+
+Before writing one, split what is being said into what is **determined** and
+what is **chosen**, and put only the second in the ADR.
+
+A name is determined: which identifier a parameter carries is a fact about the
+ecosystem the caller already imports, and picking one by taste is a guess made
+permanent by a frozen surface. A measurement is determined. A benchmark table is
+determined. Those belong in `docs/STUDIES/`, dated, with the ADR linking to
+them.
+
+What is chosen is whether to do the thing at all, when, and what it costs the
+surface. If that part comes out empty, it was never an ADR: it was a finding,
+and a study is where it goes.
+
+Both ADRs written in 2026-09 failed this on the first draft, in the same way
+and for the same reason, which is that writing down everything you learned feels
+like thoroughness and reads as a lab notebook. ADR 0003 mixed a rule with a
+vocabulary for six transforms that never shipped; ADR 0004 mixed the names,
+which precedent decides, with whether to spend a frozen surface on them, which
+only the owner decides. Both shrank by a third once separated, and both were
+caught by the owner asking what the document was for.
+
+### I11. Do not invent what already exists
 
 Check for an official or established solution before writing one. The
 accelerator's packaging, the versioning rule, the citation format and the

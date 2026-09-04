@@ -8,12 +8,13 @@
 
 ## Entry route
 
-1. [`AGENTS.md`](AGENTS.md), the rules. **Start at §0**, the ten invariants:
+1. [`AGENTS.md`](AGENTS.md), the rules. **Start at §0**, the eleven invariants:
    I1 measure before writing it down · I2 THEORY §9 is the arbiter · I3 a fix
    ships with a failing test · I4 the exactness suite falsifies · I5 the surface
    is 20 names · I6 both code paths stay green · I7 the version answers one
    question · I8 nothing ephemeral in the tree · I9 a tracked file ships ·
-   I10 do not invent what exists
+   I10 an ADR carries the choice, not the research · I11 do not invent what
+   exists
 2. [`MAP.md`](MAP.md), where things are
 3. [`STATUS.md`](STATUS.md), where things stand and who each open item waits on
 4. [`docs/FOCO-1.0.md`](docs/FOCO-1.0.md), what is left before 1.0

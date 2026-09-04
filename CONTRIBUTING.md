@@ -200,7 +200,7 @@ PatchCraft/
 │   ├── THEORY.md                   distilled design + §9 condition contract; §0 binding scope
 │   ├── ROADMAP.md                  milestone plan
 │   ├── FOCO-1.0.md                 what 1.0 freezes and the blockers in the way
-│   ├── ADR/                        one file per decision that shaped the API
+│   ├── ADR/                        one file per decision; the choice only, evidence in STUDIES/
 │   ├── STUDIES/                    background reading behind those decisions
 │   └── design/                     one spec per work phase: the alternatives measured and the decision
 ├── outreach/                       material for presenting the project publicly, not shipped

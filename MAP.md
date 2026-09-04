@@ -56,7 +56,7 @@ PatchCraft/
 │   ├── AUXILIARY.md .......... test fixtures, lab/, the off-tree conventions
 │   ├── ROADMAP.md ............ milestones, historical
 │   ├── FOCO-1.0.md ........... what 1.0 freezes, and the blockers still in the way
-│   ├── ADR/ .................. one file per decision that shaped the API
+│   ├── ADR/ .................. one file per decision; the choice, not the research
 │   ├── design/ ............... one spec per work phase: alternatives measured, then chosen
 │   └── STUDIES/ .............. background reading, and the Strata conformity review
 │
@@ -84,7 +84,7 @@ PatchCraft/
 | Know **whether this library is the right tool** | [docs/SCOPE.md](docs/SCOPE.md) |
 | Know **what the native accelerator is worth**, and re-measure it | [docs/PERFORMANCE.md](docs/PERFORMANCE.md), then `python tools/benchmark.py` |
 | Know **what the project refuses to claim** | [docs/GUIDE.md §8](docs/GUIDE.md#8-what-this-project-does-not-claim) |
-| Understand **why the API looks like this** | [docs/ADR/](docs/ADR/) |
+| Understand **why the API looks like this** | [docs/ADR/](docs/ADR/), and [docs/STUDIES/](docs/STUDIES/) for the measurements behind them |
 | Understand **why a phase was built the way it was** | [docs/design/](docs/design/) |
 | **Contribute**: run the gates, understand the two code paths | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | **Release** it | [CONTRIBUTING.md](CONTRIBUTING.md), the "Releasing" section |
