@@ -274,3 +274,32 @@ class TestNoZstandardFallback:
         sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
         assert sidecar["compressed"] is False
         assert sidecar["key"] == key
+
+
+# ------------------------------------------------------------- Path handling --
+def test_root_expands_a_leading_tilde(tmp_path, monkeypatch):
+    """`~` is expanded, and nothing else about the path is validated.
+
+    That is what torch.hub.set_dir, pytest's cacheprovider and pip all do with
+    a caller-supplied cache directory: expanduser, then use it. Without the
+    expansion `Cache("~/cache")` created a directory literally named `~` in the
+    working directory.
+    """
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    c = Cache("~/pc-cache", namespace="demo")
+    assert str(c.root).startswith(str(tmp_path))
+    assert "~" not in str(c.root)
+
+
+def test_root_is_otherwise_the_callers_business(tmp_path):
+    """No path validation, deliberately: the caller owns the location.
+
+    A cache directory is an argument the calling code chooses, not data read
+    from an untrusted source, and no established library validates it.
+    `SECURITY.md` states the boundary rather than the library policing it.
+    """
+    nested = tmp_path / "a" / "b"
+    c = Cache(nested, namespace="demo")
+    c.put("k", b"v")
+    assert c.get("k") == b"v"

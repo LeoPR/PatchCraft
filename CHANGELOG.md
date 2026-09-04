@@ -6,6 +6,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`Cache("~/cache")` created a directory literally named `~`** in the working
+  directory instead of using the home directory. `Path(root)` was used without
+  `expanduser`. Every established library expands and then stops: verified that
+  `torch.hub.set_dir` calls `expanduser` and validates nothing, that pytest's
+  cacheprovider does not validate, and that pip passes `--cache-dir` through.
+  `Cache` now does the same one thing they do.
+
+  The question that found this was whether to reject a `namespace` containing
+  `..`. The answer is no, and the reason is the owner's: it is not this
+  library's job to invent path security, and no library in the ecosystem does
+  it. What it was missing was the one thing they all do. `SECURITY.md` and
+  THEORY §9.5 now say that the path is the caller's and that only `~` is
+  expanded.
+
+
 ### Added
 
 - The rule that produced the two rescopings is recorded as invariant I10 in

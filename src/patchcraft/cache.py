@@ -103,7 +103,11 @@ class Cache:
 
         self._namespace = namespace
         self._version = version
-        self._root = Path(root) / namespace
+        # expanduser and nothing else, which is what torch.hub.set_dir, pytest
+        # and pip all do with a caller-supplied cache directory: none of them
+        # validates the path. Without it `Cache("~/cache")` created a directory
+        # literally named `~` in the working directory.
+        self._root = Path(root).expanduser() / namespace
         self._root.mkdir(parents=True, exist_ok=True)
         self._zstd = _try_zstandard()
 

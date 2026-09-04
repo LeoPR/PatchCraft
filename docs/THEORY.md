@@ -336,7 +336,8 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 ### 9.5 `Cache(root, namespace, version=1)`
 
 **Aceita:**
-- `root` inexistente → auto-criado (`mkdir(parents=True, exist_ok=True)`).
+- `root` inexistente → auto-criado (`mkdir(parents=True, exist_ok=True)`), com `~` expandido.
+- `root` e `namespace` são do chamador e **não são validados** além disso, que é o que `torch.hub.set_dir`, o cacheprovider do pytest e o pip fazem com um diretório de cache recebido: expandem `~` e usam. A `SECURITY.md` enuncia a fronteira em vez de a biblioteca policiá-la.
 - Entries de qualquer tamanho que caiba em RAM (sem mmap em v0.1).
 - Writes concorrentes (last-writer-wins via rename atômico + retry com backoff, §4).
 - Reads concorrentes (sem lock).

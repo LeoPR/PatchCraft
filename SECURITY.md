@@ -35,12 +35,19 @@ out-of-bounds write rather than an exception, and it is the thing most worth
 reporting. `PATCHCRAFT_ACCEL=0` disables the native path entirely, and the
 universal wheel does not contain it at all.
 
-**`Cache` joins its `namespace` into a filesystem path.** The argument is
-validated only as a non-empty string, so `Cache(root, namespace="../elsewhere")`
-writes outside `root`. The namespace is chosen by the calling code, not read
-from data, so this is a trust boundary rather than a hole: **do not derive a
-cache namespace from untrusted input**. If you need per-user or per-request
-caches, hash or otherwise sanitise the value before passing it.
+**`Cache` uses the path you give it, and validates nothing beyond expanding
+`~`.** That is deliberate and it is what every established library does with a
+caller-supplied cache directory: `torch.hub.set_dir` calls `expanduser` and
+stops, pytest's cacheprovider does not validate, pip passes its `--cache-dir`
+through. A cache location is an argument the calling code chooses, not data
+read from an untrusted source, so `Cache(root, namespace="../elsewhere")` will
+write outside `root` and that is the caller's decision.
+
+The boundary, therefore: **do not derive a cache root or namespace from
+untrusted input.** If you need per-user or per-request caches, hash or
+otherwise sanitise the value in the layer that has the context to do it. This
+library is not the place for path policing, and adding it here would be
+inventing a security mechanism where the ecosystem has a settled convention.
 
 **Nothing in the shipped package opens a network connection.** The dataset
 helpers that download anything live in `tests/`, which is not part of the
