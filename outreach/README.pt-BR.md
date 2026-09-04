@@ -31,9 +31,10 @@ que estes textos se dirigem lê português primeiro. O inglês é a tradução.
 - **Post do LinkedIn** (`linkedin/post.*`): cerca de 3.000 caracteres, e só as duas ou três
   primeiras linhas aparecem antes do "ver mais". Essas linhas não podem conter jargão: o
   público do LinkedIn é largo, e uma primeira frase que só fala com quem já conhece o
-  assunto filtra em vez de convidar. O post abre por um parágrafo curto de contexto sem
-  termo técnico, um segundo que nomeia o assunto, e só então a virada. Tem começo, meio e
-  fim, e o fecho retoma a ideia da abertura em vez de parar. Hashtags no fim e sem acento,
+  assunto filtra em vez de convidar. O texto tem uma ideia que o atravessa do começo ao
+  fim, e cada parágrafo a avança: aqui, a falha silenciosa, da qual os dois defeitos são
+  instâncias e a retratação é a mesma falha uma camada acima. Contexto antes de jargão,
+  densidade sem tom professoral, e um fecho que volta à abertura. Hashtags no fim e sem acento,
   porque hashtag acentuada quebra a busca do LinkedIn.
 - **Artigo do LinkedIn** (`linkedin/artigo.*`): formato longo, com títulos e tabelas
   renderizando, bom para a versão que carrega os números. Termina com o link do repositório.

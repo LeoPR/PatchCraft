@@ -8,16 +8,16 @@ Where the library does not help, the text says it does not help.*
 
 ---
 
-A large image rarely goes into a neural network whole. It is cut into pieces, each piece is
-processed, and at the end everything is glued back. Those pieces are called patches, and the
-cutting and the glueing are what this text is about.
+There is a kind of bug no test catches: the code runs, the output has the right shape, and
+the number is slightly wrong. Nobody finds out. The model just learns a little worse, and "a
+little worse" sets off no alarm. This text is about one such case, and about what it took to
+turn it into something that speaks up.
 
-Cutting an image into patches, running something on each piece and putting it back looks
-like a twenty-line job. I have written those twenty lines more times than I would like to
-admit, and got them wrong often enough to be worth writing once with tests around them.
-
-This text starts with the two mistakes those twenty lines make in silence, because they are
-why the library exists and because you may be carrying one of them right now.
+The case is this. A large image rarely goes into a neural network whole. It is cut into
+pieces, each piece is processed, and at the end everything is glued back. The pieces are
+called patches, and cutting and glueing look like a twenty-line job. I have written those
+twenty lines more times than I would like to admit, and in every project they went wrong in
+silence in one of the two ways below.
 
 ## Two defects that never announce themselves
 
@@ -87,6 +87,10 @@ hunts for the two counterexamples that would break the contract: a case inside t
 that is not exact, and a case outside the rule that is exact across every seed, which would
 say the predicate is drawn too tight. The full sweep of all 126,736 sits behind an
 environment variable, because it takes a little over a minute.
+
+Notice that it is the same silent failure as the opening, one layer up. The code was right;
+the guarantee about the code was wrong, and it passed the tests for the same reason the two
+defects at the start did: the question being asked was not the one that mattered.
 
 I think a numerical library is worth less for the guarantee it announces and more for the
 test it keeps pointed at that guarantee.

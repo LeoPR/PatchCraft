@@ -30,10 +30,11 @@ audience these texts are aimed at reads Portuguese first. English is the transla
 - **LinkedIn post** (`linkedin/post.*`): about 3,000 characters, and only the first two or
   three lines show before "see more". Those lines cannot carry jargon: the LinkedIn
   audience is wide, and a first sentence that only speaks to people who already know the
-  subject filters instead of inviting. The post opens with a short paragraph of context
-  with no technical term, a second that names the subject, and only then the turn. It has a
-  beginning, a middle and an end, and the close returns to the idea the opening raised
-  rather than simply stopping. Hashtags at the end, without
+  subject filters instead of inviting. The text has one idea that runs from start to
+  finish, and every paragraph advances it: here, silent failure, of which the two defects
+  are instances and the retraction is the same failure one layer up. Context before jargon,
+  density without a lecturing tone, and a close that returns to the opening. Hashtags at the
+  end, without
   accents, because accented hashtags break LinkedIn search.
 - **LinkedIn article** (`linkedin/artigo.*`): long form, headings and tables render, good
   for the version that carries the numbers. End with the repository link.

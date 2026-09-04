@@ -8,16 +8,16 @@ biblioteca não ajuda, o texto diz que não ajuda.*
 
 ---
 
-Uma imagem grande raramente entra inteira numa rede neural. Ela é cortada em pedaços, cada
-pedaço é processado, e no fim tudo é colado de volta. Esses pedaços se chamam patches, e o
-recorte e a colagem são o assunto deste texto.
+Existe um tipo de erro que nenhum teste pega: o código roda, a saída tem a forma certa, e o
+número está um pouco errado. Ninguém fica sabendo. O modelo só aprende um pouco pior, e "um
+pouco pior" não dispara alarme. Este texto é sobre um caso desses, e sobre o que foi preciso
+para transformá-lo em algo que avisa.
 
-Recortar uma imagem em patches, rodar alguma coisa em cada pedaço e remontar parece uma
-tarefa de vinte linhas. Eu escrevi essas vinte linhas mais vezes do que gostaria de admitir,
-e as reescrevi errado o suficiente para valer a pena escrever uma vez com teste em volta.
-
-Este texto começa pelos dois erros que essas vinte linhas cometem em silêncio, porque são
-a razão de a biblioteca existir e porque você pode estar com um deles agora.
+O caso é o seguinte. Uma imagem grande raramente entra inteira numa rede neural. Ela é
+cortada em pedaços, cada pedaço é processado, e no fim tudo é colado de volta. Os pedaços se
+chamam patches, e recortar e colar parece uma tarefa de vinte linhas. Eu escrevi essas vinte
+linhas mais vezes do que gostaria de admitir, e em cada projeto elas erraram em silêncio de
+um dos dois jeitos abaixo.
 
 ## Dois defeitos que não avisam
 
@@ -81,6 +81,10 @@ dois contraexemplos que derrubariam o contrato: um caso dentro da regra que não
 e um caso fora da regra que seja exato em todas as sementes, o que indicaria que o predicado
 está estreito demais. A varredura completa das 126.736 fica atrás de uma variável de
 ambiente, porque leva pouco mais de um minuto.
+
+Repare que é a mesma falha silenciosa da abertura, uma camada acima. O código estava certo;
+a garantia sobre o código estava errada, e passava nos testes pelo mesmo motivo que os dois
+defeitos do início passavam: a pergunta feita não era a que importava.
 
 Acho que uma biblioteca numérica vale menos pela garantia que anuncia e mais pelo teste que
 mantém apontado contra a própria garantia.
