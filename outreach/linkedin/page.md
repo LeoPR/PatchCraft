@@ -44,6 +44,12 @@ times it was covered. That count is the coverage map, the first row of the next 
 
 ![Coverage, the hand-written fold and PatchCraft, across four strides](figuras/en/2-stride.png)
 
+The figure has three rows across four strides. The top one is the coverage map, how many
+patches cover each pixel, blue where the count is a power of two and amber where it is not.
+The middle one is `fold` and `unfold` written by hand, summing and dividing by the coverage,
+validating no geometry and saying nothing about the result. The bottom one is PatchCraft,
+with the same arithmetic and the geometry checked first.
+
 At strides 32 and 16 both paths return the same tensor, and it is exact. Worth saying plainly:
 PatchCraft's arithmetic is the same. What it adds is checking the geometry first and declaring
 the regime, not summing differently.

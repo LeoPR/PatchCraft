@@ -611,98 +611,96 @@ def fig_cut(lang: str) -> None:
     # the number that means something is how much of the data lands elsewhere,
     # not how far any one value moves. Counted per channel value.
     moved = float((bad != img).float().mean()) * 100
-    side, gap, m = 340, 30, 55
-    c = Fig(432, 2 * side + gap + 2 * m)
-    caps = (s["cut_cap"][0], s["cut_cap"][1].format(moved))
+    side, gap, m = 390, 30, 48
+    c = Fig(494, 2 * side + gap + 2 * m)
+    caps = (s["cut_cap"][0], s["cut_cap"][1].format(f"{moved:.1f}".replace(".", s["decimal"])))
     for i, (t, cap) in enumerate([(img, caps[0]), (bad, caps[1])]):
         x = m + i * (side + gap)
-        c.text((x, 12), s["cut_lab"][i], 19, INK, bold=True)
-        c.framed(t, (x, 44), side)
-        c.text((x, 44 + side + 12), cap, 15, LOSS if i else MUTED, bold=bool(i))
+        c.text((x, 12), s["cut_lab"][i], 21, INK, bold=True)
+        c.framed(t, (x, 48), side)
+        c.text((x, 48 + side + 14), cap, 17, LOSS if i else MUTED, bold=bool(i))
     c.save(lang, s["cut_stem"])
 
 
 def fig_stride(lang: str) -> None:
-    """Coverage, the hand-written fold, and PatchCraft, for four strides."""
+    """Coverage, the hand-written fold, and PatchCraft, for four strides.
+
+    The row descriptions live in the prose, not here: keeping them out buys
+    about a fifth of the width back for the panels, which is what decides
+    whether the labels survive being scaled down in a feed.
+    """
     s = FIG[lang]
     img = test_image()
-    lab_x, col_x, panel, gap = 20, 200, 230, 18
-    xs = [col_x + i * (panel + gap) for i in range(4)]
-    c = Fig(712, 1200)
+    m, panel, gap = 22, 225, 18
+    xs = [m + i * (panel + gap) for i in range(4)]
+    c = Fig(788, 1000)
 
-    for i, (x, st) in enumerate(zip(xs, STRIDES, strict=True)):
-        label = s["stride_first"] if i == 0 else s["stride_rest"].format(st)
-        c.text((x, 8), label, 19, INK, bold=True)
+    for x, st in zip(xs, STRIDES, strict=True):
+        c.text((x, 10), s["stride_rest"].format(st), 21, INK, bold=True)
 
-    cov, cov_y = 120, 40
-    c.block((lab_x, cov_y + 6), s["row_cov"], size=14, lead=19)
+    def row_label(y: int, key: str) -> None:
+        head, rest = s[key]
+        c.text((m, y), head, 18, INK, bold=True)
+        c.text((m + int(font(18, bold=True).getlength(head)) + 8, y), rest, 18, MUTED)
+
+    cov, cov_y = 120, 76
+    row_label(46, "row_cov")
     scale = cov / SIZE
+    off = (panel - cov) // 2
     for x, st in zip(xs, STRIDES, strict=True):
         rows = coverage_map(st).tolist()
         vmax = int(max(max(r) for r in rows))
         for ya, yb in runs([tuple(r) for r in rows]):
             for xa, xb in runs(rows[ya]):
                 c.box(
-                    (x + xa * scale, cov_y + ya * scale),
-                    (x + xb * scale, cov_y + yb * scale),
+                    (x + off + xa * scale, cov_y + ya * scale),
+                    (x + off + xb * scale, cov_y + yb * scale),
                     fill=count_colour(int(rows[ya][xa]), vmax),
                 )
-        c.box((x, cov_y), (x + cov, cov_y + cov), outline=RULE)
+        c.box((x + off, cov_y), (x + off + cov, cov_y + cov), outline=RULE)
 
-    hand_y = 184
-    c.block((lab_x, hand_y + 8), s["row_hand"], size=14, lead=19)
+    hand_y = 244
+    row_label(214, "row_hand")
     for x, st in zip(xs, STRIDES, strict=True):
         c.framed(hand_fold(img, st), (x, hand_y), panel)
 
-    craft_y = 438
-    c.block((lab_x, craft_y + 8), s["row_craft"], size=14, lead=19)
+    craft_y = 519
+    row_label(489, "row_craft")
 
     # Strides 32 and 16 give the same tensor by both paths, so one box covers
     # both columns instead of the same sentence printed twice.
     span = 2 * panel + gap
     c.box((xs[0], craft_y), (xs[0] + span, craft_y + panel), fill=BAND, outline=RULE)
-    c.block((xs[0] + 22, craft_y + 66), s["same"], size=15, colour=MUTED, lead=22)
-
-    exact_caps = []
-    for st in STRIDES[:2]:
-        back = reconstruct(
-            extract(img, patch_size=PATCH, stride=st), image_shape=(3, SIZE, SIZE), stride=st
-        )
-        exact_caps.append(torch.equal(back, img))
-    assert all(exact_caps)
-    c.text((xs[0], craft_y + panel + 12), s["caps"][0], 16, GOOD, bold=True)
+    c.block((xs[0] + 24, craft_y + 62), s["same"], size=17, colour=MUTED, lead=25)
+    c.text((xs[0], craft_y + panel + 12), s["caps"][0], 18, GOOD, bold=True)
 
     st = STRIDES[2]
     back = reconstruct(
         extract(img, patch_size=PATCH, stride=st), image_shape=(3, SIZE, SIZE), stride=st
     )
     heat, peak = error_map(back, img)
-    # A bare 1.2e-7 says nothing about whether it matters, so the caption
-    # carries the amplification that makes it visible and the fact that both
-    # images are bit-identical once they are 8 bits, which is measured here.
     gain = f"{1.0 / peak / 1e6:.1f}".replace(".", s["decimal"])
-    eight_bit_same = torch.equal(
+    assert torch.equal(
         (img * 255).round().to(torch.uint8), (back * 255).round().to(torch.uint8)
     )
-    assert eight_bit_same
     x = xs[2]
     c.box((x, craft_y), (x + panel, craft_y + panel), fill=BAND, outline=RULE)
-    c.text((x + 18, craft_y + 16), s["diff_title"], 15, INK, bold=True)
-    inner = 108
+    c.text((x + 18, craft_y + 14), s["diff_title"], 16, INK, bold=True)
+    inner = 104
     c.framed(heat, (x + (panel - inner) // 2, craft_y + 40), inner)
     c.block(
-        (x + 18, craft_y + 158),
+        (x + 18, craft_y + 156),
         [line.format(gain) for line in s["diff_cap"]],
-        size=13,
-        lead=17,
+        size=14,
+        lead=18,
     )
-    c.text((x, craft_y + panel + 12), s["caps"][1], 16, WARN, bold=True)
+    c.text((x, craft_y + panel + 12), s["caps"][1], 18, WARN, bold=True)
 
     x = xs[3]
     c.box((x, craft_y), (x + panel, craft_y + panel), fill=BAND, outline=RULE)
     c.box((x, craft_y), (x + 5, craft_y + panel), fill=LOSS)
-    c.block((x + 20, craft_y + 42), s["refusal"], size=15, colour=INK, lead=22)
-    c.text((x, craft_y + panel + 12), s["caps"][2], 16, LOSS, bold=True)
+    c.block((x + 22, craft_y + 40), s["refusal"], size=16, colour=INK, lead=24)
+    c.text((x, craft_y + panel + 12), s["caps"][2], 18, LOSS, bold=True)
 
     c.save(lang, s["stride_stem"])
 
@@ -714,14 +712,14 @@ def fig_mnist(lang: str) -> bool:
     if digit is None:
         return False
     patches = extract(digit, patch_size=7, stride=7)
-    side, gap, m = 280, 25, 45
-    c = Fig(380, 3 * side + 2 * gap + 2 * m)
+    side, gap, m = 300, 22, 40
+    c = Fig(400, 3 * side + 2 * gap + 2 * m)
     for i, (t, cap) in enumerate(
         zip([digit, patch_grid_overlay(digit, 7), patches[5]], s["mnist_cap"], strict=True)
     ):
         x = m + i * (side + gap)
-        c.framed(t, (x, 30), side)
-        c.text((x, 30 + side + 12), cap, 15, MUTED)
+        c.framed(t, (x, 26), side)
+        c.text((x, 26 + side + 14), cap, 17, MUTED)
     c.save(lang, s["mnist_stem"])
     return True
 
@@ -798,38 +796,30 @@ FIG = {
         "mnist_stem": "3-mnist",
         "page_stem": "pagina",
         "cut_lab": ("original", "reshape intuitivo"),
-        "cut_cap": ("a imagem de entrada", "mesma forma, {:.1f}% dos valores fora do lugar"),
+        "cut_cap": ("a imagem de entrada", "mesma forma, {}% dos valores fora do lugar"),
         "stride_first": "stride 32",
         "stride_rest": "stride {}",
-        "row_cov": [
-            "*Cobertura",
-            "quantos patches",
-            "cobrem cada pixel.",
-            "Azul: potência de 2.",
-            "Âmbar: não é.",
-            "Vermelho: nenhum.",
-        ],
-        "row_hand": [
-            "*fold/unfold à mão",
-            "somar e dividir",
-            "pela cobertura,",
-            "sem validar nada",
-            "e sem dizer o",
-            "que saiu.",
-        ],
-        "row_craft": [
-            "*PatchCraft",
-            "a mesma conta,",
-            "com a geometria",
-            "conferida antes e",
-            "o regime dito",
-            "no contrato.",
-        ],
+        "row_cov": (
+            "Cobertura",
+            "quantos patches cobrem cada pixel. Azul, potência de dois. "
+            "Âmbar, não é. Vermelho, nenhum.",
+        ),
+        "row_hand": (
+            "fold e unfold à mão",
+            "somar e dividir pela cobertura, sem validar a geometria "
+            "e sem dizer o que saiu.",
+        ),
+        "row_craft": (
+            "PatchCraft",
+            "a mesma conta, com a geometria conferida antes e o regime "
+            "declarado no contrato.",
+        ),
         "same": [
             "*Nos dois, o mesmo tensor que a linha de cima.",
-            "A conta é idêntica. O que muda é que aqui o contrato diz, antes",
-            "da chamada, que estas duas geometrias voltam exatas: toda contagem",
-            "de cobertura é potência de dois.",
+            "",
+            "A conta é idêntica. O que muda é que aqui o contrato",
+            "diz, antes da chamada, que estas duas geometrias voltam",
+            "exatas: toda contagem de cobertura é potência de dois.",
         ],
         "diff_title": "o erro, ampliado",
         "decimal": ",",
@@ -905,6 +895,12 @@ coberto. Essa contagem é o mapa de cobertura, a primeira linha da figura seguin
 ## 2. O stride decide o resultado
 
 ![Cobertura, fold escrito à mão e PatchCraft, para quatro strides](FIG/2-stride.png)
+
+A figura tem três linhas e quatro strides. A de cima é o mapa de cobertura, quantos patches
+cobrem cada pixel, com azul onde a contagem é potência de dois e âmbar onde não é. A do meio
+é o `fold` e o `unfold` escritos à mão, somando e dividindo pela cobertura, sem validar a
+geometria e sem dizer o que saiu. A de baixo é o PatchCraft, com a mesma conta e a geometria
+conferida antes.
 
 Nos strides 32 e 16 os dois caminhos devolvem o mesmo tensor, e ele é exato. Vale dizer com
 todas as letras: a conta do PatchCraft é a mesma. O que ele acrescenta é conferir a geometria
@@ -1002,38 +998,30 @@ Repositório: https://github.com/LeoPR/PatchCraft
         "mnist_stem": "3-mnist",
         "page_stem": "page",
         "cut_lab": ("original", "intuitive reshape"),
-        "cut_cap": ("the input image", "same shape, {:.1f}% of the values moved"),
+        "cut_cap": ("the input image", "same shape, {}% of the values moved"),
         "stride_first": "stride 32",
         "stride_rest": "stride {}",
-        "row_cov": [
-            "*Coverage",
-            "how many patches",
-            "cover each pixel.",
-            "Blue: power of 2.",
-            "Amber: it is not.",
-            "Red: none at all.",
-        ],
-        "row_hand": [
-            "*fold/unfold by hand",
-            "sum and divide by",
-            "the coverage, with",
-            "nothing validated",
-            "and nothing said",
-            "about the result.",
-        ],
-        "row_craft": [
-            "*PatchCraft",
-            "the same arithmetic,",
-            "with the geometry",
-            "checked first and",
-            "the regime stated",
-            "in the contract.",
-        ],
+        "row_cov": (
+            "Coverage",
+            "how many patches cover each pixel. Blue, a power of two. "
+            "Amber, not one. Red, none at all.",
+        ),
+        "row_hand": (
+            "fold and unfold by hand",
+            "sum and divide by the coverage, validating no geometry "
+            "and saying nothing about the result.",
+        ),
+        "row_craft": (
+            "PatchCraft",
+            "the same arithmetic, with the geometry checked first and the "
+            "regime declared in the contract.",
+        ),
         "same": [
             "*Both give the same tensor as the row above.",
-            "The arithmetic is identical. What changes is that here the contract",
-            "says, before the call, that these two geometries come back exact:",
-            "every coverage count is a power of two.",
+            "",
+            "The arithmetic is identical. What changes is that here",
+            "the contract says, before the call, that these two",
+            "geometries come back exact: every count is a power of two.",
         ],
         "diff_title": "the error, amplified",
         "decimal": ".",
@@ -1110,6 +1098,12 @@ times it was covered. That count is the coverage map, the first row of the next 
 ## 2. The stride decides the result
 
 ![Coverage, the hand-written fold and PatchCraft, across four strides](FIG/2-stride.png)
+
+The figure has three rows across four strides. The top one is the coverage map, how many
+patches cover each pixel, blue where the count is a power of two and amber where it is not.
+The middle one is `fold` and `unfold` written by hand, summing and dividing by the coverage,
+validating no geometry and saying nothing about the result. The bottom one is PatchCraft,
+with the same arithmetic and the geometry checked first.
 
 At strides 32 and 16 both paths return the same tensor, and it is exact. Worth saying plainly:
 PatchCraft's arithmetic is the same. What it adds is checking the geometry first and declaring

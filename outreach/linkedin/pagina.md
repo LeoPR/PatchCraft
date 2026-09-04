@@ -43,6 +43,12 @@ coberto. Essa contagem é o mapa de cobertura, a primeira linha da figura seguin
 
 ![Cobertura, fold escrito à mão e PatchCraft, para quatro strides](figuras/pt-BR/2-stride.png)
 
+A figura tem três linhas e quatro strides. A de cima é o mapa de cobertura, quantos patches
+cobrem cada pixel, com azul onde a contagem é potência de dois e âmbar onde não é. A do meio
+é o `fold` e o `unfold` escritos à mão, somando e dividindo pela cobertura, sem validar a
+geometria e sem dizer o que saiu. A de baixo é o PatchCraft, com a mesma conta e a geometria
+conferida antes.
+
 Nos strides 32 e 16 os dois caminhos devolvem o mesmo tensor, e ele é exato. Vale dizer com
 todas as letras: a conta do PatchCraft é a mesma. O que ele acrescenta é conferir a geometria
 antes e declarar o regime, não somar diferente.
