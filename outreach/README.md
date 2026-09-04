@@ -22,16 +22,20 @@ source first.
 | [`2026-09-04-lancamento.md`](2026-09-04-lancamento.md) / [`2026-09-04-release.en.md`](2026-09-04-release.en.md) | the current news source (PT / EN) |
 | [`linkedin/`](linkedin/) | LinkedIn: `post.*` (short), `artigo.*` (long technical), and the figures |
 
-The figures are not drawn by hand. `tools/make_outreach_figure.py` computes each panel with
-torch's own `fold` and `unfold` and writes the PNG for uploading plus the SVG of the same
-drawing for editing. Running the script regenerates everything, so a figure obeys the same
-rule the numbers in the text do: there is a command that reproduces it.
+The figures live in `linkedin/figuras/<language>/`, one subfolder per language so the
+channel directory does not mix prose with binaries. `tools/make_outreach_figures.py` builds
+them all, PNG for uploading and SVG beside it for editing, and running the script
+regenerates everything. They obey the same rule the numbers in the text do: there is a
+command that reproduces them.
 
-There are two per language, and they form a pair in the order `coverage` then `patchcraft`:
-the first is the problem, the coverage maps of three steps; the second is the answer, the
-same three geometries with what the library returns. In the second, the error text is what
-`reconstruct` actually raises and the list of usable steps is what `tilings` returns.
-Nothing there was written by hand for the figure.
+None of them is an illustration. The image panels are the tensors `extract` and
+`reconstruct` actually return, the error in the corner of the approximate panel is the real
+difference amplified until it is visible, the refusal text is what `reconstruct` raises, and
+the coverage maps come from torch's own fold and unfold over a tensor of ones.
+
+There are three: `fold-unfold` shows the problem, `patchcraft` shows the library's three
+regimes (identical, approximate, refused) and `coverage` shows the mechanism that explains
+the other two.
 
 Portuguese is the canonical language here, unlike the rest of the project, because the
 audience these texts are aimed at reads Portuguese first. English is the translation.

@@ -12,15 +12,21 @@
 > care, and hands over the link. The theory belongs in the article, the full account in
 > the repository.
 >
-> **Images to go with it**, both 1200x848, produced by
-> `python tools/make_outreach_figure.py`, each with its SVG beside it for editing. They
-> form a pair and go in this order:
+>**Images to go with it**, in [`figuras/en/`](figuras/en/), PNG for uploading and SVG
+> beside it for editing, all produced by `python tools/make_outreach_figures.py`. None is
+> drawn: the panels are the real tensors, the errors are measured, and the refusal carries
+> the text the library raises. They go in this order:
 >
-> 1. [`coverage.en.png`](coverage.en.png), the problem. The three steps from the third
->    paragraph, with the coverage map torch's own `fold`/`unfold` produces for each.
-> 2. [`patchcraft.en.png`](patchcraft.en.png), the answer. The same three geometries with
->    what the library returns, the literal `ValueError` text for the one that does not
->    close, and the ten stride widths `tilings` reports as legal for patch 32.
+> 1. [`fold-unfold.png`](figuras/en/fold-unfold.png), the problem, and the strongest of the
+>    three because it reads without a caption. The same image down four paths: the original,
+>    the intuitive reshape that returns the right shape scrambled, stride 20 with its black
+>    band, and stride 32 done right.
+> 2. [`patchcraft.png`](figuras/en/patchcraft.png), the answer, across the three regimes the
+>    library actually has: identical at stride 32 and 16, approximate at stride 12 with the
+>    real error amplified in the corner, and refused at stride 20, which `unfold` would
+>    happily accept.
+> 3. [`coverage.png`](figuras/en/coverage.png), the mechanism behind the other two, if you
+>    want to explain why stride 12 comes out approximate and stride 16 does not.
 
 ---
 

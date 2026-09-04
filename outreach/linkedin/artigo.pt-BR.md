@@ -58,18 +58,24 @@ geometrias retangulares, a regra do máximo erra 3936 de 14969 casos e a da pot�
 erra 8, todos na direção segura de prometer menos do que entregam. Um contrato pode prometer
 de menos. Não pode prometer demais.
 
-## Por que a suíte não pegou
+## Por que a suíte não pegou, e o que mudou nela
 
-Essa é a parte que eu levaria para qualquer outro projeto.
+Isso foi corrigido na 0.5.0, em agosto de 2026, junto com a afirmação errada. Conto porque
+a causa serve para qualquer outro projeto, não porque ainda esteja aberto.
 
 Os testes de round-trip construíam as imagens com `torch.arange`. Dado inteiro, num float,
 fecha a ida e volta exato em geometrias onde dado aleatório não fecha, porque não há
-mantissa suficiente sendo usada para o arredondamento aparecer. A suíte passava porque
-estava fazendo a pergunta errada, com muita confiança.
+mantissa suficiente sendo usada para o arredondamento aparecer. A suíte passava, e passava
+porque estava fazendo a pergunta errada com muita confiança. Um teste verde não é a mesma
+coisa que uma afirmação verificada, e a distância entre as duas foi exatamente esta.
 
-A correção não foi só trocar a frase. Foi trocar o gerador de dados por um helper auditado,
-que sorteia ruído de mantissa cheia direto no dtype alvo e é proibido de derivar float32 a
-partir de float64.
+A correção não foi só trocar a frase. O gerador de dados virou um helper auditado, que
+sorteia ruído de mantissa cheia direto no dtype alvo e é proibido de derivar float32 a
+partir de float64, e ele passou a valer para os treze casos de round-trip de uma vez.
+
+**Onde isso está hoje**, para quem for olhar o repositório e não ficar em dúvida: são 1619
+testes passando, a regra em vigor é a do parágrafo anterior, e a varredura da seção
+seguinte roda em toda CI. Um `pytest` no clone reproduz esse número.
 
 ## O teste que existe para derrubar a afirmação
 

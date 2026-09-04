@@ -23,16 +23,19 @@ antes.
 | `2026-09-03-*.md` | a fonte anterior, registro da 0.5.1; datada, não se reescreve |
 | [`linkedin/`](linkedin/) | LinkedIn: `post.*` (curto), `artigo.*` (longo técnico), e as figuras |
 
-As figuras não são desenhadas à mão. O `tools/make_outreach_figure.py` calcula cada painel
-com o `fold` e o `unfold` do torch e escreve o PNG para subir mais o SVG do mesmo desenho
-para editar. Rodar o script regenera tudo, então a figura obedece à mesma regra dos números
-do texto: existe um comando que a reproduz.
+As figuras ficam em `linkedin/figuras/<língua>/`, uma subpasta por língua para o diretório
+do canal não misturar texto com binário. O `tools/make_outreach_figures.py` gera todas, em
+PNG para subir e SVG ao lado para editar, e rodar o script regenera tudo. Elas obedecem à
+mesma regra dos números do texto: existe um comando que as reproduz.
 
-São duas por língua, e formam um par na ordem `cobertura` depois `patchcraft`: a primeira é
-o problema, os mapas de cobertura de três passos; a segunda é a resposta, as mesmas três
-geometrias com o que a biblioteca devolve. Na segunda, o texto do erro é o que o
-`reconstruct` levanta de verdade, e a lista de passos utilizáveis é a que o `tilings`
-retorna. Nada ali foi escrito à mão para a figura.
+Nenhuma é ilustração. Os painéis de imagem são os tensores que o `extract` e o `reconstruct`
+devolvem de fato, o erro no canto do painel aproximado é a diferença real ampliada até
+ficar visível, o texto da recusa é o que o `reconstruct` levanta, e os mapas de cobertura
+saem do `fold` e do `unfold` do torch sobre um tensor de uns.
+
+São três: `fold-unfold` mostra o problema, `patchcraft` mostra os três regimes da
+biblioteca (idêntico, aproximado, recusado) e `cobertura` mostra o mecanismo que explica
+os outros dois.
 
 Aqui o português é a língua canônica, ao contrário do resto do projeto, porque o público a
 que estes textos se dirigem lê português primeiro. O inglês é a tradução.

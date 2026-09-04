@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="664" viewBox="0 0 1200 664">
+<rect width="1200" height="664" fill="rgb(255, 255, 255)"/>
+<text x="105" y="88" font-family="Arial,Helvetica,sans-serif" font-size="42" font-weight="bold" fill="rgb(26, 26, 26)">O passo decide se a imagem volta inteira</text>
+<text x="105" y="138" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="rgb(110, 110, 110)">Imagem 128x128, patch 32. A cor é o número de patches que cobrem aquele pixel,</text>
+<text x="105" y="166" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="rgb(110, 110, 110)">medido com o fold e o unfold do torch sobre um tensor de uns.</text>
+<rect x="105.0" y="218.0" width="300.0" height="300.0" fill="rgb(219, 233, 246)"/>
+<rect x="105.0" y="218.0" width="300.0" height="300.0" fill="none" stroke="rgb(206, 206, 206)"/>
+<rect x="450.0" y="218.0" width="37.5" height="37.5" fill="rgb(219, 233, 246)"/>
+<rect x="487.5" y="218.0" width="225.0" height="37.5" fill="rgb(141, 184, 219)"/>
+<rect x="712.5" y="218.0" width="37.5" height="37.5" fill="rgb(219, 233, 246)"/>
+<rect x="450.0" y="255.5" width="37.5" height="225.0" fill="rgb(141, 184, 219)"/>
+<rect x="487.5" y="255.5" width="225.0" height="225.0" fill="rgb(52, 105, 156)"/>
+<rect x="712.5" y="255.5" width="37.5" height="225.0" fill="rgb(141, 184, 219)"/>
+<rect x="450.0" y="480.5" width="37.5" height="37.5" fill="rgb(219, 233, 246)"/>
+<rect x="487.5" y="480.5" width="225.0" height="37.5" fill="rgb(141, 184, 219)"/>
+<rect x="712.5" y="480.5" width="37.5" height="37.5" fill="rgb(219, 233, 246)"/>
+<rect x="450.0" y="218.0" width="300.0" height="300.0" fill="none" stroke="rgb(206, 206, 206)"/>
+<rect x="795.0" y="218.0" width="46.9" height="46.9" fill="rgb(219, 233, 246)"/>
+<rect x="841.9" y="218.0" width="28.1" height="46.9" fill="rgb(141, 184, 219)"/>
+<rect x="870.0" y="218.0" width="18.8" height="46.9" fill="rgb(219, 233, 246)"/>
+<rect x="888.8" y="218.0" width="28.1" height="46.9" fill="rgb(141, 184, 219)"/>
+<rect x="916.9" y="218.0" width="18.8" height="46.9" fill="rgb(219, 233, 246)"/>
+<rect x="935.6" y="218.0" width="28.1" height="46.9" fill="rgb(141, 184, 219)"/>
+<rect x="963.8" y="218.0" width="18.8" height="46.9" fill="rgb(219, 233, 246)"/>
+<rect x="982.5" y="218.0" width="28.1" height="46.9" fill="rgb(141, 184, 219)"/>
+<rect x="1010.6" y="218.0" width="46.9" height="46.9" fill="rgb(219, 233, 246)"/>
+<rect x="1057.5" y="218.0" width="37.5" height="46.9" fill="rgb(176, 42, 42)"/>
+<rect x="795.0" y="264.9" width="46.9" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="841.9" y="264.9" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="870.0" y="264.9" width="18.8" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="888.8" y="264.9" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="916.9" y="264.9" width="18.8" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="935.6" y="264.9" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="963.8" y="264.9" width="18.8" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="982.5" y="264.9" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="1010.6" y="264.9" width="46.9" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="1057.5" y="264.9" width="37.5" height="28.1" fill="rgb(176, 42, 42)"/>
+<rect x="795.0" y="293.0" width="46.9" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="841.9" y="293.0" width="28.1" height="18.8" fill="rgb(141, 184, 219)"/>
+<rect x="870.0" y="293.0" width="18.8" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="888.8" y="293.0" width="28.1" height="18.8" fill="rgb(141, 184, 219)"/>
+<rect x="916.9" y="293.0" width="18.8" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="935.6" y="293.0" width="28.1" height="18.8" fill="rgb(141, 184, 219)"/>
+<rect x="963.8" y="293.0" width="18.8" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="982.5" y="293.0" width="28.1" height="18.8" fill="rgb(141, 184, 219)"/>
+<rect x="1010.6" y="293.0" width="46.9" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="1057.5" y="293.0" width="37.5" height="18.8" fill="rgb(176, 42, 42)"/>
+<rect x="795.0" y="311.8" width="46.9" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="841.9" y="311.8" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="870.0" y="311.8" width="18.8" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="888.8" y="311.8" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="916.9" y="311.8" width="18.8" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="935.6" y="311.8" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="963.8" y="311.8" width="18.8" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="982.5" y="311.8" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="1010.6" y="311.8" width="46.9" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="1057.5" y="311.8" width="37.5" height="28.1" fill="rgb(176, 42, 42)"/>
+<rect x="795.0" y="339.9" width="46.9" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="841.9" y="339.9" width="28.1" height="18.8" fill="rgb(141, 184, 219)"/>
+<rect x="870.0" y="339.9" width="18.8" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="888.8" y="339.9" width="28.1" height="18.8" fill="rgb(141, 184, 219)"/>
+<rect x="916.9" y="339.9" width="18.8" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="935.6" y="339.9" width="28.1" height="18.8" fill="rgb(141, 184, 219)"/>
+<rect x="963.8" y="339.9" width="18.8" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="982.5" y="339.9" width="28.1" height="18.8" fill="rgb(141, 184, 219)"/>
+<rect x="1010.6" y="339.9" width="46.9" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="1057.5" y="339.9" width="37.5" height="18.8" fill="rgb(176, 42, 42)"/>
+<rect x="795.0" y="358.6" width="46.9" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="841.9" y="358.6" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="870.0" y="358.6" width="18.8" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="888.8" y="358.6" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="916.9" y="358.6" width="18.8" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="935.6" y="358.6" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="963.8" y="358.6" width="18.8" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="982.5" y="358.6" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="1010.6" y="358.6" width="46.9" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="1057.5" y="358.6" width="37.5" height="28.1" fill="rgb(176, 42, 42)"/>
+<rect x="795.0" y="386.8" width="46.9" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="841.9" y="386.8" width="28.1" height="18.8" fill="rgb(141, 184, 219)"/>
+<rect x="870.0" y="386.8" width="18.8" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="888.8" y="386.8" width="28.1" height="18.8" fill="rgb(141, 184, 219)"/>
+<rect x="916.9" y="386.8" width="18.8" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="935.6" y="386.8" width="28.1" height="18.8" fill="rgb(141, 184, 219)"/>
+<rect x="963.8" y="386.8" width="18.8" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="982.5" y="386.8" width="28.1" height="18.8" fill="rgb(141, 184, 219)"/>
+<rect x="1010.6" y="386.8" width="46.9" height="18.8" fill="rgb(219, 233, 246)"/>
+<rect x="1057.5" y="386.8" width="37.5" height="18.8" fill="rgb(176, 42, 42)"/>
+<rect x="795.0" y="405.5" width="46.9" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="841.9" y="405.5" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="870.0" y="405.5" width="18.8" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="888.8" y="405.5" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="916.9" y="405.5" width="18.8" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="935.6" y="405.5" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="963.8" y="405.5" width="18.8" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="982.5" y="405.5" width="28.1" height="28.1" fill="rgb(52, 105, 156)"/>
+<rect x="1010.6" y="405.5" width="46.9" height="28.1" fill="rgb(141, 184, 219)"/>
+<rect x="1057.5" y="405.5" width="37.5" height="28.1" fill="rgb(176, 42, 42)"/>
+<rect x="795.0" y="433.6" width="46.9" height="46.9" fill="rgb(219, 233, 246)"/>
+<rect x="841.9" y="433.6" width="28.1" height="46.9" fill="rgb(141, 184, 219)"/>
+<rect x="870.0" y="433.6" width="18.8" height="46.9" fill="rgb(219, 233, 246)"/>
+<rect x="888.8" y="433.6" width="28.1" height="46.9" fill="rgb(141, 184, 219)"/>
+<rect x="916.9" y="433.6" width="18.8" height="46.9" fill="rgb(219, 233, 246)"/>
+<rect x="935.6" y="433.6" width="28.1" height="46.9" fill="rgb(141, 184, 219)"/>
+<rect x="963.8" y="433.6" width="18.8" height="46.9" fill="rgb(219, 233, 246)"/>
+<rect x="982.5" y="433.6" width="28.1" height="46.9" fill="rgb(141, 184, 219)"/>
+<rect x="1010.6" y="433.6" width="46.9" height="46.9" fill="rgb(219, 233, 246)"/>
+<rect x="1057.5" y="433.6" width="37.5" height="46.9" fill="rgb(176, 42, 42)"/>
+<rect x="795.0" y="480.5" width="300.0" height="37.5" fill="rgb(176, 42, 42)"/>
+<rect x="795.0" y="218.0" width="300.0" height="300.0" fill="none" stroke="rgb(206, 206, 206)"/>
+<text x="105" y="206" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="bold" fill="rgb(26, 26, 26)">passo 32</text>
+<text x="105" y="548" font-family="Arial,Helvetica,sans-serif" font-size="16" fill="rgb(110, 110, 110)">4x4 patches, sem sobreposição</text>
+<text x="105" y="574" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="bold" fill="rgb(28, 108, 76)">todo pixel coberto 1 vez</text>
+<text x="450" y="206" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="bold" fill="rgb(26, 26, 26)">passo 16</text>
+<text x="450" y="548" font-family="Arial,Helvetica,sans-serif" font-size="16" fill="rgb(110, 110, 110)">7x7 patches, com sobreposição</text>
+<text x="450" y="574" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="bold" fill="rgb(28, 108, 76)">contagens de 1, 2 e 4</text>
+<text x="795" y="206" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="bold" fill="rgb(26, 26, 26)">passo 20</text>
+<text x="795" y="548" font-family="Arial,Helvetica,sans-serif" font-size="16" fill="rgb(110, 110, 110)">5x5 patches, grade termina em 112</text>
+<text x="795" y="574" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="bold" fill="rgb(176, 42, 42)">3840 pixels sem cobertura</text>
+<text x="105" y="614" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="rgb(110, 110, 110)">patches cobrindo o pixel:</text>
+<rect x="328.0" y="596.0" width="20.0" height="20.0" fill="rgb(219, 233, 246)"/>
+<text x="356" y="615" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="rgb(26, 26, 26)">1</text>
+<rect x="396.0" y="596.0" width="20.0" height="20.0" fill="rgb(141, 184, 219)"/>
+<text x="424" y="615" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="rgb(26, 26, 26)">2</text>
+<rect x="464.0" y="596.0" width="20.0" height="20.0" fill="rgb(52, 105, 156)"/>
+<text x="492" y="615" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="rgb(26, 26, 26)">4</text>
+<rect x="532.0" y="596.0" width="20.0" height="20.0" fill="rgb(176, 42, 42)"/>
+<text x="560" y="615" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="rgb(26, 26, 26)">0, perdido</text>
+<text x="105" y="640" font-family="Arial,Helvetica,sans-serif" font-size="16" fill="rgb(110, 110, 110)">Tudo medido. Reproduz com: python tools/make_outreach_figures.py</text>
+</svg>

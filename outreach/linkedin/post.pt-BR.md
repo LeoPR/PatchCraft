@@ -11,15 +11,20 @@
 > assunto, diz o que o `fold`/`unfold` faz, mostra rapidamente os casos que pedem cuidado,
 > e entrega o link. A teoria fica no artigo; a íntegra, no repositório.
 >
-> **Imagens para acompanhar**, 1200x848 as duas, geradas por
-> `python tools/make_outreach_figure.py`, com o SVG de cada uma ao lado para editar.
-> Formam um par e vão nessa ordem:
+>**Imagens para acompanhar**, em [`figuras/pt-BR/`](figuras/pt-BR/), PNG para subir e SVG
+> ao lado para editar, todas geradas por `python tools/make_outreach_figures.py`. Nenhuma é
+> desenhada: os painéis são os tensores de verdade, os erros são medidos, e a recusa traz o
+> texto que a biblioteca levanta. Vão nesta ordem:
 >
-> 1. [`cobertura.pt-BR.png`](cobertura.pt-BR.png), o problema. Os três passos do terceiro
->    parágrafo, com o mapa de cobertura que o `fold`/`unfold` do torch produz em cada um.
-> 2. [`patchcraft.pt-BR.png`](patchcraft.pt-BR.png), a resposta. As mesmas três geometrias
->    com o que a biblioteca devolve, o texto literal do `ValueError` na que não fecha, e as
->    dez larguras de passo que o `tilings` aponta como legais para patch 32.
+> 1. [`fold-unfold.png`](figuras/pt-BR/fold-unfold.png), o problema, e é a mais forte das
+>    três porque se lê sem legenda. A mesma imagem por quatro caminhos: original, o reshape
+>    intuitivo que devolve a forma certa embaralhada, o passo 20 com a faixa preta, e o
+>    passo 32 feito certo.
+> 2. [`patchcraft.png`](figuras/pt-BR/patchcraft.png), a resposta, nos três regimes que a
+>    biblioteca tem de fato: idêntica no passo 32 e no 16, aproximada no passo 12 com o erro
+>    real ampliado no canto, e recusa no passo 20 que o `unfold` aceitaria.
+> 3. [`cobertura.png`](figuras/pt-BR/cobertura.png), o mecanismo por trás das duas, se
+>    quiser explicar por que o passo 12 sai aproximado e o 16 não.
 
 ---
 

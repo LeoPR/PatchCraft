@@ -64,18 +64,24 @@ rule mispredicts 3936 of 14969 cases, the power-of-two rule mispredicts 8. Those
 the safe direction, promising less than they deliver. A contract may under-promise. It may
 not over-promise.
 
-## Why the suite missed it
+## Why the suite missed it, and what changed in it
 
-This is the part I would carry to any other project.
+This was fixed in 0.5.0, in August 2026, together with the wrong claim. I tell it because
+the cause transfers to any other project, not because anything here is still open.
 
 The round-trip tests built their images with `torch.arange`. Integer data in a float
 round-trips exactly on geometries where random data does not, because not enough mantissa
-is in play for the rounding to show. The suite passed because it was asking the wrong
-question, with great confidence.
+is in play for the rounding to show. The suite passed, and it passed because it was asking
+the wrong question with great confidence. A green test is not the same thing as a verified
+claim, and the gap between the two was exactly this.
 
-The fix was not just changing the sentence. It was replacing the data generator with an
-audited helper that draws full-mantissa noise directly in the target dtype and is forbidden
-from deriving float32 from float64.
+The fix was not just changing the sentence. The data generator became an audited helper
+that draws full-mantissa noise directly in the target dtype and is forbidden from deriving
+float32 from float64, and it came to govern all thirteen round-trip cases at once.
+
+**Where this stands today**, so that nobody opening the repository has to wonder: 1619 tests
+pass, the rule in force is the one in the paragraph above, and the sweep described in the
+next section runs in every CI job. A `pytest` on a clone reproduces that number.
 
 ## The test that exists to bring the claim down
 
