@@ -21,7 +21,13 @@ antes.
 |---|---|
 | [`2026-09-04-lancamento.md`](2026-09-04-lancamento.md) / [`2026-09-04-release.en.md`](2026-09-04-release.en.md) | a fonte de notícia atual (PT / EN) |
 | `2026-09-03-*.md` | a fonte anterior, registro da 0.5.1; datada, não se reescreve |
-| [`linkedin/`](linkedin/) | LinkedIn: `post.*` (curto), `artigo.*` (longo técnico), e as figuras |
+| [`linkedin/`](linkedin/) | LinkedIn: `post.*` (curto), `artigo.*` (longo técnico), `pagina.md` (ilustrada) e as figuras |
+
+**Para publicar o artigo**, use `linkedin/artigo-linkedin.pt-BR.md`, que é o mesmo artigo
+gerado sem as duas coisas que o editor do LinkedIn não faz: crase no meio da frase e tabela.
+A tabela vira a imagem `4-tabela`, extraída do próprio artigo para os números não divergirem,
+e o arquivo traz no topo o passo a passo da colagem e os marcadores `[IMAGEM: ...]` no ponto
+exato onde cada figura entra. Não edite esse arquivo: edite o artigo e rode o script.
 
 As figuras ficam em `linkedin/figuras/<língua>/`, uma subpasta por língua para o diretório
 do canal não misturar texto com binário. O `tools/make_outreach_figures.py` gera todas, em

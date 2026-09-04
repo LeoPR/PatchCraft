@@ -20,7 +20,13 @@ source first.
 | Path | What it is |
 |---|---|
 | [`2026-09-04-lancamento.md`](2026-09-04-lancamento.md) / [`2026-09-04-release.en.md`](2026-09-04-release.en.md) | the current news source (PT / EN) |
-| [`linkedin/`](linkedin/) | LinkedIn: `post.*` (short), `artigo.*` (long technical), and the figures |
+| [`linkedin/`](linkedin/) | LinkedIn: `post.*` (short), `artigo.*` (long technical), `page.md` (illustrated) and the figures |
+
+**To publish the article**, use `linkedin/artigo-linkedin.en.md`, the same article generated
+without the two things the LinkedIn editor cannot do: inline code and tables. The table
+becomes the `4-tabela` image, extracted from the article itself so the numbers cannot drift,
+and the file carries the pasting steps at the top and the `[IMAGE: ...]` markers at the exact
+point each figure goes. Do not edit that file: edit the article and run the script.
 
 The figures live in `linkedin/figuras/<language>/`, one subfolder per language so the
 channel directory does not mix prose with binaries. `tools/make_outreach_figures.py` builds
