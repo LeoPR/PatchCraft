@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `docs/STUDIES/2026-09-03-precision-measurements.md`. ADR 0004 was carrying
+  its own evidence, which made a 227-line document that read as a lab notebook
+  where a decision was wanted. The measurements moved here, the ADR kept the
+  decision, the names and the order, and it is 176 lines. Each measurement now
+  says what it settled, so a number can be checked without reading the argument
+  that used it.
+
 ### Changed
 
 - **ADR 0003 is accepted, after being rescoped to what it actually governs.**
