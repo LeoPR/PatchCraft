@@ -58,7 +58,7 @@ pode prometer demais, porque quem confia nele não tem como perceber a diferenç
 regra o erro por pixel cresce com a cobertura, e chega a 19 ULP em float32 sem nada
 sinalizar.
 
-## O teste que existe para derrubar a afirmação
+## Como o contrato é verificado
 
 O contrato acima tem, na suíte, um teste cuja função explícita é falsificá-lo.
 
@@ -77,7 +77,7 @@ fecha, então uma suíte construída com `torch.arange` passa sem estar verifica
 Acho que uma biblioteca numérica vale menos pela garantia que anuncia e mais pelo teste que
 mantém apontado contra a própria garantia.
 
-## O acelerador, e a objeção que ele merece
+## O acelerador, e se o ganho é só mais núcleos
 
 O caminho quente é o fold com sobreposição, que é onde o tempo vai quando os patches se
 sobrepõem. Cinco das seis wheels trazem um kernel Rust para ele, compilado dentro da própria

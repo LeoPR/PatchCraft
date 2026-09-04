@@ -64,7 +64,7 @@ rule mispredicts 3936 of 14969 cases, the power-of-two rule mispredicts 8. Those
 the safe direction, promising less than they deliver. A contract may under-promise. It may
 not over-promise.
 
-## The test that exists to bring the claim down
+## How the contract is verified
 
 The contract above has, in the suite, a test whose explicit job is to falsify it.
 
@@ -87,7 +87,7 @@ built with `torch.arange` passes without verifying anything.
 I think a numerical library is worth less for the guarantee it announces and more for the
 test it keeps pointed at that guarantee.
 
-## The accelerator, and the objection it deserves
+## The accelerator, and whether the gain is just more cores
 
 The hot path is the overlapping fold, which is where the time goes when patches overlap.
 Five of the six wheels carry a Rust kernel for it, compiled into the wheel itself, with no
