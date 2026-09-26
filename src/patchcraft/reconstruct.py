@@ -138,16 +138,29 @@ def reconstruct(
     # and the 2-D map is the outer product. O(H+W) integer math instead of a
     # second F.fold of ones; the contents are identical integers, so the
     # division is bit-exact vs the fold.
-    ys = torch.arange(h, device=patches.device)
-    num_h_t = torch.full_like(ys, num_h)
-    count_h = torch.minimum(ys // sh + 1, num_h_t)
-    count_h = count_h + torch.minimum((h - 1 - ys) // sh + 1, num_h_t) - num_h
-    xs = torch.arange(w, device=patches.device)
-    num_w_t = torch.full_like(xs, num_w)
-    count_w = torch.minimum(xs // sw + 1, num_w_t)
-    count_w = count_w + torch.minimum((w - 1 - xs) // sw + 1, num_w_t) - num_w
-    count = (count_h.unsqueeze(1) * count_w.unsqueeze(0)).to(accum_dtype)
+    #
+    # The suffix ramp is the prefix ramp reversed, and a square grid reuses
+    # the H axis for W. The outer product is taken in the accumulation dtype:
+    # both factors are small exact integers, so the multiply rounds their
+    # exact product once, exactly as casting the int64 product did.
+    count_h = _axis_counts(h, sh, num_h, accum_dtype, patches.device)
+    count_w = (
+        count_h
+        if (w, sw, num_w) == (h, sh, num_h)
+        else _axis_counts(w, sw, num_w, accum_dtype, patches.device)
+    )
+    count = count_h.unsqueeze(1) * count_w.unsqueeze(0)
 
     # Every count is an exact integer >= 1 (coverage is validated), so no
     # clamp is needed -- unlike the folded ones, there is no float noise.
-    return (numerator / count).to(patches.dtype)
+    # The numerator is a fresh tensor this function owns, so it is divided
+    # in place rather than allocating a second (C, H, W) buffer.
+    return numerator.div_(count).to(patches.dtype)
+
+
+def _axis_counts(
+    n: int, step: int, num: int, dtype: torch.dtype, device: torch.device
+) -> torch.Tensor:
+    """Patches covering each position along one axis of a full-coverage grid."""
+    prefix = (torch.arange(n, device=device) // step + 1).clamp_(max=num)
+    return (prefix + prefix.flip(0) - num).to(dtype)

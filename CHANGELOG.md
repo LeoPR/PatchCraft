@@ -51,6 +51,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   gradients. Accelerated `stitch` is 2.7x to 5.1x faster at 512x512 and 1.2x
   to 1.4x at 2048x2048; on the pure path `F.fold` still dominates at 2048.
 
+- **`reconstruct` builds its count map with fewer operations, and both
+  `reconstruct` and `stitch` divide in place.** The suffix ramp of the
+  closed-form count map is the prefix ramp reversed, a square grid reuses the
+  H axis for W, and the outer product is taken in the accumulation dtype,
+  where multiplying two small exact integers rounds their exact product once,
+  as casting the int64 product did. The numerator and the denominator are
+  fresh tensors each function owns, so the final clamp and division no longer
+  allocate. Bit-identical: 0 differences over 13,820 `reconstruct` and 38,696
+  `stitch` cases, and the caller's patches are never mutated or aliased.
+  Accelerated `reconstruct` is 1.15x to 1.26x faster, and one call at
+  3x2048x2048 with patch 64 and stride 32 allocates 64 MiB instead of 177
+  (`stitch` hann: 65 instead of 128).
+
 ### Fixed
 
 - docs/PERFORMANCE.md and `tools/benchmark.py` said non-overlapping geometries

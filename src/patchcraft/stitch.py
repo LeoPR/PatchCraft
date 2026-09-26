@@ -242,4 +242,6 @@ def stitch(
     # divided by 1e-6 instead of by the real weight. Measured at 640x640,
     # patch 256, stride 128: max error 0.94 on data in [0, 1], 960 pixels
     # wrong, identical in float64 because it was never a precision problem.
-    return (numerator / den.clamp_min(torch.finfo(den.dtype).tiny)).to(patches.dtype)
+    # Both operands are fresh tensors this function owns, so the clamp and the
+    # division run in place instead of allocating two more (C, H, W) buffers.
+    return numerator.div_(den.clamp_min_(torch.finfo(den.dtype).tiny)).to(patches.dtype)
