@@ -8,7 +8,7 @@
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/patchcraft.svg)](https://pypi.org/project/patchcraft/)
 [![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/LeoPR/PatchCraft/blob/main/LICENSE)
 
-**Codifica uma imagem em patches e decodifica de volta.** O PatchCraft cuida da aritmética do `unfold` e do `fold`, da validação da geometria e da mistura nas emendas, para que o seu pipeline possa cuidar de todo o resto.
+**Recorta uma imagem em patches e monta de volta.** Uma imagem grande raramente entra inteira numa rede: ela é cortada em pedaços pequenos, os patches, cada um é processado sozinho, e a imagem é montada de volta. O PatchCraft cuida da aritmética do `unfold` e do `fold`, da validação da geometria e da mistura nas emendas, para que o seu pipeline possa cuidar de todo o resto.
 
 **Uma imagem por vez, de propósito.** Cada chamada recebe um tensor float `(C, H, W)` e devolve um tensor, porque a quantidade de patches depende da imagem, e uma API em lote teria que preencher com padding ou devolver uma lista. Quem fornece o lote é o seu `for`, o `torch.vmap` ou o `DataLoader`.
 
@@ -47,8 +47,8 @@ rodam os caminhos em torch puro, que devolvem os mesmos valores.
 
 O `patchcraft.accel_available()` informa em runtime qual dos dois você recebeu,
 e `PATCHCRAFT_ACCEL=0` no ambiente força o caminho puro. No fold com
-sobreposição ele vale entre 2.6x e 14x aqui, medido em
-[docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+sobreposição o acelerador vale entre 2,6x e 14x na máquina em que foi
+medido, que o [docs/PERFORMANCE.md](docs/PERFORMANCE.md) relata por inteiro.
 
 O nome da distribuição e o nome de importação são os dois `patchcraft`. As dependências de execução são `torch>=2.6`, `numpy>=1.26` e `pillow>=10`. As versões de Python suportadas estão [no manual](docs/GUIDE.md#9-install-details-and-citation), junto com a observação que você precisa ler antes de instalar uma wheel de GPU.
 
@@ -108,7 +108,7 @@ assert not torch.equal(scrambled, patches)                   # e os pixels errad
 
 O segundo é um stride que não cobre a imagem. Numa imagem de 128 por 128 com `patch=32, stride=20`, a grade para no pixel 112, o que deixa 3840 dos 16384 pixels em zero, e um `fold` escrito à mão devolve essa imagem parcialmente preta sem reclamar.
 
-Escrever o laço de recortar e remontar à mão custa 17 linhas não vazias contra 3 aqui, e os dois resultados concordam em cerca de 1.2e-05 num valor em [0, 1], com as duas rotas diferindo só na ordem em que somam uma janela separável. [O manual](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) roda as duas versões lado a lado.
+Escrever o laço de recortar e remontar à mão custa 17 linhas não vazias contra 3 aqui, e os dois resultados concordam em cerca de 1,2e-05 num valor em [0, 1], mais de 300 vezes menos que um degrau de 8 bits, com as duas rotas diferindo só na ordem em que somam uma janela separável. [O manual](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) roda as duas versões lado a lado.
 
 ## A geometria precisa cobrir a imagem
 
@@ -148,7 +148,7 @@ O round-trip é exato quando todo valor do mapa de cobertura é potência de doi
 
 São 1656 testes coletados, com CI verde em {Ubuntu, Windows} x {Python 3.12, 3.13, 3.14}, e com `ruff check` e `mypy --strict` na mesma execução. O pacote é tipado e distribui o `py.typed`.
 
-Nenhum projeto externo consumiu a biblioteca ainda, e nenhum caminho CUDA dela jamais executou. [O manual](docs/GUIDE.md#8-what-this-project-does-not-claim) lista o que mais este projeto se recusa a afirmar.
+Em GPU as funções preservam o dispositivo que você passa, e o kernel Rust é só de CPU, então não acelera ali; todo número desta página é de CPU. Nenhum projeto externo consome a biblioteca ainda, que é o critério para dizer a API assentada. [O manual](docs/GUIDE.md#8-where-this-applies-today) diz onde o resto se aplica.
 
 ## Onde ler em seguida
 

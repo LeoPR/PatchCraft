@@ -8,7 +8,7 @@
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/patchcraft.svg)](https://pypi.org/project/patchcraft/)
 [![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/LeoPR/PatchCraft/blob/main/LICENSE)
 
-**Encode one image into patches, decode it back.** PatchCraft owns the `unfold` and `fold` arithmetic, the geometry validation and the seam blending, so that your pipeline can own everything else.
+**Cut one image into patches, and put it back together.** A large image rarely goes into a network whole: it is cut into small tiles, the patches, each one is processed on its own, and the image is put back. PatchCraft owns the `unfold` and `fold` arithmetic, the geometry validation and the seam blending, so that your pipeline can own everything else.
 
 **One image at a time, on purpose.** Every call takes one `(C, H, W)` float tensor and returns one tensor, because the patch count depends on the image and a batched API would have to pad or return a list. Your `for` loop, `torch.vmap` or `DataLoader` supplies the batching.
 
@@ -30,7 +30,7 @@ The image goes out as a stack of patches, you do your work on the stack, and it 
 image. That last arrow has two doors: `reconstruct` when the patches are untouched, and `stitch`
 when a model rewrote them and the seams need to fade.
 
-This page is the call page. The manual is [docs/GUIDE.md](docs/GUIDE.md), and it carries the measurements, the tables and the long examples that used to live here.
+This page is the call page. The manual is [docs/GUIDE.md](docs/GUIDE.md), and it carries the measurements, the tables and the long examples.
 
 ## Install
 
@@ -47,8 +47,8 @@ paths, which return the same values.
 
 `patchcraft.accel_available()` reports at runtime which one you got, and
 `PATCHCRAFT_ACCEL=0` in the environment forces the pure path. On the overlapping
-fold it is worth between 2.6x and 14x here, measured in
-[docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+fold the accelerator is worth between 2.6x and 14x on the machine it was
+measured on, which [docs/PERFORMANCE.md](docs/PERFORMANCE.md) reports in full.
 
 The distribution name and the import name are both `patchcraft`. The runtime dependencies are `torch>=2.6`, `numpy>=1.26` and `pillow>=10`, and the supported Python versions are in [the guide](docs/GUIDE.md#9-install-details-and-citation) together with the note you need before you install a GPU wheel.
 
@@ -108,7 +108,7 @@ assert not torch.equal(scrambled, patches)                   # and the wrong pix
 
 The second one is a stride that does not cover the image. On a 128 by 128 image with `patch=32, stride=20` the grid stops at pixel 112, which leaves 3840 of the 16384 pixels at zero, and a hand-rolled `fold` returns that partly black image without complaining.
 
-Writing the tile-and-blend loop by hand costs 17 non-blank lines against 3 here, and the two results agree to about 1.2e-05 on a value in [0, 1], the two routes differing only in the order they sum a separable window. [The guide](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) runs both versions side by side.
+Writing the tile-and-blend loop by hand costs 17 non-blank lines against 3 here, and the two results agree to about 1.2e-05 on a value in [0, 1], more than 300 times smaller than one 8-bit step, the two routes differing only in the order they sum a separable window. [The guide](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) runs both versions side by side.
 
 ## The geometry has to cover the image
 
@@ -130,7 +130,7 @@ print([s.patch_size for s in tilings(image.shape)])  # 7 exact tilings, from the
 
 `tilings` is arithmetic on the shape, so it reads nothing and allocates nothing. Pass `allow_overlap=True` when you want the overlapping geometries too.
 
-## Where you are getting into
+## What you are getting into
 
 The surface is one tensor in and one tensor out. There is no batch axis, no dataset, no dataloader and no training, and that boundary is binding rather than provisional, recorded in [docs/THEORY.md](docs/THEORY.md) §0.
 
@@ -148,7 +148,7 @@ The round trip is exact when every value in the count map is a power of two, whi
 
 1656 tests collected and CI is green on {Ubuntu, Windows} x {Python 3.12, 3.13, 3.14}, with `ruff check` and `mypy --strict` in the same run. The package is typed and ships `py.typed`.
 
-No external project has consumed it yet, and no CUDA path in this library has ever executed. [The guide](docs/GUIDE.md#8-what-this-project-does-not-claim) lists what else this project declines to claim.
+On GPU the functions keep the device you hand them, and the Rust kernel is CPU-only, so it does not accelerate there; every figure here is a CPU figure. No external project consumes the library yet, which is the gate for calling the API settled. [The guide](docs/GUIDE.md#8-where-this-applies-today) says where the rest applies.
 
 ## Where to read next
 

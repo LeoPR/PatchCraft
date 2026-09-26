@@ -6,7 +6,7 @@ This is the manual. [The README](../README.md) is the call page, and it answers 
 
 You do not have to read it from the top. Each section stands on its own, so jump into the one that matches the problem in front of you, and follow the links out to [THEORY.md](THEORY.md) when you want the contract rather than the demonstration.
 
-**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run on CPU against the release named in [CHANGELOG.md](../CHANGELOG.md) as the most recent one, with Python 3.13 and torch 2.x. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-what-this-project-does-not-claim), and the file and line references, which point at the repository head.
+**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run on CPU against the release named in [CHANGELOG.md](../CHANGELOG.md) as the most recent one, with Python 3.13 and torch 2.x. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-where-this-applies-today), and the file and line references, which point at the repository head.
 
 ## Contents
 
@@ -17,7 +17,7 @@ You do not have to read it from the top. Each section stands on its own, so jump
 5. [Seams: `reconstruct` against `stitch`, measured](#5-seams-reconstruct-against-stitch-measured)
 6. [Planning the geometry before you allocate](#6-planning-the-geometry-before-you-allocate)
 7. [The 20 symbols and what each allocates](#7-the-20-symbols-and-what-each-allocates)
-8. [What this project does not claim](#8-what-this-project-does-not-claim)
+8. [Where this applies today](#8-where-this-applies-today)
 9. [Install details and citation](#9-install-details-and-citation)
 
 ## 1. Why not `unfold` and `fold` directly
@@ -119,7 +119,7 @@ reconstruct: patch grid leaves pixels uncovered (partial coverage forbidden): im
 
 If you extract, run a model and reconstruct, the guard catches you. If you extract, run a model and never reconstruct, which is what a patch dataset does, then you lose the border in silence.
 
-`Patchify` behaves the same way, because it calls the same code. Until this is decided one way or the other, call `num_patches` or `tilings` before you extract, and [section 6](#6-planning-the-geometry-before-you-allocate) shows how. The asymmetry is recorded as blocker B6 in [FOCO-1.0.md](FOCO-1.0.md).
+`Patchify` behaves the same way, because it calls the same code. The asymmetry is the contract, written in [THEORY.md](THEORY.md) §9.1, so call `num_patches` or `tilings` before you extract, and [section 6](#6-planning-the-geometry-before-you-allocate) shows how.
 
 ### The whole job, written both ways
 
@@ -186,17 +186,15 @@ lines: 17 by hand, 3 with patchcraft
 
 Seventeen non-blank lines against three, for a result that agrees to about 1.2e-05 on a value in [0, 1].
 
-**That last number used to read 0.0, and the change is worth understanding rather than glossing.** The two versions compute the same quantity by different routes. `stitch` builds its denominator from two 1-D window folds, because a separable kernel allows it, while the hand-rolled version folds a replicated 2-D kernel. Same value, different summation order, so the float result differs in the last few bits. Nothing here is a correctness gap, and the reason to say so out loud is that this page claimed bit-equality until the measurement was re-run.
+**That number is not 0.0, and the reason is worth a sentence.** The two versions compute the same quantity by different routes. `stitch` builds its denominator from two 1-D window folds, because a separable kernel allows it, while the hand-rolled version folds a replicated 2-D kernel. Same value, different summation order, so the float result differs in the last few bits. Nothing here is a correctness gap.
 
 The exception is `weight="uniform"`, where `stitch` still agrees with `reconstruct` bit for bit, because the ones-kernel multiply is exact.
 
 The by-hand version above is also the correct one, since it already has the coverage check, the right permutation and the strictly positive window. Getting to that version is the work.
 
-### Two honest caveats
+### What the library adds over torch
 
 PatchCraft computes nothing that torch cannot, and on the platforms without a native wheel it is the same arithmetic underneath. It is no longer the same code, though: `extract` takes a strided-window view instead of im2col, `reconstruct` skips the fold entirely on non-overlapping grids and computes the count map in closed form, and five of the six wheels carry a Rust kernel for the overlapping fold. [PERFORMANCE.md](PERFORMANCE.md) has the measurements. What you are buying is that the geometry is checked before the arithmetic runs, in one place, with tests around it.
-
-The second caveat is that the coverage defect shown above once shipped inside PatchCraft itself, which validated the patch count and never the coverage, and so returned partly black images until a later release added the guard. [CHANGELOG.md](../CHANGELOG.md) carries that entry with the measurements that found it. The argument for the library is that the guard is written once and regression tested, and not that it was ever obvious.
 
 ## 2. The patch stack and the count map
 
@@ -439,11 +437,11 @@ The maximum is 4, the geometry is legal and fully covering, and the round trip s
 
 **float64 is not a safe harbour.** The deciding axis is the count map and not the dtype, so float64 misses the round trip at exactly the geometry where float32 misses it. Reaching for a wider float buys you a smaller error, and it never buys you exactness.
 
-**Half precision comes back exact here for a reason worth knowing, and not because of a stronger guarantee.** PatchCraft accumulates `float16` and `bfloat16` in a float32 buffer and rounds once on return, and that final rounding is far coarser than the float32 error, so those rows land back on the value they started from. The promotion exists for a different reason entirely, and for a different one in each format. `float16` genuinely overflows: the folded sum passes its finite range before the division ever happens, and a constant image at 10000.0 came back as `inf` in 144 of 256 pixels before the fix. `bfloat16` carries `float32`'s exponent and cannot overflow there, so its promotion buys precision instead, cutting the error on ordinary data from 9.3e-03 to 1.9e-03. [THEORY.md](THEORY.md) §9.2 records both measurements.
+**Half precision comes back exact here for a reason worth knowing, and not because of a stronger guarantee.** PatchCraft accumulates `float16` and `bfloat16` in a float32 buffer and rounds once on return, and that final rounding is far coarser than the float32 error, so those rows land back on the value they started from. The promotion exists for a different reason entirely, and for a different one in each format. `float16` genuinely overflows: the folded sum passes its finite range before the division ever happens, and a constant image at 10000.0 comes back as `inf` in 144 of 256 pixels without the promotion. `bfloat16` carries `float32`'s exponent and cannot overflow there, so its promotion buys precision instead, cutting the error on ordinary data from 9.3e-03 to 1.9e-03. [THEORY.md](THEORY.md) §9.2 records both measurements.
 
 ### Where this rule is written down
 
-[ADR 0003](ADR/0003-reversibility-classes.md) is where the exactness boundary is written as contract, **accepted on 2026-09-03**. What it ratifies is one rule, that an exactness claim is declared per regime with a condition the caller can evaluate before calling, and not a vocabulary: the three-letter classes its first draft proposed were deferred, because they were written for six transforms that never shipped. The wording itself has since landed across the project, where docstrings, SCOPE, THEORY, USAGE and the READMEs all came to state the count-map rule with the per-pixel bound, closing blocker B1 in [FOCO-1.0.md](FOCO-1.0.md).
+[ADR 0003](ADR/0003-reversibility-classes.md), accepted on 2026-09-03, and [THEORY.md](THEORY.md) §9.2 hold this rule as contract text: an exactness claim is declared per regime, with a condition the caller can evaluate before calling. This section measures it.
 
 Treat this section as the measured truth, and the ADR as the formal statement of the same rule.
 
@@ -488,7 +486,7 @@ uniform: 0.018617
 hann:    0.000097
 ratio:   191x
  uniform against the model's own patches: mean 29.60 dB, min 20.01 dB
-    hann against the model's own patches: mean 27.14 dB, min 19.41 dB
+    hann against the model's own patches: mean 27.15 dB, min 19.41 dB
 ```
 
 ### The error itself, one row across one boundary
@@ -563,19 +561,19 @@ for size, patch, stride in ((32, 8, 4), (64, 16, 8), (128, 32, 16), (512, 128, 6
    512x512    128      64    0.0186    0.0073   0.0001  191.0x
 ```
 
-The famous 191x is true at 512 pixel images with 128 pixel patches, and it is true nowhere else. At 8 pixel patches hann wins by 1.6x, which is not worth a paragraph, and gaussian beats hann outright in that row.
+The 191x above is true at 512 pixel images with 128 pixel patches, and it is true nowhere else. At 8 pixel patches hann wins by 1.6x, which is not worth a paragraph, and gaussian beats hann outright in that row.
 
 The reason is visible in the uniform column, which does not move at all. Uniform's step stays a one-pixel discontinuity at every scale, while hann spreads the same disagreement across an overlap that widens with the patch, so the gap between them is a function of patch size. If your patches are small, uniform is fine, and if they are large, hann is worth its cost.
 
 ### The three windows, and what each costs
 
 - **`"uniform"`** is the default. Every covering patch contributes equally, which is exactly `reconstruct`'s arithmetic, and it puts the whole disagreement on the grid lines.
-- **`"hann"`** is the strong seam suppressor and the cheapest to compute. It is the interior of a longer symmetric Hann window, `hann_window(n + 2, periodic=False)[1:-1]`, so it is strictly positive on every sample and never zeroes a pixel. The plain symmetric window, which is exactly zero at both endpoints, was the largest defect the first audit of this library found, and [THEORY.md](THEORY.md) §2.5 records what it did to real images.
+- **`"hann"`** is the strong seam suppressor and the cheapest to compute. It is the interior of a longer symmetric Hann window, `hann_window(n + 2, periodic=False)[1:-1]`, so it is strictly positive on every sample and never zeroes a pixel. A plain symmetric window is exactly zero at both endpoints and would zero every pixel covered only by patch edges; [THEORY.md](THEORY.md) §2.5 measures it.
 - **`"gaussian"`** keeps far more weight at the patch edge than hann does, so it suppresses seams less at the larger patch sizes in the sweep, and it wins at the smallest one. THEORY §2.5 states the tradeoff as weaker seam suppression than Hann in exchange for a flatter window.
 
-**Hann costs fidelity, and the cost is already in the numbers above.** Measured against the model's own patches, uniform keeps 29.60 dB mean and hann keeps 27.14 dB. Hann is trading exactness for smoothness on purpose, so if what you want back is the model's output rather than a pleasant image, uniform is the honest choice.
+**Hann costs fidelity, and the cost is already in the numbers above.** Measured against the model's own patches, uniform keeps 29.60 dB mean and hann keeps 27.15 dB. Hann is trading exactness for smoothness on purpose, so if what you want back is the model's output rather than a pleasant image, uniform is the honest choice.
 
-### A trap that made an earlier version of this demo lie
+### Alternating synthetic error makes uniform look perfect
 
 The result flips if the per-patch error alternates in sign from patch to patch, because then the count map averages the alternation away and uniform comes out perfect.
 
@@ -701,11 +699,9 @@ round trip exact: True
 
 `num_patches` answers with a tuple what `extract` needs 79 MiB to discover. At 50 percent overlap the patch stack is more than three times the size of the image it came from, and that multiple grows as the stride shrinks, so the plan is worth making before the allocation.
 
-### A wart the enumeration used to have
+### One spec for a single-patch grid
 
-The enumeration used to emit one spec per stride value wherever the grid collapsed to a single patch, and it labelled almost all of them as overlapping. On a 28 by 28 image that was 28 specs for the same whole-image tiling, 27 of them carrying `overlap=True`, where a single patch has nothing to overlap with.
-
-They were removed, because with one patch the stride is unobservable and each of those specs was a duplicate of the exact tile. The output of the block above already reflects the change: the overlap-allowed count for that shape fell from 100 to 73, and only one spec now describes the whole-image tiling.
+Where the grid collapses to a single patch, the stride cannot be observed, so `tilings` returns that tiling once, with `overlap=False`.
 
 ```python
 from patchcraft import tilings
@@ -721,7 +717,7 @@ print(whole[0])
 TilingSpec(patch_size=(28, 28), stride=(28, 28), dilation=(1, 1), num_patches=(1, 1), total_patches=1, overlap=False)
 ```
 
-If you pinned a spec by its position in the returned list, that position moved. Select by `patch_size` and `stride` instead, which is what the fields are for.
+Select a spec by its `patch_size` and `stride` rather than by its position in the list, which is what the fields are for.
 
 ## 7. The 20 symbols and what each allocates
 
@@ -792,29 +788,25 @@ with tempfile.TemporaryDirectory() as directory:
 (16,)
 ```
 
-The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_factor`, are walked through in [USAGE.md](USAGE.md) §7 and §11. One warning about them belongs here too, because an external reviewer hit it on first contact with the API: in `PatchMeta`, `row` and `col` already have the stride applied, so multiplying them by the stride again lands you on the wrong patch.
+The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_factor`, are walked through in [USAGE.md](USAGE.md) §7 and §11. One warning about them belongs here too: in `PatchMeta`, `row` and `col` already have the stride applied, so multiplying them by the stride again lands you on the wrong patch.
 
-## 8. What this project does not claim
+## 8. Where this applies today
 
-**This is pre-1.0, and no external project has consumed it yet.** That second half is the honest headline, and everything below is detail underneath it.
+**Before 1.0, and with no external consumer yet.** A real project consuming the published API is the gate [ROADMAP.md](ROADMAP.md) sets for calling the shape settled. Until then a new `0.y` may still change what comes out; pin `~=0.5.0` to take fixes only.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 1619 tests, skips 32 cases, and deselects 5 GPU tests, in about half a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 1619 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
-Five things this project does not claim.
+Where the evidence is thinner, this is what it means for you.
 
-**1. No consumer.** The gate in [ROADMAP.md](ROADMAP.md) is that a real project consumes `patchcraft` v0.2 as published, and that has not happened yet. The one external review that did happen found a defect in the `pair` docstring on first contact, which is the sample size this API has been tested against by somebody other than its author.
+**On GPU, it works and does not accelerate.** `extract`, `reconstruct`, `stitch` and `resize` keep the device you hand them, and the Rust kernel is CPU-only, so it steps aside. No CUDA path has run in CI or anywhere else and every measurement on this page is CPU, so check exactness on your device before you rely on it.
 
-**2. No CUDA, anywhere.** The torch build here is CPU only, and both workflows run `pytest -m "not gpu"`, so the CUDA paths of `extract`, `reconstruct`, `stitch` and `resize` have never executed. Device preservation is implemented and unmeasured on device, and every measurement on this page is CPU.
+**On macOS and aarch64, the kernel ships built but unexercised.** Every geometry in the suite is checked with `torch.equal` against the pure path, and that job runs on Ubuntu and Windows x86_64. On the other wheels, compare one run against `PATCHCRAFT_ACCEL=0` on your own data.
 
-**3. The no-zstandard cache path runs in no whole environment.** `Cache` falls back to uncompressed payloads when `zstandard` is absent, and every configuration here and in CI installs the extra, so a plain `pip install patchcraft` takes a branch that no end-to-end run exercises. It is covered by a unit test that monkeypatches the import away, which is weaker than actually installing without it.
+**Without `zstandard`, `Cache` stores payloads uncompressed.** A plain `pip install patchcraft` takes that branch, which a unit test covers by removing the import; install `patchcraft[cache]` if payload size matters.
 
-**4. Nothing executes the examples on this page.** They were run by hand and pasted verbatim, against the release the provenance note at the top names, and no test in the suite runs them. A test that executes every fenced block and checks the figures quoted in prose is the next piece of work on this file, [USAGE.md](USAGE.md) is no longer in that position: since 0.5.3 every `>>>` on it runs in the suite, so a stale line there fails CI.
+**The examples on this page were run by hand**, against the release the provenance note at the top names, and no test executes them. The ones in [USAGE.md](USAGE.md) do run in the suite, so a stale line there fails CI.
 
-**5. The accelerated and the pure paths are equal by test, on two platforms out of five.** Every geometry in the suite is checked with `torch.equal` against the pure path, but that job runs on Ubuntu and Windows x86_64 only. The macOS and aarch64 wheels are built and their contents are checked, and nothing has ever executed their kernel in CI.
-
-**6. Pre-1.0 means output values can change in either kind of release, for two different reasons.** A new `0.y` may move behaviour the documentation endorsed, which is what happened when `tilings` began returning 73 specs where it returned 100. A new `0.y.z` may change values too, but only by making the code match a promise the documentation was already making: twice now that has been the `stitch` hann denominator, once for a window that zeroed covered pixels and once for a floor that swallowed the corner band. [CHANGELOG.md](../CHANGELOG.md) records each one together with the measurement that motivated it, and [CONTRIBUTING.md](../CONTRIBUTING.md) carries the rule.
-
-The backlog that closes these is [FOCO-1.0.md](FOCO-1.0.md).
+**Output values can move between releases, for two different reasons.** A new `0.y` may change behaviour the documentation endorsed. A new `0.y.z` may change values only to make the code match a promise the documentation already made. [CHANGELOG.md](../CHANGELOG.md) records each change with the measurement behind it.
 
 ## 9. Install details and citation
 
@@ -838,13 +830,13 @@ cd PatchCraft
 pip install -e ".[dev,cache]"
 ```
 
-**Wheels.** A release publishes one sdist and six wheels. Five of them are tagged `cp312-abi3-<platform>` and carry a Rust accelerator for the overlapping fold, covering Windows x64, Linux x86_64 and aarch64, and both macOS architectures; the sixth is `py3-none-any` and runs the torch paths. Installers prefer the most specific compatible tag, so `pip install patchcraft` picks the accelerated wheel where one exists and the universal wheel otherwise. The two return the same values, which [section 8](#8-what-this-project-does-not-claim) item 5 qualifies, and `patchcraft.accel_available()` says which one you are running. There is no extra to enable and nothing separate to install.
+**Wheels.** A release publishes one sdist and six wheels. Five of them are tagged `cp312-abi3-<platform>` and carry a Rust accelerator for the overlapping fold, covering Windows x64, Linux x86_64 and aarch64, and both macOS architectures; the sixth is `py3-none-any` and runs the torch paths. Installers prefer the most specific compatible tag, so `pip install patchcraft` picks the accelerated wheel where one exists and the universal wheel otherwise. The two return the same values, which [section 8](#8-where-this-applies-today) qualifies for macOS and aarch64, and `patchcraft.accel_available()` says which one you are running. There is no extra to enable and nothing separate to install.
 
 Installing from the sdist compiles the accelerator when a Rust toolchain is present and falls back to a pure install when it is not, so the source path never fails for want of cargo. `PATCHCRAFT_ACCEL=0` in the environment forces the pure path at runtime, which is how you check whether the accelerator explains a difference you are seeing.
 
 **Python versions.** CI tests 3.12, 3.13 and 3.14 on Ubuntu and Windows, which is also what the classifiers advertise. The floor is real rather than cautious: `cache.py` uses the PEP 695 generic syntax that arrived in 3.12, so the package does not parse on 3.11. `requires-python` is `>=3.12` with no ceiling, so pip will install this on a newer Python too, where nothing has been measured.
 
-**GPU.** Install a matching torch wheel first, following [pytorch.org/get-started/locally](https://pytorch.org/get-started/locally/). Read [section 8](#8-what-this-project-does-not-claim) before you do, because no CUDA path in this library has ever been executed.
+**GPU.** Install a matching torch wheel first, following [pytorch.org/get-started/locally](https://pytorch.org/get-started/locally/). [Section 8](#8-where-this-applies-today) says what to expect there: the functions keep the device, and the Rust kernel does not run.
 
 **Contributing.** The commands CI runs are `pytest -m "not gpu"`, `ruff check src tests`, `mypy --strict src`, and `cargo test --manifest-path accel/Cargo.toml` for the Rust kernel. New behaviour arrives as a hypothesis measured in `lab/`, becomes a test in `tests/` when the measurement holds, and is recorded in an ADR when it changes a contract. [CONTRIBUTING.md](../CONTRIBUTING.md) carries the full layout, the validation conventions and the release procedure.
 

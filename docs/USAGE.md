@@ -2,9 +2,7 @@
 
 > **This page is executed, not transcribed.** Every `>>>` below runs in the
 > test suite as a doctest, and the output shown is compared against the output
-> produced. A stale line here fails CI rather than misleading a reader, which
-> is what the page could do before: it spent three releases claiming an API
-> that had moved.
+> produced. A stale line here fails CI rather than misleading a reader.
 
 Run it yourself against your install:
 
@@ -205,9 +203,9 @@ Visual: the kernel shape applied to each patch for `patch_size=4`:
 ```
 
 Hann uses the interior of a longer symmetric window
-(`hann_window(n + 2)[1:-1]`, so the edge weight is small but never zero;
-before 0.2.1 the plain symmetric window was exactly `0` at both edges and
-zeroed pixels covered only by patch edges). Gaussian uses per-axis
+(`hann_window(n + 2, periodic=False)[1:-1]`), so the edge weight is small but
+never zero, where a plain symmetric window would be exactly `0` at both edges
+and zero the pixels covered only by patch edges. Gaussian uses per-axis
 `sigma = max(1, ph / 4)` / `max(1, pw / 4)` so the edge weight is small
 but never zero.
 
@@ -439,7 +437,7 @@ Both reject shape, dtype, and device mismatches.
 
 ---
 
-## 13. End-to-end QPatchSR-style pre-flight (synthesizing 10, 11, 12)
+## 13. End-to-end pre-flight for an LR/HR training set (combining 7, 10, 11, 12)
 
 ```python
 >>> # Goal: train a model that maps 14x14 patches to corresponding 28x28 patches.
@@ -464,7 +462,7 @@ Both reject shape, dtype, and device mismatches.
 >>> # err = per_patch_psnr(model(result.lr_patches), result.hr_patches)
 ```
 
-This is the loop QPatchSR (and any similar consumer) will run.
+This is the loop a super-resolution training pipeline runs.
 PatchCraft covers steps 1, 2, and 4. Step 3 is the consumer's job.
 
 ---
