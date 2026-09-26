@@ -73,6 +73,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   it. 22.8 to 7.3 ms at 512x512, 91 to 9 ms at 1080x1920, 699 to 17 ms at
   4000x3000.
 
+- **`stitch` with the uniform window skips the fold on non-overlapping
+  grids.** There the fold adds each value, times 1, into a zero-filled buffer
+  and divides by a count of 1, which is `0.0 + x`: the value itself, except
+  that `-0.0` comes out as `+0.0` and a NaN comes out quiet. The new path
+  rearranges the patches and adds `0.0`, which reproduces exactly that; a bare
+  rearrangement would have kept `-0.0`, a difference `torch.equal` cannot see
+  and an integer-view comparison can. Bit-identical in the full comparison
+  and in a dedicated check of zeros of both signs, NaN payloads, infinities,
+  extremes and subnormals, and pinned by a new test against `F.fold` itself.
+  3.4x to 58x faster depending on size: 146 to 9.4 ms on the pure path at
+  3x2048x2048 with patch 32.
+
 ### Fixed
 
 - docs/PERFORMANCE.md and `tools/benchmark.py` said non-overlapping geometries

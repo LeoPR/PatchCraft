@@ -27,6 +27,20 @@ class TestUniformEqualsReconstruct:
         out_recon = reconstruct(patches, image_shape=img.shape, stride=4)
         assert bit_equal(out_stitch, out_recon)
 
+    def test_exact_tiling_returns_what_the_fold_returns(self) -> None:
+        """The non-overlapping uniform path skips the fold, and must still
+        return the fold's bits: 0.0 + x, which turns -0.0 into +0.0 and
+        quiets a NaN. A bare rearrangement would keep -0.0, and torch.equal
+        cannot tell the two apart, so this compares integer views against
+        F.fold itself."""
+        vals = torch.tensor([-0.0, 0.0, float("nan"), float("inf"), -1.5, 2.0**-140])
+        patches = vals[torch.arange(4 * 1 * 3 * 3) % vals.numel()].reshape(4, 1, 3, 3)
+        out = stitch(patches, image_shape=(1, 6, 6), stride=3)
+        cols = patches.permute(1, 2, 3, 0).reshape(9, 4).unsqueeze(0)
+        folded = F.fold(cols, output_size=(6, 6), kernel_size=3, stride=3)[0]
+        assert bit_equal(out, folded / 1.0)
+        assert not torch.signbit(out[out == 0]).any()
+
     def test_exact_tiling_recovers_image(self) -> None:
         img = rand_image(2, 12, 12, torch.float32, seed=502)
         patches = extract(img, patch_size=4, stride=4)

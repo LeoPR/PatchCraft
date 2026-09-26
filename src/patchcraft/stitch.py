@@ -200,6 +200,18 @@ def stitch(
         if patches.dtype in (torch.float16, torch.bfloat16)
         else patches.dtype
     )
+
+    if weight == "uniform" and sh == ph and sw == pw:
+        # Non-overlapping grid under the uniform window. The fold would add
+        # each value, times 1, into a zero-filled buffer and divide by a
+        # count of 1, so the whole computation is 0.0 + x: x itself, except
+        # that -0.0 comes out as +0.0 and a NaN comes out quiet. Adding 0.0
+        # to the rearranged patches does exactly that, bit for bit, without
+        # the fold, which at 3x2048x2048 is most of the call.
+        grid = patches.to(accum_dtype).reshape(num_h, num_w, c, ph, pw)
+        out = grid.permute(2, 0, 3, 1, 4).reshape(c, h, w)
+        return (out + 0.0).to(patches.dtype)
+
     wh = _window_1d(weight, ph, accum_dtype, patches.device)
     ww = _window_1d(weight, pw, accum_dtype, patches.device)
     kernel = wh.unsqueeze(1) * ww.unsqueeze(0)
