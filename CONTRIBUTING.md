@@ -34,7 +34,7 @@ is silently inert here. Either make that global hook delegate, or set
 whatever else the global hooks were doing.
 
 `ruff-format` is deliberately not among the hooks. This project has never used
-it, and adopting it would reformat 36 of 65 files in a commit that changed no
+it, and adopting it would reformat 37 of 82 files in a commit that changed no
 behaviour.
 
 ```
@@ -130,6 +130,8 @@ PatchCraft/
 ├── setup.py                        the one build decision: with or without the Rust extension
 ├── tools/check_dist.py             gate: extension present, versions agree, tag respected
 ├── tools/benchmark.py              accelerated vs pure, and proves they agree first
+├── tools/compare_exactness_rules.py  the power-of-two rule against k_max <= 4, measured
+├── tools/make_outreach_figures.py  every outreach figure and generated page, computed
 ├── MANIFEST.in                     what the sdist carries
 ├── README.md                       the call page, canonical, English
 ├── README.pt-BR.md                 the same call page in Portuguese
@@ -148,7 +150,7 @@ PatchCraft/
 ├── SECURITY.md                     how to report, and what the real attack surface is
 ├── CODE_OF_CONDUCT.md              Contributor Covenant 2.1, verbatim
 ├── .github/
-│   ├── ISSUE_TEMPLATE/             five forms; the required fields are what makes a report reproducible
+│   ├── ISSUE_TEMPLATE/             four forms and a chooser; the required fields are what makes a report reproducible
 │   ├── PULL_REQUEST_TEMPLATE.md    asks whether a returned value moved, which decides the version bump
 │   └── workflows/
 │   ├── test.yml                    matrix CI on PRs/main, plus the accelerated job
@@ -185,6 +187,9 @@ PatchCraft/
 │   ├── test_accel.py               native path, skipped unless the extension was built
 │   ├── test_datasets_helper.py     label_subset
 │   ├── test_import.py
+│   ├── test_docs_usage.py          runs docs/USAGE.md as a doctest
+│   ├── test_citation.py            CITATION.cff agrees with the package
+│   ├── conftest.py                 shared fixtures
 │   ├── _rng.py                     audited round-trip helpers (data generation, bit equality)
 │   ├── test_rng.py                 tests for those helpers
 │   └── _datasets.py                dev-only fixtures (MNIST, etc), NOT public API
@@ -199,14 +204,15 @@ PatchCraft/
 │   ├── AUXILIARY.md                tests/_datasets, lab/, Z:\ conventions (NOT part of the wheel)
 │   ├── THEORY.md                   distilled design + §9 condition contract; §0 binding scope
 │   ├── ROADMAP.md                  milestone plan
-│   ├── FOCO-1.0.md                 what 1.0 freezes and the blockers in the way
+│   ├── FOCO-1.0.md                 what 1.0 freezes, and the six blockers, all closed
 │   ├── ADR/                        one file per decision; the choice only, evidence in STUDIES/
 │   ├── STUDIES/                    background reading behind those decisions
 │   └── design/                     one spec per work phase: the alternatives measured and the decision
 ├── outreach/                       material for presenting the project publicly, not shipped
 │   ├── README.md                   how it is organized and what to check before publishing
-│   ├── 2026-09-03-lancamento.md    the dated news source every channel text derives from
-│   └── linkedin/                   post (short) and artigo (long), each in PT and EN
+│   ├── 2026-09-04-lancamento.md    the current dated news source the channel texts derive from
+│   ├── 2026-09-03-lancamento.md    the previous one, kept as the record of 0.5.1
+│   └── linkedin/                   post, artigo, the illustrated page and the figures, PT and EN
 └── archive/                        reference-only; gitignored (pruned 2026-05-17, only HISTORY.md kept)
 ```
 
@@ -253,12 +259,7 @@ PEP 440's `~=0.5.0` means `>=0.5.0, <0.6.0`. In every one of them a `0.y` bump
 is the announcement that something may break, and a `0.y.z` bump is the
 promise that nothing does.
 
-That fixes what each digit is for here:
-
-One consequence worth stating on its own, because a consumer cannot infer it
-from a `Literal`: **`WeightKind` is an open set.** Adding a member is additive
-and lands in a `0.y` before 1.0 and a minor after it; removing or renaming one
-is a break. Code that matches on it exhaustively should keep a fallback arm.
+That fixes what each digit is for here.
 
 The question that decides it is not "did a returned value change". A bug fix
 changes returned values by definition, and if that forced a `0.Y.0` then a
@@ -289,6 +290,11 @@ under any rule keyed on whether values changed:
 - `0.5.0` made `tilings` return 73 specs where it returned 100. The
   enumeration's output set is the contract. A **y**.
 
+One consequence worth stating on its own, because a consumer cannot infer it
+from a `Literal`: **`WeightKind` is an open set.** Adding a member is additive
+and lands in a `0.y` before 1.0 and a minor after it; removing or renaming one
+is a break. Code that matches on it exhaustively should keep a fallback arm.
+
 After 1.0 the ordinary reading applies: breaking is major, additive is minor,
 fixed is patch. What 1.0 freezes is written in
 [`docs/FOCO-1.0.md`](docs/FOCO-1.0.md).
@@ -304,11 +310,6 @@ minting a y announced a break that never happened.
 
 `0.5.1` was briefly numbered `0.6.0` before release. It changes only how the
 package is built and shipped, so it is a z-bump.
-
-Two others were right and are worth recording as the shape to copy. `0.3.0`
-moved `stitch` output by ULPs through a different summation order, which is an
-output change and belongs at a y boundary. `0.5.0` made `tilings` return 73
-specs where it returned 100, which is squarely a break.
 
 The accelerator in [`accel/`](accel/) has no version of its own to manage. It
 is compiled into this wheel, so it ships when `patchcraft` ships. The version

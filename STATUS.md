@@ -55,7 +55,7 @@ inventing path security is not this library's job, and no library in the
 ecosystem does it, verified against `torch.hub.set_dir`, pytest's cacheprovider
 and pip. Asking the question found the real defect, which was the opposite
 shape: `Cache` was missing the one thing all of them do, so `Cache("~/cache")`
-created a directory literally named `~`. Fixed in the unreleased set, with no
+created a directory literally named `~`. Fixed in 0.5.4, with no
 validation added. [SECURITY.md](SECURITY.md) and THEORY §9.5 now say the path
 is the caller's and that only `~` is expanded.
 

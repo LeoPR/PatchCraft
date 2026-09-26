@@ -22,7 +22,7 @@ PatchCraft/
 ├── CONTRIBUTING.md ........... layout, the two code paths, the versioning rule, releasing
 ├── CITATION.cff .............. citation metadata; GitHub reads it for the cite button
 ├── LICENSE ................... MIT
-├── SECURITY.md ............... how to report, and the three trust boundaries that matter
+├── SECURITY.md ............... how to report, and the five edges of the attack surface
 ├── CODE_OF_CONDUCT.md ........ Contributor Covenant 2.1
 │
 ├── src/patchcraft/ ........... THE LIBRARY. 20 public names, frozen by test
@@ -55,19 +55,21 @@ PatchCraft/
 │   ├── USAGE.md .............. the 20 symbols one at a time; every >>> runs in the suite
 │   ├── AUXILIARY.md .......... test fixtures, lab/, the off-tree conventions
 │   ├── ROADMAP.md ............ milestones, historical
-│   ├── FOCO-1.0.md ........... what 1.0 freezes, and the blockers still in the way
+│   ├── FOCO-1.0.md ........... what 1.0 freezes, and the six blockers, all closed
 │   ├── ADR/ .................. one file per decision; the choice, not the research
 │   ├── design/ ............... one spec per work phase: alternatives measured, then chosen
 │   └── STUDIES/ .............. background reading, and the Strata conformity review
 │
 ├── tools/
 │   ├── benchmark.py .......... accelerated vs pure, and proves they agree before timing
-│   └── check_dist.py ......... release gate: extension present, versions agree, tag respected
+│   ├── check_dist.py ......... release gate: extension present, versions agree, tag respected
+│   ├── compare_exactness_rules.py  the power-of-two rule against k_max <= 4, measured
+│   └── make_outreach_figures.py    every outreach figure and generated page, computed
 │
 ├── outreach/ ................. material for presenting the project; not shipped
 ├── lab/ ...................... scratch experiments; only the README is tracked
 └── .github/
-    ├── ISSUE_TEMPLATE/ ....... five forms, each asking for the geometry and PATCHCRAFT_ACCEL=0
+    ├── ISSUE_TEMPLATE/ ....... four forms, each asking for the geometry and PATCHCRAFT_ACCEL=0
     ├── PULL_REQUEST_TEMPLATE.md
     └── workflows/ ............ test.yml (both code paths) and release.yml (one project, six wheels)
 ```
@@ -83,7 +85,7 @@ PatchCraft/
 | Know **what each function accepts and rejects**, precisely | [docs/THEORY.md §9](docs/THEORY.md), which is the arbiter where documents disagree |
 | Know **whether this library is the right tool** | [docs/SCOPE.md](docs/SCOPE.md) |
 | Know **what the native accelerator is worth**, and re-measure it | [docs/PERFORMANCE.md](docs/PERFORMANCE.md), then `python tools/benchmark.py` |
-| Know **what the project refuses to claim** | [docs/GUIDE.md §8](docs/GUIDE.md#8-what-this-project-does-not-claim) |
+| Know **where the library applies today** | [docs/GUIDE.md §8](docs/GUIDE.md#8-where-this-applies-today) |
 | Understand **why the API looks like this** | [docs/ADR/](docs/ADR/), and [docs/STUDIES/](docs/STUDIES/) for the measurements behind them |
 | Understand **why a phase was built the way it was** | [docs/design/](docs/design/) |
 | **Contribute**: run the gates, understand the two code paths | [CONTRIBUTING.md](CONTRIBUTING.md) |

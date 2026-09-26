@@ -6,6 +6,50 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `tools/compare_exactness_rules.py` measures the exactness rule against the
+  obvious looser one, keeping the largest coverage count at 4 or below, over
+  the 126,736 geometries `tests/test_exactness.py` enumerates, with the round
+  trip on five seeds as ground truth. The power-of-two rule makes no false
+  promise and withholds none; `k_max <= 4` promises exactness on 13,870
+  geometries that do not come back exact. The outreach article quoted an
+  earlier sweep of 14,969 rectangular geometries from a lab script that is not
+  in the tree, so no command reproduced it; it now cites this one.
+
+### Changed
+
+- **The manual, the usage page and the three READMEs no longer carry
+  development history.** Sentences about what an earlier version did, what a
+  first audit found or what used to be printed moved out; where an old
+  measurement is the argument for the current rule it stays, in the present
+  tense. GUIDE §8 is now "Where this applies today", and each of its items says
+  what a reader should do (on GPU it works and does not accelerate; on macOS and
+  aarch64, compare once against `PATCHCRAFT_ACCEL=0`), instead of listing what
+  the project has not done. The old anchor is updated everywhere it was linked.
+- The README tagline read "Encode one image into patches, decode it back",
+  which invited the compression reading the page then had to head off. It now
+  says "Cut one image into patches, and put it back together", followed by one
+  sentence on what a patch is for.
+- GUIDE's hann figure against the model's own patches read 27.14 dB and prints
+  27.15 dB on both code paths; the page now quotes what the code prints.
+- `tools/make_outreach_figures.py` lost 301 unreachable lines left from
+  earlier layouts, with every generated file byte-identical before the later
+  edits. Every caption that states a result is now checked against it before
+  it is drawn, including the refusal at stride 20 and the exact round trip at
+  32 and 16. The MNIST grid is drawn at display scale instead of into the
+  digit's pixels, where it hid more than a third of a 28x28 image, and the
+  patch shown alone is outlined in it.
+
+### Fixed
+
+- CONTRIBUTING placed the `WeightKind` paragraph between "what each digit is
+  for here:" and the table the colon announced, and its errata repeated two
+  worked examples word for word. MAP and CONTRIBUTING counted five issue forms
+  where there are four, called all-closed 1.0 blockers "still in the way", and
+  listed neither generator in `tools/`. STATUS still called the `Cache` fix
+  unreleased after 0.5.4 shipped it.
+
 ## [0.5.4] - 2026-09-04
 
 ### Fixed
