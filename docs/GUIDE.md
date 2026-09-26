@@ -188,7 +188,7 @@ Seventeen non-blank lines against three, for a result that agrees to about 1.2e-
 
 **That number is not 0.0, and the reason is worth a sentence.** The two versions compute the same quantity by different routes. `stitch` builds its denominator from two 1-D window folds, because a separable kernel allows it, while the hand-rolled version folds a replicated 2-D kernel. Same value, different summation order, so the float result differs in the last few bits. Nothing here is a correctness gap.
 
-The exception is `weight="uniform"`, where `stitch` still agrees with `reconstruct` bit for bit, because the ones-kernel multiply is exact.
+The exception is `weight="uniform"`, where `stitch` still agrees with `reconstruct` bit for bit, because the ones-kernel multiply is exact. The one bit that can differ is the sign of a zero on a non-overlapping grid: there `reconstruct` only rearranges and keeps a `-0.0`, while `stitch` computes `0.0 + x`, which returns `+0.0`. Both compare equal as numbers.
 
 The by-hand version above is also the correct one, since it already has the coverage check, the right permutation and the strictly positive window. Getting to that version is the work.
 
@@ -794,7 +794,7 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 **Before 1.0, and with no external consumer yet.** A real project consuming the published API is the gate [ROADMAP.md](ROADMAP.md) sets for calling the shape settled. Until then a new `0.y` may still change what comes out; pin `~=0.5.0` to take fixes only.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 1619 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 1620 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Where the evidence is thinner, this is what it means for you.
 

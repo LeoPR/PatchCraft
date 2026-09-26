@@ -10,8 +10,9 @@ build and how many threads torch decides to use:
 It measures the one hot path the accelerator touches, which is the overlapping
 fold inside ``reconstruct`` and ``stitch``. Non-overlapping geometries are not
 measured: ``reconstruct`` takes a closed-form path there that is already a pure
-rearrangement. ``stitch`` has no such path and still folds at
-``stride == patch_size``, which docs/PERFORMANCE.md states with its timing.
+rearrangement, and so does ``stitch`` under the uniform window. ``stitch``
+with ``hann`` or ``gaussian`` still folds at ``stride == patch_size``, which
+docs/PERFORMANCE.md states.
 
 Every case is run twice, once with the accelerator and once with
 ``PATCHCRAFT_ACCEL=0``, and the two results are compared with ``torch.equal``

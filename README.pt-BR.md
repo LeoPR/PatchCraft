@@ -146,7 +146,7 @@ O round-trip é exato quando todo valor do mapa de cobertura é potência de doi
 
 **Pré-1.0**, e o badge acima mostra a versão atual. Enquanto o primeiro dígito for zero, quem marca a fronteira de compatibilidade é o do meio: um `0.y.z` novo é seguro de pegar, e é num `0.y` novo que um valor de saída ou uma assinatura pode mudar. O [CHANGELOG.md](CHANGELOG.md) registra cada uma dessas mudanças com a medição por trás dela.
 
-São 1656 testes coletados, com CI verde em {Ubuntu, Windows} x {Python 3.12, 3.13, 3.14}, e com `ruff check` e `mypy --strict` na mesma execução. O pacote é tipado e distribui o `py.typed`.
+São 1657 testes coletados, com CI verde em {Ubuntu, Windows} x {Python 3.12, 3.13, 3.14}, e com `ruff check` e `mypy --strict` na mesma execução. O pacote é tipado e distribui o `py.typed`.
 
 Em GPU as funções preservam o dispositivo que você passa, e o kernel Rust é só de CPU, então não acelera ali; todo número desta página é de CPU. Nenhum projeto externo consome a biblioteca ainda, que é o critério para dizer a API assentada. [O manual](docs/GUIDE.md#8-where-this-applies-today) diz onde o resto se aplica.
 

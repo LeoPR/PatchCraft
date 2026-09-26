@@ -128,7 +128,7 @@ The everyday shorthand is that `stride == patch_size` and `stride == patch_size 
 
 ## Status
 
-This is pre-1.0, so both the output values and the API shape can still move. While the leading digit is zero the middle one is the compatibility boundary, which makes a new `0.y.z` safe to take and a new `0.y` the place where a change is allowed to land, and the [changelog](https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md) records each one with the measurement behind it. The suite collects 1656 tests and passes on Python 3.12, 3.13 and 3.14, on Ubuntu and on Windows alike.
+This is pre-1.0, so both the output values and the API shape can still move. While the leading digit is zero the middle one is the compatibility boundary, which makes a new `0.y.z` safe to take and a new `0.y` the place where a change is allowed to land, and the [changelog](https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md) records each one with the measurement behind it. The suite collects 1657 tests and passes on Python 3.12, 3.13 and 3.14, on Ubuntu and on Windows alike.
 
 Where it applies today: on GPU the functions accept CUDA tensors and keep the device, and the Rust kernel is CPU-only, so it does not accelerate there; every figure on this page is a CPU figure, so check exactness on your device before relying on it. No external project consumes the published API yet, which is the gate this project set for calling the shape settled.
 
