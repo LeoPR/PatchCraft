@@ -40,11 +40,11 @@ and the intuitive reshape into (L, C, ph, pw) hands you the right shape with the
 pixels. The shape assertion passes, training runs, the loss comes down a little less, and
 there is no error message anywhere.
 
+[IMAGE: 1-cut.png - caption: the same image before and after the intuitive reshape]
+
 The second lives in the stride. On a 128 by 128 image with patch 32 and stride 20, the grid
 stops at pixel 112 and leaves 3840 of the 16384 pixels at zero. A hand-rolled fold returns
 that partly black image without complaining.
-
-[IMAGE: 1-cut.png - caption: the same image before and after the intuitive reshape]
 
 Neither is hard to fix. Both are easy to miss, and that difference is what justifies writing
 it once, with tests around it, rather than rewriting it per project.
@@ -66,20 +66,16 @@ computed from the geometry alone, without running anything. The caller knows whi
 they are in beforehand.
 
 The rule looks severe, and the obvious alternative is looser: just keep the maximum overlap
-count small. It does not work, and the gap is wide. Over a sweep of 14,969 rectangular
-geometries, the maximum rule mispredicts 3,936 cases; the power-of-two rule mispredicts 8,
-and those 8 err by promising less than they deliver.
+count at 4 or below. It does not work. Over the 126,736 legal geometries the suite
+enumerates, the maximum rule promises exactness on 13,870 that do not come back exact, nearly
+11% of the space. The power-of-two rule promises none that fail, and withholds none that come
+back exact. python tools/compare_exactness_rules.py reproduces the count.
 
-That asymmetry is what settles which of the two is worth having. A contract may
+That is what settles which of the two is worth having. A contract may
 under-promise. It may not over-promise, because whoever trusts it has no way to notice the
 difference: outside the rule the per-pixel error grows with the coverage and reaches 19 ULP
-in float32 with nothing to signal it.
-
-Notice that the previous version looked at the maximum of the map and the correct one looks
-at all of its values. I tested both against a sweep of rectangular geometries: the maximum
-rule mispredicts 3936 of 14969 cases, the power-of-two rule mispredicts 8. Those 8 fail in
-the safe direction, promising less than they deliver. A contract may under-promise. It may
-not over-promise.
+in float32 (19 times the smallest step float32 can represent at that value) with nothing to
+signal it.
 
 ## How the contract is verified
 
@@ -93,10 +89,6 @@ hunts for the two counterexamples that would break the contract: a case inside t
 that is not exact, and a case outside the rule that is exact across every seed, which would
 say the predicate is drawn too tight. The full sweep of all 126,736 sits behind an
 environment variable, because it takes a little over a minute.
-
-Notice that it is the same silent failure as the opening, one layer up. The code was right;
-the guarantee about the code was wrong, and it passed the tests for the same reason the two
-defects at the start did: the question being asked was not the one that mattered.
 
 One detail of the data generator is worth carrying anywhere patches get tested: the images
 are full-mantissa noise drawn directly in the target dtype, never an integer ramp. Integer
@@ -162,7 +154,7 @@ surface is 20 names, frozen by test.
 pip install patchcraft
 
 
-The code, the measurements and the documentation of what does not work are open.
+The code, the measurements and the documented scope are open.
 
 https://github.com/LeoPR/PatchCraft
 

@@ -58,9 +58,10 @@ não seja exato, e um caso fora que seja exato por sorte. A varredura completa f
 `PATCHCRAFT_SWEEP_FULL=1`.
 
 **Por que a regra é essa e não uma mais frouxa.** A alternativa óbvia seria só manter a
-sobreposição máxima pequena. Sobre 14.969 geometrias retangulares, a regra do máximo erra
-3.936 casos; a da potência de dois erra 8, e os 8 erram prometendo menos do que entregam.
-Um contrato pode prometer de menos, e não pode prometer demais, porque fora da regra o erro
+contagem máxima de sobreposição em até 4. Sobre as 126.736 geometrias legais que a suíte
+enumera, ela promete exatidão em 13.870 que não voltam exatas; a da potência de dois não
+promete nenhuma que falhe nem deixa de prometer nenhuma que volte exata
+(`python tools/compare_exactness_rules.py`). Um contrato pode prometer de menos, e não pode prometer demais, porque fora da regra o erro
 cresce com a cobertura e chega a 19 ULP em float32 sem nada sinalizar.
 
 **Um detalhe do gerador de dados**, transferível para quem testar patches em qualquer

@@ -31,14 +31,14 @@ pieces are called patches.
 
 PyTorch ships two functions for this. `unfold` slides a window across the image and returns
 every window stacked. `fold` goes the other way, adding each window back into the position
-it came from. For simple cuts, with the window moving one full size at a time, the two are
-enough.
+it came from. The distance the window travels from one patch to the next is the stride.
+For simple cuts, with the stride equal to the window size, the two are enough.
 
 Beyond that case, details start asking for care. `unfold` returns the patches in a packed
 layout, and rearranging it into the intuitive order scrambles the pixels without changing
-the tensor's shape. When the step is smaller than the window the patches overlap and `fold`
+the tensor's shape. When the stride is smaller than the window the patches overlap and `fold`
 sums the overlaps, so putting the image back means dividing each pixel by the number of
-times it was covered. And when the step does not close the image, the grid stops before the
+times it was covered. And when the stride does not close the image, the grid stops before the
 edge and the remainder comes back as zero.
 
 PatchCraft covers those cases. It validates the geometry before cutting, divides by the
@@ -52,7 +52,7 @@ for the overlapping path.
 There is a longer article with the measurements and the figures, in Portuguese:
 👉 https://www.linkedin.com/pulse/patchcraft-desmontar-e-montar-imagens-leonardo-marques-de-souza-q0mvf/
 
-The code, the measurements and the documentation of what does not work:
+The code, the measurements and the documented scope:
 👉 https://github.com/LeoPR/PatchCraft
 
 #Python #PyTorch #OpenSource #ComputerVision #SoftwareEngineering

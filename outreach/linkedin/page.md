@@ -59,8 +59,8 @@ dividing a float by anything that is not a power of two rounds. The error map dr
 the grid of those regions, which are the amber ones in the first row.
 
 The figure marks that case `≈ 0` because that is what it means in practice, and here is the
-number with a measure beside it. The maximum error is `1.1921e-07`, which is 151.5 dB of
-PSNR, where 40 dB is already treated as visually lossless. It fits 32,897 times inside one
+number with a measure beside it. The maximum error is `1.1921e-07`, and the reassembled
+image sits at 151.5 dB of PSNR, where 40 dB is already treated as visually lossless. It fits 32,897 times inside one
 8-bit step, so converting both images to `uint8` makes them bit for bit identical; the
 difference only appears at 16 bits.
 

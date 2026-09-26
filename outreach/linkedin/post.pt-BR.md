@@ -51,7 +51,7 @@ caminho com sobreposição.
 Escrevi um artigo com as medições, as figuras e os limites de onde isto se aplica hoje:
 👉 https://www.linkedin.com/pulse/patchcraft-desmontar-e-montar-imagens-leonardo-marques-de-souza-q0mvf/
 
-O código, as medições e a documentação do que não funciona:
+O código, as medições e o escopo documentado:
 👉 https://github.com/LeoPR/PatchCraft
 
 #Python #PyTorch #OpenSource #VisaoComputacional #EngenhariaDeSoftware

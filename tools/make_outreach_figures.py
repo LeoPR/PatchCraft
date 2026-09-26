@@ -1,18 +1,23 @@
 """Draw the outreach figures, from measurement rather than by hand.
 
-Three figures, in two languages, into outreach/linkedin/figuras/<lang>/:
+Five figures per language, into outreach/linkedin/figuras/<lang>/:
 
-  cobertura    the mechanism. How many patches cover each pixel at three
-               steps, which is why the other two figures look the way they do.
-  fold-unfold  what torch's fold and unfold give you on their own, including
-               the two results that are wrong without saying so.
-  patchcraft   the same operation through the library, across the three
-               regimes it actually has: identical, approximate, refused.
+  0-capa       the 1.91:1 cover the LinkedIn article editor asks for
+  1-recorte    the unfold, and the reshape that keeps the shape and moves
+               the pixels
+  2-stride     coverage, a hand-written fold and PatchCraft, across four
+               strides: identical, approximate and refused
+  3-mnist      a real digit, its patch grid and one patch
+  4-tabela     the benchmark table, parsed out of the article
 
-Every panel is computed here. The images are the real tensors, the errors are
-measured with torch, the error map is the real difference amplified, and the
-refusal carries the message the library actually raises. Re-running the script
-regenerates all of it:
+plus the illustrated page (linkedin/pagina.md, page.md) and the article
+prepared for the LinkedIn editor (linkedin/artigo-linkedin.<lang>.md).
+
+Every panel is computed here, and every caption that states a result is
+checked against the result before it is drawn: the images are the real
+tensors, the errors are measured, the error map is the real difference
+amplified, and the refusal is asserted to be what reconstruct raises.
+Re-running the script regenerates all of it:
 
     python tools/make_outreach_figures.py
 """
@@ -42,13 +47,6 @@ LOSS = (176, 42, 42)
 GOOD = (28, 108, 76)
 WARN = (170, 110, 20)
 BAND = (246, 247, 249)
-
-COUNT_COLOUR = {
-    0: (176, 42, 42),
-    1: (219, 233, 246),
-    2: (141, 184, 219),
-    4: (52, 105, 156),
-}
 
 SIZE = 128
 PATCH = 32
@@ -244,17 +242,10 @@ class Canvas:
             f'href="data:image/png;base64,{data}"/>'
         )
 
-    def title(self, string: str, left: int) -> None:
-        size = 42
-        while size > 22 and font(size, bold=True).getlength(string) > self.w - 2 * left:
-            size -= 1
-        self.text((left, 46), string, size, INK, bold=True)
-
     def save(self, lang: str, stem: str) -> None:
         self.svg.append("</svg>")
         folder = OUT / lang
         folder.mkdir(parents=True, exist_ok=True)
-        (folder / f"{stem}.png").parent.mkdir(parents=True, exist_ok=True)
         self.img.save(folder / f"{stem}.png")
         (folder / f"{stem}.svg").write_text("\n".join(self.svg), encoding="utf-8")
         png_kb = (folder / f"{stem}.png").stat().st_size // 1024
@@ -263,299 +254,15 @@ class Canvas:
         print(f"  {rel}.png  {png_kb} KB      {rel}.svg  {svg_kb} KB")
 
 
-def panel_grid(count: int, panel: int, gap: int) -> tuple[int, list[int]]:
-    total = count * panel + (count - 1) * gap
-    left = (W - total) // 2
-    return left, [left + i * (panel + gap) for i in range(count)]
-
-
-def draw_panels(c: Canvas, xs, top, panel, labels, details, verdicts, colours):
-    for i, x in enumerate(xs):
-        c.text((x, top - 34), labels[i], 22, INK, bold=True)
-        c.text((x, top + panel + 14), details[i], 16, MUTED)
-        c.text((x, top + panel + 38), verdicts[i], 18, colours[i], bold=True)
-
-
 # --------------------------------------------------------------------------
-# Wording
-# --------------------------------------------------------------------------
-
-STRINGS = {
-    "pt-BR": {
-        "foot": "Tudo medido. Reproduz com: python tools/make_outreach_figures.py",
-        "naive": {
-            "stem": "fold-unfold",
-            "title": "O que o fold e o unfold devolvem sozinhos",
-            "sub1": (
-                "A mesma imagem 128x128 com patch 32, recortada e remontada "
-                "de quatro maneiras."
-            ),
-            "sub2": "Duas delas devolvem a imagem errada sem levantar erro nenhum.",
-            "labels": ("original", "reshape intuitivo", "passo 20", "passo 32"),
-            "details": (
-                "a imagem de entrada",
-                "unfold, reshape para (L,C,ph,pw)",
-                "fold escrito à mão",
-                "unfold e fold, feito certo",
-            ),
-            "verdicts": (
-                "o que deveria voltar",
-                "erro máximo 0,996",
-                "3840 pixels em zero",
-                "idêntica, erro 0",
-            ),
-        },
-        "craft": {
-            "stem": "patchcraft",
-            "title": "O PatchCraft tem três respostas, e diz qual delas deu",
-            "sub1": (
-                "A mesma imagem por extract e reconstruct, variando só o "
-                "passo. O regime muda com a"
-            ),
-            "sub2": (
-                "geometria: exato quando toda contagem de cobertura é potência "
-                "de dois, e não por sorte."
-            ),
-            "labels": ("passo 32", "passo 16", "passo 12", "passo 20"),
-            "details": (
-                "contagens: 1",
-                "contagens: 1, 2, 4",
-                "contagens: 1, 2, 3, 4, 6, 9",
-                "cobre 112 de 128",
-            ),
-            "note": "canto: o erro real, ampliado até ficar visível",
-            "refusal": (
-                "ValueError",
-                "patch grid leaves",
-                "pixels uncovered",
-                "(partial coverage",
-                "forbidden)",
-            ),
-        },
-        "cover": {
-            "stem": "cobertura",
-            "title": "O passo decide se a imagem volta inteira",
-            "sub1": (
-                "Imagem 128x128, patch 32. A cor é o número de patches que "
-                "cobrem aquele pixel,"
-            ),
-            "sub2": "medido com o fold e o unfold do torch sobre um tensor de uns.",
-            "labels": ("passo 32", "passo 16", "passo 20"),
-            "details": (
-                "4x4 patches, sem sobreposição",
-                "7x7 patches, com sobreposição",
-                "5x5 patches, grade termina em 112",
-            ),
-            "verdicts": (
-                "todo pixel coberto 1 vez",
-                "contagens de 1, 2 e 4",
-                "3840 pixels sem cobertura",
-            ),
-            "legend": "patches cobrindo o pixel:",
-            "zero": "0, perdido",
-        },
-    },
-    "en": {
-        "foot": "All measured. Reproduce with: python tools/make_outreach_figures.py",
-        "naive": {
-            "stem": "fold-unfold",
-            "title": "What fold and unfold return on their own",
-            "sub1": "The same 128x128 image with patch 32, cut and reassembled four ways.",
-            "sub2": "Two of them return the wrong image without raising anything.",
-            "labels": ("original", "intuitive reshape", "stride 20", "stride 32"),
-            "details": (
-                "the input image",
-                "unfold, reshape to (L,C,ph,pw)",
-                "fold written by hand",
-                "unfold and fold, done right",
-            ),
-            "verdicts": (
-                "what should come back",
-                "max error 0.996",
-                "3840 pixels at zero",
-                "identical, error 0",
-            ),
-        },
-        "craft": {
-            "stem": "patchcraft",
-            "title": "PatchCraft has three answers, and says which one you got",
-            "sub1": (
-                "The same image through extract and reconstruct, varying only "
-                "the stride. The regime"
-            ),
-            "sub2": (
-                "follows the geometry: exact when every coverage count is a "
-                "power of two, not by luck."
-            ),
-            "labels": ("stride 32", "stride 16", "stride 12", "stride 20"),
-            "details": (
-                "counts: 1",
-                "counts: 1, 2, 4",
-                "counts: 1, 2, 3, 4, 6, 9",
-                "covers 112 of 128",
-            ),
-            "note": "corner: the real error, amplified until visible",
-            "refusal": (
-                "ValueError",
-                "patch grid leaves",
-                "pixels uncovered",
-                "(partial coverage",
-                "forbidden)",
-            ),
-        },
-        "cover": {
-            "stem": "coverage",
-            "title": "The step decides whether the image comes back whole",
-            "sub1": (
-                "128x128 image, patch 32. The colour is the number of "
-                "patches covering that pixel,"
-            ),
-            "sub2": "measured with torch's own fold and unfold over a tensor of ones.",
-            "labels": ("stride 32", "stride 16", "stride 20"),
-            "details": (
-                "4x4 patches, no overlap",
-                "7x7 patches, overlapping",
-                "5x5 patches, grid ends at 112",
-            ),
-            "verdicts": (
-                "every pixel covered once",
-                "counts of 1, 2 and 4",
-                "3840 pixels uncovered",
-            ),
-            "legend": "patches covering the pixel:",
-            "zero": "0, lost",
-        },
-    },
-}
-
-
-# --------------------------------------------------------------------------
-# The figures
-# --------------------------------------------------------------------------
-
-PANEL4, GAP4, TOP4, H4 = 250, 30, 218, 588
-PANEL3, GAP3, TOP3, H3 = 300, 45, 218, 664
-
-
-def build_naive(lang: str) -> None:
-    s = STRINGS[lang]["naive"]
-    img = test_image()
-    panels = [img, naive_reshape(img), hand_fold(img, 20), hand_fold(img, 32)]
-
-    left, xs = panel_grid(4, PANEL4, GAP4)
-    c = Canvas(H4)
-    c.title(s["title"], left)
-    c.text((left, 118), s["sub1"], 20, MUTED)
-    c.text((left, 146), s["sub2"], 20, MUTED)
-
-    for x, panel in zip(xs, panels, strict=True):
-        c.paste(panel, (x, TOP4), PANEL4)
-        c.box((x, TOP4), (x + PANEL4, TOP4 + PANEL4), outline=RULE)
-
-    draw_panels(
-        c, xs, TOP4, PANEL4, s["labels"], s["details"], s["verdicts"],
-        (MUTED, LOSS, LOSS, GOOD),
-    )
-    c.text((left, H4 - 40), STRINGS[lang]["foot"], 16, MUTED)
-    c.save(lang, s["stem"])
-
-
-def build_craft(lang: str) -> None:
-    s = STRINGS[lang]["craft"]
-    img = test_image()
-    left, xs = panel_grid(4, PANEL4, GAP4)
-    c = Canvas(H4)
-    c.title(s["title"], left)
-    c.text((left, 118), s["sub1"], 20, MUTED)
-    c.text((left, 146), s["sub2"], 20, MUTED)
-
-    verdicts, colours = [], []
-    for i, stride in enumerate((32, 16, 12, 20)):
-        x = xs[i]
-        try:
-            back = reconstruct(
-                extract(img, patch_size=PATCH, stride=stride),
-                image_shape=(3, SIZE, SIZE),
-                stride=stride,
-            )
-        except ValueError:
-            c.box((x, TOP4), (x + PANEL4, TOP4 + PANEL4), fill=BAND, outline=RULE)
-            c.box((x, TOP4), (x + 5, TOP4 + PANEL4), fill=LOSS)
-            ty = TOP4 + 78
-            for j, line in enumerate(s["refusal"]):
-                c.text((x + 22, ty), line, 17, LOSS if j == 0 else INK, mono=True)
-                ty += 23
-            verdicts.append("recusa" if lang == "pt-BR" else "refused")
-            colours.append(LOSS)
-            continue
-
-        c.paste(back, (x, TOP4), PANEL4)
-        c.box((x, TOP4), (x + PANEL4, TOP4 + PANEL4), outline=RULE)
-        heat, peak = error_map(back, img)
-        if peak == 0:
-            verdicts.append("idêntica, erro 0" if lang == "pt-BR" else "identical, error 0")
-            colours.append(GOOD)
-        else:
-            inset = 88
-            ix, iy = x + PANEL4 - inset - 8, TOP4 + PANEL4 - inset - 8
-            c.paste(heat, (ix, iy), inset)
-            c.box((ix, iy), (ix + inset, iy + inset), outline=(255, 255, 255))
-            exponent = math.floor(math.log10(peak))
-            mantissa = peak / (10**exponent)
-            word = "aproximada" if lang == "pt-BR" else "approximate"
-            verdicts.append(f"{word}, {mantissa:.1f}e{exponent}")
-            colours.append(WARN)
-
-    draw_panels(c, xs, TOP4, PANEL4, s["labels"], s["details"], verdicts, colours)
-    c.text((left, H4 - 40), s["note"] + ".  " + STRINGS[lang]["foot"], 16, MUTED)
-    c.save(lang, s["stem"])
-
-
-def build_cover(lang: str) -> None:
-    s = STRINGS[lang]["cover"]
-    left, xs = panel_grid(3, PANEL3, GAP3)
-    c = Canvas(H3)
-    c.title(s["title"], left)
-    c.text((left, 118), s["sub1"], 20, MUTED)
-    c.text((left, 146), s["sub2"], 20, MUTED)
-
-    scale = PANEL3 / SIZE
-    for x, stride in zip(xs, (32, 16, 20), strict=True):
-        rows = coverage_map(stride).tolist()
-        for ya, yb in runs([tuple(r) for r in rows]):
-            for xa, xb in runs(rows[ya]):
-                c.box(
-                    (x + xa * scale, TOP3 + ya * scale),
-                    (x + xb * scale, TOP3 + yb * scale),
-                    fill=COUNT_COLOUR[int(rows[ya][xa])],
-                )
-        c.box((x, TOP3), (x + PANEL3, TOP3 + PANEL3), outline=RULE)
-
-    draw_panels(
-        c, xs, TOP3, PANEL3, s["labels"], s["details"], s["verdicts"], (GOOD, GOOD, LOSS)
-    )
-
-    ly = TOP3 + PANEL3 + 78
-    c.text((left, ly), s["legend"], 18, MUTED)
-    lx = left + int(font(18).getlength(s["legend"])) + 24
-    for count in (1, 2, 4, 0):
-        caption = s["zero"] if count == 0 else str(count)
-        c.box((lx, ly), (lx + 20, ly + 20), fill=COUNT_COLOUR[count])
-        c.text((lx + 28, ly + 1), caption, 18, INK)
-        lx += 28 + int(font(18).getlength(caption)) + 30
-
-    c.text((left, H3 - 40), STRINGS[lang]["foot"], 16, MUTED)
-    c.save(lang, s["stem"])
-
-
-# --------------------------------------------------------------------------
-# Three figures and the page that links them
+# The figures and the page that links them
 #
 # The prose lives in the markdown file, not baked into the pixels, so it can
 # be edited and the images can be placed wherever the channel wants them.
 # --------------------------------------------------------------------------
 
 STRIDES = (32, 16, 12, 20)
+PATCH_SHOWN = 5  # the MNIST patch drawn alone, outlined in the grid
 
 
 def mnist_digit() -> torch.Tensor | None:
@@ -573,19 +280,6 @@ def mnist_digit() -> torch.Tensor | None:
     except Exception as exc:
         print(f"  (MNIST unavailable, third figure skipped: {exc})")
         return None
-
-
-def patch_grid_overlay(gray: torch.Tensor, patch: int) -> torch.Tensor:
-    """The digit with the patch boundaries drawn on it."""
-    out = gray.clone()
-    for k in range(patch, gray.shape[-1], patch):
-        for axis in (1, 2):
-            sl = [slice(None)] * 3
-            sl[axis] = slice(k - 1, k + 1)
-            out[(0, *sl[1:])] = 1.0
-            out[(1, *sl[1:])] = 0.45
-            out[(2, *sl[1:])] = 0.10
-    return out
 
 
 class Fig(Canvas):
@@ -625,9 +319,10 @@ def fig_cut(lang: str) -> None:
 def fig_stride(lang: str) -> None:
     """Coverage, the hand-written fold, and PatchCraft, for four strides.
 
-    The row descriptions live in the prose, not here: keeping them out buys
-    about a fifth of the width back for the panels, which is what decides
-    whether the labels survive being scaled down in a feed.
+    Each row carries a one-line label above it rather than a label column
+    beside it: the column cost a fifth of the width, and in a feed that
+    scales images to a fixed column, width is what decides whether the text
+    survives. The longer explanation of the rows lives in the prose.
     """
     s = FIG[lang]
     img = test_image()
@@ -668,10 +363,16 @@ def fig_stride(lang: str) -> None:
     row_label(489, "row_craft")
 
     # Strides 32 and 16 give the same tensor by both paths, so one box covers
-    # both columns instead of the same sentence printed twice.
+    # both columns instead of the same sentence printed twice. The caption
+    # says exact and identical, so both are checked before it is drawn.
+    for st in STRIDES[:2]:
+        back = reconstruct(
+            extract(img, patch_size=PATCH, stride=st), image_shape=(3, SIZE, SIZE), stride=st
+        )
+        assert torch.equal(back, img) and torch.equal(back, hand_fold(img, st)), st
     span = 2 * panel + gap
     c.box((xs[0], craft_y), (xs[0] + span, craft_y + panel), fill=BAND, outline=RULE)
-    c.block((xs[0] + 24, craft_y + 62), s["same"], size=17, colour=MUTED, lead=25)
+    c.block((xs[0] + 24, craft_y + 50), s["same"], size=17, colour=MUTED, lead=25)
     c.text((xs[0], craft_y + panel + 12), s["caps"][0], 18, GOOD, bold=True)
 
     st = STRIDES[2]
@@ -689,13 +390,24 @@ def fig_stride(lang: str) -> None:
     inner = 104
     c.framed(heat, (x + (panel - inner) // 2, craft_y + 40), inner)
     c.block(
-        (x + 18, craft_y + 156),
+        (x + 16, craft_y + 152),
         [line.format(gain) for line in s["diff_cap"]],
-        size=14,
-        lead=18,
+        size=16,
+        lead=21,
     )
     c.text((x, craft_y + panel + 12), s["caps"][1], 18, WARN, bold=True)
 
+    # The refusal panel quotes the error, so the error is produced and checked.
+    try:
+        reconstruct(
+            extract(img, patch_size=PATCH, stride=STRIDES[3]),
+            image_shape=(3, SIZE, SIZE),
+            stride=STRIDES[3],
+        )
+    except ValueError as exc:
+        assert "partial coverage forbidden" in str(exc), exc
+    else:
+        raise AssertionError(f"stride {STRIDES[3]} was expected to be refused")
     x = xs[3]
     c.box((x, craft_y), (x + panel, craft_y + panel), fill=BAND, outline=RULE)
     c.box((x, craft_y), (x + 5, craft_y + panel), fill=LOSS)
@@ -714,12 +426,23 @@ def fig_mnist(lang: str) -> bool:
     patches = extract(digit, patch_size=7, stride=7)
     side, gap, m = 300, 22, 40
     c = Fig(400, 3 * side + 2 * gap + 2 * m)
-    for i, (t, cap) in enumerate(
-        zip([digit, patch_grid_overlay(digit, 7), patches[5]], s["mnist_cap"], strict=True)
-    ):
+    for i, (t, cap) in enumerate(zip([digit, digit, patches[PATCH_SHOWN]], s["mnist_cap"], strict=True)):
         x = m + i * (side + gap)
         c.framed(t, (x, 26), side)
         c.text((x, 26 + side + 14), cap, 17, MUTED)
+    # The grid goes on top at display scale, 3px wide, instead of being
+    # written into the digit's own pixels, where a line two pixels thick
+    # hid more than a third of a 28x28 image.
+    x, cell = m + side + gap, side / 28 * 7
+    for k in range(1, 4):
+        c.box((x + k * cell - 1, 26), (x + k * cell + 2, 26 + side), fill=(255, 115, 25))
+        c.box((x, 26 + k * cell - 1), (x + side, 26 + k * cell + 2), fill=(255, 115, 25))
+    # Outline the cell the third panel shows, so the two panels read as one:
+    # extract returns patches in row-major order, so index 5 is row 1, col 1.
+    row, col = divmod(PATCH_SHOWN, 4)
+    x0, y0 = x + col * cell, 26 + row * cell
+    for d in range(5):
+        c.box((x0 - 2 + d, y0 - 2 + d), (x0 + cell + 3 - d, y0 + cell + 3 - d), outline=(0, 200, 255))
     c.save(lang, s["mnist_stem"])
     return True
 
@@ -751,7 +474,7 @@ FIG = {
         "alt_table": "a tabela de desempenho",
         "placements": [
             (
-                "essa imagem parcialmente preta sem reclamar.",
+                "erro em lugar nenhum.",
                 "1-recorte",
                 "a mesma imagem antes e depois do reshape intuitivo",
             ),
@@ -797,7 +520,6 @@ FIG = {
         "page_stem": "pagina",
         "cut_lab": ("original", "reshape intuitivo"),
         "cut_cap": ("a imagem de entrada", "mesma forma, {}% dos valores fora do lugar"),
-        "stride_first": "stride 32",
         "stride_rest": "stride {}",
         "row_cov": (
             "Cobertura",
@@ -838,7 +560,7 @@ FIG = {
             "e sem avisar.",
         ],
         "caps": ("exatas, erro 0", "aproximada, ≈ 0", "recusada"),
-        "mnist_cap": ("o dígito, 28x28", "patch 7, stride 7: 4x4 = 16", "o patch de índice 5"),
+        "mnist_cap": ("o dígito, 28x28", "patch 7, stride 7: 4x4 = 16", "o patch 5, em azul na grade"),
         "md_mnist": """
 ## 3. Numa imagem típica
 
@@ -911,8 +633,8 @@ um float por um número que não é potência de dois arredonda. O mapa do erro 
 a grade dessas regiões, que são as âmbar da primeira linha.
 
 A figura marca esse caso como `≈ 0` porque é o que ele significa na prática, e aqui vai o
-número com a medida ao lado. O erro máximo é `1,1921e-07`, o que dá 151,5 dB de PSNR quando
-40 dB já costuma ser tratado como visualmente sem perda. Ele cabe 32.897 vezes dentro de um
+número com a medida ao lado. O erro máximo é `1,1921e-07`, e a imagem remontada fica a
+151,5 dB de PSNR, quando 40 dB já costuma ser tratado como visualmente sem perda. Ele cabe 32.897 vezes dentro de um
 degrau de 8 bits, então convertendo as duas imagens para `uint8` elas saem bit a bit
 idênticas; só em 16 bits a diferença aparece.
 
@@ -953,7 +675,7 @@ Repositório: https://github.com/LeoPR/PatchCraft
         "alt_table": "the performance table",
         "placements": [
             (
-                "that partly black image without complaining.",
+                "there is no error message anywhere.",
                 "1-cut",
                 "the same image before and after the intuitive reshape",
             ),
@@ -999,7 +721,6 @@ Repositório: https://github.com/LeoPR/PatchCraft
         "page_stem": "page",
         "cut_lab": ("original", "intuitive reshape"),
         "cut_cap": ("the input image", "same shape, {}% of the values moved"),
-        "stride_first": "stride 32",
         "stride_rest": "stride {}",
         "row_cov": (
             "Coverage",
@@ -1021,7 +742,8 @@ Repositório: https://github.com/LeoPR/PatchCraft
             "",
             "The arithmetic is identical. What changes is that here",
             "the contract says, before the call, that these two",
-            "geometries come back exact: every count is a power of two.",
+            "geometries come back exact: every coverage count",
+            "is a power of two.",
         ],
         "diff_title": "the error, amplified",
         "decimal": ".",
@@ -1040,7 +762,7 @@ Repositório: https://github.com/LeoPR/PatchCraft
             "returns one, silently.",
         ],
         "caps": ("exact, error 0", "approximate, ≈ 0", "refused"),
-        "mnist_cap": ("the digit, 28x28", "patch 7, stride 7: 4x4 = 16", "the patch at index 5"),
+        "mnist_cap": ("the digit, 28x28", "patch 7, stride 7: 4x4 = 16", "patch 5, blue in the grid"),
         "md_mnist": """
 ## 3. On a typical image
 
@@ -1114,8 +836,8 @@ dividing a float by anything that is not a power of two rounds. The error map dr
 the grid of those regions, which are the amber ones in the first row.
 
 The figure marks that case `≈ 0` because that is what it means in practice, and here is the
-number with a measure beside it. The maximum error is `1.1921e-07`, which is 151.5 dB of
-PSNR, where 40 dB is already treated as visually lossless. It fits 32,897 times inside one
+number with a measure beside it. The maximum error is `1.1921e-07`, and the reassembled
+image sits at 151.5 dB of PSNR, where 40 dB is already treated as visually lossless. It fits 32,897 times inside one
 8-bit step, so converting both images to `uint8` makes them bit for bit identical; the
 difference only appears at 16 bits.
 
@@ -1181,7 +903,7 @@ def fig_cover(lang: str) -> None:
     side = 200
     c.framed(img, (700, 214), side)
     c.framed(naive_reshape(img), (700 + side + 24, 214), side)
-    c.text((700, 214 + side + 14), s["cover_cap"], 15, MUTED)
+    c.text((700, 214 + side + 14), s["cover_cap"], 18, MUTED)
     c.save(lang, "0-capa")
 
 

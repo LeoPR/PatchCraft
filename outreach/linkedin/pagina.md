@@ -58,8 +58,8 @@ um float por um número que não é potência de dois arredonda. O mapa do erro 
 a grade dessas regiões, que são as âmbar da primeira linha.
 
 A figura marca esse caso como `≈ 0` porque é o que ele significa na prática, e aqui vai o
-número com a medida ao lado. O erro máximo é `1,1921e-07`, o que dá 151,5 dB de PSNR quando
-40 dB já costuma ser tratado como visualmente sem perda. Ele cabe 32.897 vezes dentro de um
+número com a medida ao lado. O erro máximo é `1,1921e-07`, e a imagem remontada fica a
+151,5 dB de PSNR, quando 40 dB já costuma ser tratado como visualmente sem perda. Ele cabe 32.897 vezes dentro de um
 degrau de 8 bits, então convertendo as duas imagens para `uint8` elas saem bit a bit
 idênticas; só em 16 bits a diferença aparece.
 

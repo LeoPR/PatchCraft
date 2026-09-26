@@ -48,15 +48,16 @@ arredonda. `stride == patch_size` sempre satisfaz isso, porque toda contagem val
 O que faz disso um contrato, e não uma promessa, é a segunda metade: a condição se calcula a
 partir da geometria, sem rodar nada. Quem vai chamar sabe de antemão em que regime está.
 
-A regra parece severa, e a alternativa óbvia é mais frouxa: bastaria manter a sobreposição
-máxima pequena. Ela não funciona, e a diferença é grande. Sobre uma varredura de 14.969
-geometrias retangulares, a regra do máximo erra 3.936 casos; a da potência de dois erra 8, e
-os 8 erram prometendo menos do que entregam.
+A regra parece severa, e a alternativa óbvia é mais frouxa: bastaria manter a contagem
+máxima de sobreposição em até 4. Ela não funciona. Sobre as 126.736 geometrias legais que a
+suíte enumera, a regra do máximo promete exatidão em 13.870 que não voltam exatas, quase 11%
+do espaço. A da potência de dois não promete nenhuma que falhe, e não deixa de prometer
+nenhuma que volte exata. `python tools/compare_exactness_rules.py` reproduz a contagem.
 
-É essa assimetria que decide qual das duas vale. Um contrato pode prometer de menos. Não
+É isso que decide qual das duas vale. Um contrato pode prometer de menos. Não
 pode prometer demais, porque quem confia nele não tem como perceber a diferença: fora da
-regra o erro por pixel cresce com a cobertura, e chega a 19 ULP em float32 sem nada
-sinalizar.
+regra o erro por pixel cresce com a cobertura, e chega a 19 ULP em float32 (19 vezes o
+menor passo que o float32 consegue representar naquele valor) sem nada sinalizar.
 
 ## Como o contrato é verificado
 
@@ -136,7 +137,7 @@ pública são 20 nomes, congelados por teste.
 pip install patchcraft
 ```
 
-O código, as medições e a documentação do que não funciona estão abertos.
+O código, as medições e o escopo documentado estão abertos.
 
 https://github.com/LeoPR/PatchCraft
 
