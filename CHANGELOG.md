@@ -41,6 +41,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   digit's pixels, where it hid more than a third of a 28x28 image, and the
   patch shown alone is outlined in it.
 
+- **`stitch` builds its window denominator without a Python loop.** The
+  1-D window fold ran one iteration per stride residue, six tensor operations
+  each, and that loop dominated `stitch` at every size once the numerator was
+  accelerated. All residues are now one cumsum over a `(m, step)` view of the
+  zero-padded kernel, which scans each residue in the same order, so the
+  output is bit-identical: 0 differences against the previous code over
+  38,696 cases, covering three windows, four float dtypes, both code paths and
+  gradients. Accelerated `stitch` is 2.7x to 5.1x faster at 512x512 and 1.2x
+  to 1.4x at 2048x2048; on the pure path `F.fold` still dominates at 2048.
+
 ### Fixed
 
 - docs/PERFORMANCE.md and `tools/benchmark.py` said non-overlapping geometries

@@ -84,17 +84,26 @@ def _fold_window_1d(
     Within each residue class modulo ``step`` the sum is a sliding window
     over the strided kernel, computed with a cumsum: O(length + len(w1d))
     instead of a 2-D F.fold of the replicated kernel.
+
+    All residues at once: zero-pad the kernel to a multiple of ``step`` and
+    view it as ``(m, step)``, so column ``r`` is ``w1d[r::step]`` followed by
+    zeros. ``cumsum(0)`` scans each column in the same sequential order as a
+    1-D cumsum of that residue, and ``hi`` never exceeds the residue's real
+    length, so the padding is never read and every output is the same two
+    partial sums subtracted, bit for bit.
     """
-    out = w1d.new_zeros(length)
-    for r in range(step):
-        sub = w1d[r::step]
-        n_sub = sub.numel()
-        cs = torch.cat([w1d.new_zeros(1), sub.cumsum(0)])
-        ks = torch.arange((length - r + step - 1) // step, device=w1d.device)
-        hi = torch.clamp(ks + 1, max=n_sub)
-        lo = torch.clamp(ks + 1 - num, min=0)
-        out[r::step] = cs[hi] - cs[lo]
-    return out
+    n = w1d.numel()
+    m = -(-n // step)
+    pad = m * step - n
+    padded = torch.cat([w1d, w1d.new_zeros(pad)]) if pad else w1d
+    cs = torch.cat([w1d.new_zeros(1, step), padded.view(m, step).cumsum(0)])
+    y = torch.arange(length, device=w1d.device)
+    k = y // step
+    r = y - k * step
+    n_sub = (n - r + step - 1) // step
+    hi = torch.minimum(k + 1, n_sub)
+    lo = torch.clamp(k + 1 - num, min=0)
+    return cs[hi, r] - cs[lo, r]
 
 
 def _window_kernel(
