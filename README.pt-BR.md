@@ -47,7 +47,7 @@ rodam os caminhos em torch puro, que devolvem os mesmos valores.
 
 O `patchcraft.accel_available()` informa em runtime qual dos dois você recebeu,
 e `PATCHCRAFT_ACCEL=0` no ambiente força o caminho puro. No fold com
-sobreposição o acelerador vale entre 2,6x e 14x na máquina em que foi
+sobreposição o acelerador vale entre 5,8x e 16,5x na máquina em que foi
 medido, que o [docs/PERFORMANCE.md](docs/PERFORMANCE.md) relata por inteiro.
 
 O nome da distribuição e o nome de importação são os dois `patchcraft`. As dependências de execução são `torch>=2.6`, `numpy>=1.26` e `pillow>=10`. As versões de Python suportadas estão [no manual](docs/GUIDE.md#9-install-details-and-citation), junto com a observação que você precisa ler antes de instalar uma wheel de GPU.

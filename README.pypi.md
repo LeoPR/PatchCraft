@@ -46,7 +46,7 @@ paths, which return the same values.
 
 `patchcraft.accel_available()` reports at runtime which one you got, and
 `PATCHCRAFT_ACCEL=0` in the environment forces the pure path. On the overlapping
-fold it is worth between 2.6x and 14x on the machine it was measured on, which
+fold the accelerator is worth between 5.8x and 16.5x on the machine it was measured on, which
 the [performance page](https://github.com/LeoPR/PatchCraft/blob/main/docs/PERFORMANCE.md)
 reports in full.
 

@@ -47,7 +47,7 @@ paths, which return the same values.
 
 `patchcraft.accel_available()` reports at runtime which one you got, and
 `PATCHCRAFT_ACCEL=0` in the environment forces the pure path. On the overlapping
-fold the accelerator is worth between 2.6x and 14x on the machine it was
+fold the accelerator is worth between 5.8x and 16.5x on the machine it was
 measured on, which [docs/PERFORMANCE.md](docs/PERFORMANCE.md) reports in full.
 
 The distribution name and the import name are both `patchcraft`. The runtime dependencies are `torch>=2.6`, `numpy>=1.26` and `pillow>=10`, and the supported Python versions are in [the guide](docs/GUIDE.md#9-install-details-and-citation) together with the note you need before you install a GPU wheel.

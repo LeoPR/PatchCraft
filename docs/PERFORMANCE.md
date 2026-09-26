@@ -36,18 +36,19 @@ Intel Xeon E5-2697 v4 at 2.30 GHz, 36 logical cores, Windows.
 
 ## Versions
 
-`patchcraft` 0.5.1, torch 2.14.0+cpu, Python 3.13.13. Measured 2026-09-03.
+`patchcraft` 0.5.5, torch 2.14.0+cpu, Python 3.13.13, torch using 4 threads.
+Measured 2026-09-26.
 
 ## The overlapping fold
 
 | Geometry | Call | Pure torch | Accelerated | Speedup |
 |---|---|---|---|---|
-| 3x512x512, patch 32, stride 16 | `reconstruct` | 16.3 ms | 2.3 ms | 7.1x |
-| 3x512x512, patch 32, stride 16 | `stitch, weight="hann"` | 16.2 ms | 6.3 ms | 2.6x |
-| 3x1024x1024, patch 64, stride 32 | `reconstruct` | 53.5 ms | 7.8 ms | 6.9x |
-| 3x1024x1024, patch 64, stride 32 | `stitch, weight="hann"` | 83.3 ms | 15.7 ms | 5.3x |
-| 3x2048x2048, patch 64, stride 32 | `reconstruct` | 453.7 ms | 32.1 ms | 14.1x |
-| 3x2048x2048, patch 64, stride 32 | `stitch, weight="hann"` | 460.9 ms | 37.9 ms | 12.2x |
+| 3x512x512, patch 32, stride 16 | `reconstruct` | 13.3 ms | 2.3 ms | 5.8x |
+| 3x512x512, patch 32, stride 16 | `stitch, weight="hann"` | 20.2 ms | 3.0 ms | 6.7x |
+| 3x1024x1024, patch 64, stride 32 | `reconstruct` | 73.3 ms | 7.2 ms | 10.1x |
+| 3x1024x1024, patch 64, stride 32 | `stitch, weight="hann"` | 81.9 ms | 8.7 ms | 9.5x |
+| 3x2048x2048, patch 64, stride 32 | `reconstruct` | 470.0 ms | 28.5 ms | 16.5x |
+| 3x2048x2048, patch 64, stride 32 | `stitch, weight="hann"` | 453.3 ms | 31.0 ms | 14.6x |
 
 The gain grows with the image because the kernel parallelizes over output
 rows, and each output pixel is written by exactly one worker, so there are no
@@ -56,7 +57,7 @@ atomics and no contention.
 **The gain is algorithmic rather than a thread count.** The obvious objection
 is that the accelerator simply uses more cores than torch does, and it is
 worth answering with a measurement. Forcing torch to 4, 8, 16 and 36 threads
-on the largest case above moved the pure path between 365 ms and 465 ms, with
+on the largest case above moved the pure path between 390 ms and 448 ms, with
 36 threads no better than 8. `F.fold` does not scale here with batch size 1,
 which is the whole reason a native kernel was worth writing.
 
