@@ -8,9 +8,10 @@ build and how many threads torch decides to use:
     python tools/benchmark.py --markdown     # the table as the docs carry it
 
 It measures the one hot path the accelerator touches, which is the overlapping
-fold inside ``reconstruct`` and ``stitch``. Non-overlapping geometries never
-reach it: they take a closed-form path that is already a pure rearrangement, so
-there is nothing to accelerate and they are not measured here.
+fold inside ``reconstruct`` and ``stitch``. Non-overlapping geometries are not
+measured: ``reconstruct`` takes a closed-form path there that is already a pure
+rearrangement. ``stitch`` has no such path and still folds at
+``stride == patch_size``, which docs/PERFORMANCE.md states with its timing.
 
 Every case is run twice, once with the accelerator and once with
 ``PATCHCRAFT_ACCEL=0``, and the two results are compared with ``torch.equal``

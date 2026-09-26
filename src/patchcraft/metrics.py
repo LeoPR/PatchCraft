@@ -1,6 +1,6 @@
 """Pixel-level metrics between patches (or between any same-shape tensors).
 
-Three pure functions, no state, no allocation beyond the diff itself. Lives
+Three pure functions, no state. Lives
 in PatchCraft because every consumer that uses ``extract`` + ``reconstruct``
 or ``pair`` ends up reinventing the same MSE/PSNR per patch, so bundling them
 here saves consumers from inventing slightly-different reductions and gives
@@ -91,8 +91,10 @@ def patch_metrics(
     _check_pair(a, b)
     mv = _check_max_value(max_value)
 
-    # Single f64 materialization: in-place subtract casts b elementwise, so
-    # no separate f64 copy of b (and no mutation of a when a is already f64).
+    # a is promoted to f64 once and b is subtracted in place, so a is never
+    # mutated when it is already f64. The in-place subtract does not avoid a
+    # copy of b: with b in a narrower dtype, torch casts it to an f64 temporary
+    # first, so the transient peak is about twice the f64 difference.
     if a.dtype == torch.float64:
         diff = a - b
     else:

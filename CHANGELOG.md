@@ -43,6 +43,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- docs/PERFORMANCE.md and `tools/benchmark.py` said non-overlapping geometries
+  never reach the fold. That holds for `reconstruct`, which has a closed-form
+  path at `stride == patch_size`, and not for `stitch`, which folds at every
+  geometry: at 3x2048x2048 with patch 32 it takes about 144 ms on the pure
+  path where `reconstruct` returns the same bits under the uniform window in
+  about 6 ms. Both now say so.
+- `metrics.py` claimed no allocation beyond the difference and, in a comment,
+  that the in-place subtract avoids a float64 copy of `b`. Measured with the
+  torch profiler, `a.to(float64).sub_(b)` with `b` in float32 allocates a
+  float64 temporary of `b` first, doubling the largest allocation from 188 to
+  375 MiB on 94 MiB of input. The comment and the module docstring now say
+  what happens; the code is unchanged.
 - CONTRIBUTING placed the `WeightKind` paragraph between "what each digit is
   for here:" and the table the colon announced, and its errata repeated two
   worked examples word for word. MAP and CONTRIBUTING counted five issue forms

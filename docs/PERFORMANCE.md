@@ -11,9 +11,13 @@ The accelerator touches exactly one thing, which is the overlapping fold
 inside `reconstruct` and `stitch`. That is where the time goes when patches
 overlap, because `F.fold` does the scatter-add serially.
 
-Non-overlapping geometries never reach it. Where `stride == patch_size` the
-library takes a closed-form path that is already a pure rearrangement, so
-there is nothing to accelerate and nothing below measures it.
+Non-overlapping geometries never reach it in `reconstruct`. Where
+`stride == patch_size`, `reconstruct` takes a closed-form path that is already
+a pure rearrangement, so there is nothing to accelerate and nothing below
+measures it. `stitch` has no such path and folds at every geometry, so at
+`stride == patch_size` it still pays the fold: at 3x2048x2048 with patch 32 it
+takes about 144 ms on the pure path, where `reconstruct` takes about 6 ms for
+the same bits under the uniform window.
 
 ## How to read the timings
 
