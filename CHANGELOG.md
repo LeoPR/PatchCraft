@@ -64,6 +64,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   3x2048x2048 with patch 64 and stride 32 allocates 64 MiB instead of 177
   (`stitch` hann: 65 instead of 128).
 
+- **`tilings(allow_overlap=True)` visits only the strides that can work.** A
+  stride covers both axes exactly when it divides `h - p` and `w - p`, that
+  is when it divides their gcd, so the loop runs over the divisors of the gcd
+  instead of over every stride below the patch size. The output is the same
+  list in the same order: identical in 9,530 cases, every shape from 1x1 to
+  69x69 in both modes plus larger ones, and `paired_tilings`, which builds on
+  it. 22.8 to 7.3 ms at 512x512, 91 to 9 ms at 1080x1920, 699 to 17 ms at
+  4000x3000.
+
 ### Fixed
 
 - docs/PERFORMANCE.md and `tools/benchmark.py` said non-overlapping geometries

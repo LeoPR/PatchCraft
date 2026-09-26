@@ -9,6 +9,7 @@ Contract: docs/THEORY.md §1.5 and §9.6.
 """
 from __future__ import annotations
 
+import math
 from typing import NamedTuple
 
 from patchcraft.extract import _as_pair
@@ -180,25 +181,41 @@ def tilings(
                 overlap=False,
             ))
         if allow_overlap:
-            for s in range(1, p):
-                if (h - p) % s == 0 and (w - p) % s == 0:
-                    nh = (h - p) // s + 1
-                    nw = (w - p) // s + 1
-                    if nh == 1 and nw == 1:
-                        # Degenerate single-patch geometry: with one patch the
-                        # stride is unobservable and the spec is a semantic
-                        # duplicate of the exact tile (p, p)/(p, p), always
-                        # emitted for the same p. Skip it (0.5.0, D1).
-                        continue
-                    results.append(TilingSpec(
-                        patch_size=(p, p),
-                        stride=(s, s),
-                        dilation=(1, 1),
-                        num_patches=(nh, nw),
-                        total_patches=nh * nw,
-                        overlap=True,
-                    ))
+            # A stride s covers both axes exactly when it divides h - p and
+            # w - p, that is when it divides their gcd, so only the divisors
+            # of the gcd are visited instead of every s in 1..p-1. The gcd is
+            # 0 only when h == w == p: every stride then yields the single-
+            # patch grid, where the stride is unobservable and the spec would
+            # duplicate the exact tile (p, p)/(p, p) emitted just above.
+            g = math.gcd(h - p, w - p)
+            if g == 0:
+                continue
+            for s in _divisors_below(g, p):
+                nh = (h - p) // s + 1
+                nw = (w - p) // s + 1
+                results.append(TilingSpec(
+                    patch_size=(p, p),
+                    stride=(s, s),
+                    dilation=(1, 1),
+                    num_patches=(nh, nw),
+                    total_patches=nh * nw,
+                    overlap=True,
+                ))
     return results
+
+
+def _divisors_below(n: int, limit: int) -> list[int]:
+    """The divisors of ``n`` (> 0) that are below ``limit``, ascending."""
+    small: list[int] = []
+    large: list[int] = []
+    i = 1
+    while i * i <= n:
+        if n % i == 0:
+            small.append(i)
+            if i != n // i:
+                large.append(n // i)
+        i += 1
+    return [d for d in small + large[::-1] if d < limit]
 
 
 def scale_factor(
