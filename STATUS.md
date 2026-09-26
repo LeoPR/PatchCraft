@@ -1,4 +1,4 @@
-# STATUS: 2026-09-04
+# STATUS: 2026-09-26
 
 > The snapshot. Where things are *right now*, and who each open item waits on.
 > Where things **are** is [MAP.md](MAP.md); the rules are [AGENTS.md](AGENTS.md);
@@ -6,7 +6,7 @@
 
 ## Where the project is
 
-**0.5.4 is on PyPI**, published through Trusted Publishing on a tag push: one
+**0.5.5 is on PyPI**, published through Trusted Publishing on a tag push: one
 sdist, five `cp312-abi3` platform wheels carrying the Rust accelerator, and one
 universal `py3-none-any` wheel. There is no extra to enable and no second
 package.
@@ -22,13 +22,15 @@ builds the Rust kernel and runs the whole suite through it.
 
 ## What is in flight
 
-**Nothing unreleased.** 0.5.4 closed the nine entries that had accumulated
-since 0.5.3: two fixes, `Cache` not expanding a leading `~` and `resize`
-raising a raw torch error on 13 of the 25 resample-mode x integer-dtype
-combinations, the second of which also uncovered a silent `int32` truncation
-older than itself. The other seven are documentation, and they close every
-item the 2026-09-04 audit left open, including ADR 0004's step 0 and the
-`WeightKind` compatibility sentence.
+**Nothing unreleased.** 0.5.5 is a performance release that changes no bit:
+`stitch` folds its window without a Python loop and skips the fold for the
+uniform window on non-overlapping grids, `reconstruct` builds its count map
+with fewer operations, both divide in place, and `tilings` visits only the
+strides that can work. Each was compared against the 0.5.4 code through
+integer views, 53,716 cases with 0 differences, and the full 126,736-geometry
+sweep passes on both paths. Alongside it, the surface pages lost their
+development history, GUIDE section 8 became "Where this applies today", and
+docs/PERFORMANCE.md was re-measured on the code that ships.
 
 ## What is blocked, and on whom
 

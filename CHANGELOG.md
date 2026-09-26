@@ -6,40 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
+## [0.5.5] - 2026-09-26
 
-- `tools/compare_exactness_rules.py` measures the exactness rule against the
-  obvious looser one, keeping the largest coverage count at 4 or below, over
-  the 126,736 geometries `tests/test_exactness.py` enumerates, with the round
-  trip on five seeds as ground truth. The power-of-two rule makes no false
-  promise and withholds none; `k_max <= 4` promises exactness on 13,870
-  geometries that do not come back exact. The outreach article quoted an
-  earlier sweep of 14,969 rectangular geometries from a lab script that is not
-  in the tree, so no command reproduced it; it now cites this one.
+A performance release that changes no bit. Every change to `src/` below was
+compared against the 0.5.4 code through integer views, so that `-0.0` and
+`+0.0` or two NaN payloads count as different: 53,716 cases over 1,382
+geometries, four float dtypes, both code paths and gradients, with 0
+differences. The full 126,736-geometry exactness sweep passes on both paths.
 
 ### Changed
-
-- **The manual, the usage page and the three READMEs no longer carry
-  development history.** Sentences about what an earlier version did, what a
-  first audit found or what used to be printed moved out; where an old
-  measurement is the argument for the current rule it stays, in the present
-  tense. GUIDE §8 is now "Where this applies today", and each of its items says
-  what a reader should do (on GPU it works and does not accelerate; on macOS and
-  aarch64, compare once against `PATCHCRAFT_ACCEL=0`), instead of listing what
-  the project has not done. The old anchor is updated everywhere it was linked.
-- The README tagline read "Encode one image into patches, decode it back",
-  which invited the compression reading the page then had to head off. It now
-  says "Cut one image into patches, and put it back together", followed by one
-  sentence on what a patch is for.
-- GUIDE's hann figure against the model's own patches read 27.14 dB and prints
-  27.15 dB on both code paths; the page now quotes what the code prints.
-- `tools/make_outreach_figures.py` lost 301 unreachable lines left from
-  earlier layouts, with every generated file byte-identical before the later
-  edits. Every caption that states a result is now checked against it before
-  it is drawn, including the refusal at stride 20 and the exact round trip at
-  32 and 16. The MNIST grid is drawn at display scale instead of into the
-  digit's pixels, where it hid more than a third of a 28x28 image, and the
-  patch shown alone is outlined in it.
 
 - **`stitch` builds its window denominator without a Python loop.** The
   1-D window fold ran one iteration per stride residue, six tensor operations
@@ -85,20 +60,66 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   3.4x to 58x faster depending on size: 146 to 9.4 ms on the pure path at
   3x2048x2048 with patch 32.
 
+- docs/PERFORMANCE.md is re-measured on the code that ships, twice, agreeing
+  within about 10%. The accelerator's range over the published table is now
+  5.8x to 16.5x, against 2.6x to 14x at 0.5.1; the low end moved most, since
+  accelerated `stitch` at 512 went from 6.3 to 3.0 ms. The thread sweep behind
+  "the gain is algorithmic" was re-run as well: the pure path at 2048 takes
+  448 ms at 4 threads and 390 at 36, no better than at 8.
+
+- **The manual, the usage page and the three READMEs no longer carry
+  development history.** Sentences about what an earlier version did, what a
+  first audit found or what used to be printed moved out; where an old
+  measurement is the argument for the current rule it stays, in the present
+  tense. GUIDE §8 is now "Where this applies today", and each of its items says
+  what a reader should do (on GPU it works and does not accelerate; on macOS and
+  aarch64, compare once against `PATCHCRAFT_ACCEL=0`), instead of listing what
+  the project has not done. The old anchor is updated everywhere it was linked.
+
+- The README tagline read "Encode one image into patches, decode it back",
+  which invited the compression reading the page then had to head off. It now
+  says "Cut one image into patches, and put it back together", followed by one
+  sentence on what a patch is for.
+
+- GUIDE's hann figure against the model's own patches read 27.14 dB and prints
+  27.15 dB on both code paths; the page now quotes what the code prints.
+
+- `tools/make_outreach_figures.py` lost 301 unreachable lines left from
+  earlier layouts, with every generated file byte-identical before the later
+  edits. Every caption that states a result is now checked against it before
+  it is drawn, including the refusal at stride 20 and the exact round trip at
+  32 and 16. The MNIST grid is drawn at display scale instead of into the
+  digit's pixels, where it hid more than a third of a 28x28 image, and the
+  patch shown alone is outlined in it.
+
+### Added
+
+- `tools/compare_exactness_rules.py` measures the exactness rule against the
+  obvious looser one, keeping the largest coverage count at 4 or below, over
+  the 126,736 geometries `tests/test_exactness.py` enumerates, with the round
+  trip on five seeds as ground truth. The power-of-two rule makes no false
+  promise and withholds none; `k_max <= 4` promises exactness on 13,870
+  geometries that do not come back exact. The outreach article quoted an
+  earlier sweep of 14,969 rectangular geometries from a lab script that is not
+  in the tree, so no command reproduced it; it now cites this one.
+
 ### Fixed
 
 - docs/PERFORMANCE.md and `tools/benchmark.py` said non-overlapping geometries
-  never reach the fold. That holds for `reconstruct`, which has a closed-form
-  path at `stride == patch_size`, and not for `stitch`, which folds at every
-  geometry: at 3x2048x2048 with patch 32 it takes about 144 ms on the pure
-  path where `reconstruct` returns the same bits under the uniform window in
-  about 6 ms. Both now say so.
+  never reach the fold. At 0.5.4 that held for `reconstruct`, which has a
+  closed-form path at `stride == patch_size`, and not for `stitch`, which
+  folded at every geometry: about 144 ms on the pure path at 3x2048x2048 with
+  patch 32, where `reconstruct` returned the same bits in about 6 ms. This
+  release gives `stitch` that path under the uniform window, and both texts
+  now say which windows still fold and why.
+
 - `metrics.py` claimed no allocation beyond the difference and, in a comment,
   that the in-place subtract avoids a float64 copy of `b`. Measured with the
   torch profiler, `a.to(float64).sub_(b)` with `b` in float32 allocates a
   float64 temporary of `b` first, doubling the largest allocation from 188 to
   375 MiB on 94 MiB of input. The comment and the module docstring now say
   what happens; the code is unchanged.
+
 - CONTRIBUTING placed the `WeightKind` paragraph between "what each digit is
   for here:" and the table the colon announced, and its errata repeated two
   worked examples word for word. MAP and CONTRIBUTING counted five issue forms
@@ -995,7 +1016,8 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) covers installation, the car-vs-track metaphor,
   validation lab.
 
-[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.4...HEAD
+[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.5...HEAD
+[0.5.5]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.5
 [0.5.4]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.4
 [0.5.3]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.3
 [0.5.2]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.2
