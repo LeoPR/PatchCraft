@@ -123,14 +123,15 @@ def tilings(
     list[TilingSpec]
         Sorted by ``patch_size[0]`` ascending; within one patch size the exact
         tile (``stride == patch_size``) comes first, then strides ``1..p-1``
-        ascending. Always at least
-        one entry: ``(p=min(H, W), s=p)`` when image is square.
+        ascending. Empty when no square patch between the bounds covers the
+        image, for example ``tilings((29, 29), max_patch_size=10) == []``, or a
+        one-row image under the default ``min_patch_size=2``.
 
     Raises
     ------
     ValueError
-        On malformed ``image_shape``, non-positive bounds, or
-        ``min_patch_size > max_patch_size``.
+        On malformed ``image_shape``, non-positive bounds, or an explicit
+        ``max_patch_size`` below ``min_patch_size``.
     """
     if not (isinstance(image_shape, tuple) and len(image_shape) in (2, 3)):
         raise ValueError(
@@ -153,6 +154,11 @@ def tilings(
         )
     if max_patch_size is None:
         max_patch_size = min(h, w)
+        if max_patch_size < min_patch_size:
+            # The image is smaller than the smallest patch asked for. Nothing
+            # fits, which is an empty answer; raising here would blame a
+            # max_patch_size the caller never passed.
+            return []
     if (
         not isinstance(max_patch_size, int)
         or isinstance(max_patch_size, bool)

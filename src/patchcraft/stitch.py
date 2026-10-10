@@ -206,8 +206,10 @@ def stitch(
         # each value, times 1, into a zero-filled buffer and divide by a
         # count of 1, so the whole computation is 0.0 + x: x itself, except
         # that -0.0 comes out as +0.0 and a NaN comes out quiet. Adding 0.0
-        # to the rearranged patches does exactly that, bit for bit, without
-        # the fold, which at 3x2048x2048 is most of the call.
+        # to the rearranged patches does exactly that to the returned values
+        # in eager mode, without the fold, which at 3x2048x2048 is most of the
+        # call. Derivatives pass through unchanged, and torch.compile folds the
+        # addition away, so there a -0.0 and a signaling NaN come out as given.
         grid = patches.to(accum_dtype).reshape(num_h, num_w, c, ph, pw)
         out = grid.permute(2, 0, 3, 1, 4).reshape(c, h, w)
         return (out + 0.0).to(patches.dtype)
@@ -255,5 +257,6 @@ def stitch(
     # patch 256, stride 128: max error 0.94 on data in [0, 1], 960 pixels
     # wrong, identical in float64 because it was never a precision problem.
     # Both operands are fresh tensors this function owns, so the clamp and the
-    # division run in place instead of allocating two more (C, H, W) buffers.
+    # division run in place instead of allocating an (H, W) copy of the
+    # denominator and a (C, H, W) quotient.
     return numerator.div_(den.clamp_min_(torch.finfo(den.dtype).tiny)).to(patches.dtype)

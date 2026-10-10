@@ -140,7 +140,7 @@ O PatchCraft não ajuda quando você quer uma operação em lote sobre N imagens
 
 ## Quando o round-trip é bit a bit
 
-O round-trip é exato quando todo valor do mapa de cobertura é potência de dois, e isso acontece porque dividir um float por uma potência de dois é a única divisão que nunca arredonda. Fora dessa regra, o erro por pixel é limitado por (k+1)·eps·|v|, com k a contagem de cobertura do pixel. Um float mais largo compra um erro menor e nunca a exatidão, então o float64 não é um porto seguro. Quem decide a resposta é a geometria, e não o dtype. [O manual](docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit) traz a varredura que mede isso.
+O round-trip é exato quando todo valor do mapa de cobertura é potência de dois, o que numa geometria legal quer dizer que toda contagem é 1, 2 ou 4: somar duas ou quatro cópias de um valor nunca arredonda, e dividir por 2 ou por 4 também não. Fora dessa regra, o erro por pixel é limitado por (k+1)·eps·|v|, com k a contagem de cobertura do pixel. Um float mais largo compra um erro menor e nunca a exatidão, então o float64 não é um porto seguro. Quem decide a resposta é a geometria, e não o dtype. [O manual](docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit) traz a varredura que mede isso.
 
 ## Estado
 

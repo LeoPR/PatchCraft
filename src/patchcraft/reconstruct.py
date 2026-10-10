@@ -32,11 +32,15 @@ def reconstruct(
     reconstructed value is the average of every patch covering it.
 
     The round trip is bit-exact when every value in that count map is a power of
-    two, because dividing a float by a power of two is the one division that
-    never rounds. ``stride == patch_size`` always satisfies this, since each
-    pixel is then covered exactly once. Overlap satisfies it only sometimes:
-    with ``stride == patch_size / 2`` the counts are 1, 2 and 4, so the round
-    trip stays exact, while a geometry that puts a 3 or a 9 in the map does not.
+    two, which in a legal geometry means every count is 1, 2 or 4: adding two or
+    four copies of a value never rounds, and neither does dividing by 2 or 4.
+    ``stride == patch_size`` always satisfies this, since each pixel is then
+    covered exactly once. Overlap satisfies it only sometimes: with
+    ``stride == patch_size / 2`` the counts are 1, 2 and 4, so the round trip
+    stays exact, while a geometry that puts a 3 or a 9 in the map does not.
+    Exact means equal as values, which is what ``torch.equal`` checks: the fold
+    sums into ``+0.0``, so on an overlapping grid a ``-0.0`` pixel comes back as
+    ``+0.0`` and a NaN may come back with different bits.
     Outside the rule the per-pixel error is bounded by ``(k + 1) * eps * |v|``,
     where ``k`` is that pixel's coverage count, so the error grows with the
     overlap, so there is no fixed ULP figure (measured up to 19 ULP at k=81 in
@@ -56,8 +60,8 @@ def reconstruct(
     Dtype and device of ``patches`` are preserved. Integer dtypes are
     rejected (``F.fold`` is not implemented for them). Half-precision inputs
     (``float16``, ``bfloat16``) accumulate internally in ``float32`` on
-    overlapping grids to avoid overflow inside ``F.fold`` and are cast back on
-    return.
+    overlapping grids, ``float16`` because its sum would overflow inside the
+    fold and ``bfloat16`` for precision, and are cast back on return.
     """
     if not isinstance(patches, torch.Tensor):
         raise TypeError(
@@ -105,9 +109,10 @@ def reconstruct(
     # image at ph=3, stride=1 reached inf in 144 of 256 pixels against a finite
     # max of 65504. bfloat16 carries float32's exponent and cannot overflow
     # here; its numerator peaked at 9.0e+04 against a finite max of 3.4e+38.
-    # What the promotion buys bfloat16 is precision, since it has 8 mantissa
-    # bits to float16's 11: on ordinary [0, 1] data it cut the error from
-    # 9.3e-03 to 1.9e-03. Cast back at the end (§9.2).
+    # What the promotion buys bfloat16 is exactness, since it has 8 mantissa
+    # bits to float16's 11: at 1x16x16, ph=3, stride=1, on data drawn in
+    # bfloat16, the native fold misses by 7.8e-03 and the promoted round trip
+    # returns the input bit for bit. Cast back at the end (§9.2).
     accum_dtype = (
         torch.float32
         if patches.dtype in (torch.float16, torch.bfloat16)

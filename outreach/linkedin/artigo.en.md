@@ -41,8 +41,9 @@ tensor, bit for bit.
 > power of two. Outside that, the per-pixel error is bounded by `(k+1)·eps·|v|`, with `k`
 > that pixel's coverage count.
 
-There is one reason for it: dividing a float by a power of two is the one division that
-never rounds. `stride == patch_size` always satisfies it, because every count is 1.
+In a legal geometry that means every count is 1, 2 or 4, and for those counts both steps
+are exact: adding two or four copies of a value never rounds, and neither does dividing by 2
+or 4. `stride == patch_size` always satisfies it, because every count is 1.
 
 What makes this a contract rather than a promise is the second half: the condition is
 computed from the geometry alone, without running anything. The caller knows which regime

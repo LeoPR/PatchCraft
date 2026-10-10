@@ -43,8 +43,9 @@ A ida e volta é exata bit a bit **se e somente se todo valor do mapa de cobertu
 potência de dois**. Fora disso o erro por pixel é limitado por `(k+1)·eps·|v|`, com `k` a
 contagem de cobertura daquele pixel.
 
-A razão é uma só: dividir um float por uma potência de dois é a única divisão que nunca
-arredonda. `stride == patch_size` sempre satisfaz, porque toda contagem vale 1.
+Numa geometria legal isso quer dizer que toda contagem é 1, 2 ou 4, e nesses casos as duas
+contas são exatas: somar duas ou quatro cópias de um valor não arredonda, e dividir por 2 ou
+por 4 também não. `stride == patch_size` sempre satisfaz, porque toda contagem vale 1.
 
 O que torna isso um contrato e não uma promessa é a segunda metade: a condição se calcula
 a partir da geometria, sem rodar nada. Quem vai chamar sabe de antemão em que regime está.

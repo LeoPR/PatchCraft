@@ -140,7 +140,7 @@ PatchCraft does not help when you want a batched op over N images, a dataset or 
 
 ## When the round trip is bit for bit
 
-The round trip is exact when every value in the count map is a power of two, which happens because dividing a float by a power of two is the one division that never rounds. Outside that rule the per-pixel error is bounded by (k+1)·eps·|v|, with k the pixel's coverage count. A wider float buys a smaller miss and never exactness, so float64 is not a safe harbour. The axis that decides the answer is the geometry and not the dtype, and [the guide](docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit) has the sweep that measures it.
+The round trip is exact when every value in the count map is a power of two, which in a legal geometry means every count is 1, 2 or 4: adding two or four copies of a value never rounds, and neither does dividing by 2 or 4. Outside that rule the per-pixel error is bounded by (k+1)·eps·|v|, with k the pixel's coverage count. A wider float buys a smaller miss and never exactness, so float64 is not a safe harbour. The axis that decides the answer is the geometry and not the dtype, and [the guide](docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit) has the sweep that measures it.
 
 ## Status
 

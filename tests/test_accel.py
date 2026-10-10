@@ -14,6 +14,7 @@ import torch
 import torch.nn.functional as F  # noqa: N812 (torch convention)
 
 from patchcraft import _accel, reconstruct, stitch
+from tests._rng import bit_equal
 
 real_accel = pytest.mark.skipif(
     not _accel.accel_available(), reason="native accelerator not built into this install"
@@ -113,12 +114,16 @@ def test_fold_weighted_matches_manual_fold() -> None:
 
 # --- Equivalence through the public API, both modes -------------------------
 
-_OVERLAP_GEOMETRIES = [
+_FOLD_GEOMETRIES = [
     # (ph, pw, sh, sw, h, w), all with exact coverage
     (4, 4, 2, 2, 16, 16),  # square, half overlap
     (5, 4, 3, 2, 14, 14),  # stride does not divide patch, both axes
     (4, 6, 3, 5, 16, 21),  # rectangular everything
     (32, 32, 16, 16, 96, 96),  # realistic scale
+    # stride == patch_size: hann and gaussian still fold here, so both paths
+    # must agree, while uniform stitch and reconstruct only rearrange
+    (4, 4, 4, 4, 16, 16),
+    (4, 4, 4, 2, 16, 14),  # no overlap on one axis only
 ]
 
 
@@ -133,7 +138,7 @@ def _patches_for(
 
 
 @real_accel
-@pytest.mark.parametrize("geom", _OVERLAP_GEOMETRIES)
+@pytest.mark.parametrize("geom", _FOLD_GEOMETRIES)
 @pytest.mark.parametrize("c", [1, 3, 4])
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
 def test_reconstruct_accel_matches_pure(
@@ -150,12 +155,12 @@ def test_reconstruct_accel_matches_pure(
     monkeypatch.setenv("PATCHCRAFT_ACCEL", "1")
     fast = reconstruct(patches, (c, h, w), (sh, sw))
     assert fast.dtype == pure.dtype
-    assert torch.equal(pure, fast)
+    assert bit_equal(pure, fast)
 
 
 @real_accel
 @pytest.mark.parametrize("weight", ["uniform", "hann", "gaussian"])
-@pytest.mark.parametrize("geom", _OVERLAP_GEOMETRIES)
+@pytest.mark.parametrize("geom", _FOLD_GEOMETRIES)
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
 def test_stitch_accel_matches_pure(
     weight: str,
@@ -171,7 +176,7 @@ def test_stitch_accel_matches_pure(
     monkeypatch.setenv("PATCHCRAFT_ACCEL", "1")
     fast = stitch(patches, (3, h, w), (sh, sw), weight=weight)  # type: ignore[arg-type]
     assert fast.dtype == pure.dtype
-    assert torch.equal(pure, fast)
+    assert bit_equal(pure, fast)
 
 
 @real_accel

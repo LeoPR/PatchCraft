@@ -29,7 +29,7 @@ import random
 import pytest
 import torch
 
-from patchcraft import extract, reconstruct
+from patchcraft import extract, reconstruct, stitch
 from tests._rng import (
     bit_equal,
     count_map_pow2,
@@ -144,6 +144,33 @@ class TestNanInsidePredicate:
         )
         assert not torch.equal(out, img)  # NaN != NaN
         assert bit_equal(out, img)
+
+
+class TestSignedZeroOnOverlap:
+    """Exact inside the predicate means equal as values. The fold sums into
+    +0.0, so on an overlapping grid a -0.0 comes back +0.0, and the accelerated
+    and pure paths must agree on that bit too (I6), which torch.equal cannot
+    check."""
+
+    @pytest.mark.parametrize("dtype", _DTYPES)
+    @pytest.mark.parametrize("accel", ["1", "0"])
+    @pytest.mark.parametrize("op", ["reconstruct", "stitch"])
+    def test_negative_zero_comes_back_positive(
+        self, dtype: torch.dtype, accel: str, op: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("PATCHCRAFT_ACCEL", accel)
+        img = rand_image(1, 16, 16, dtype, seed=7)
+        corner, edge, interior = (0, 0, 0), (0, 0, 7), (0, 7, 7)  # counts 1, 2, 4
+        for at in (corner, edge, interior):
+            img[at] = -0.0
+        patches = extract(img, patch_size=(4, 4), stride=(2, 2))
+        if op == "reconstruct":
+            out = reconstruct(patches, image_shape=img.shape, stride=(2, 2))
+        else:
+            out = stitch(patches, image_shape=img.shape, stride=(2, 2))
+        assert torch.equal(out, img)
+        for at in (corner, edge, interior):
+            assert out[at] == 0 and not torch.signbit(out[at])
 
 
 @pytest.mark.slow

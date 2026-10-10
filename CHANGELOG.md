@@ -24,6 +24,50 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   pins vmap to a plain loop bit for bit, on both paths and in four dtypes; 70
   of its 114 cases fail against 0.5.5. The test helper `bit_equal` gained
   bfloat16.
+- **`tilings` returns `[]` for an image smaller than the default minimum
+  patch.** A one-row image raised `min_patch_size (2) > max_patch_size (1)`,
+  blaming a bound the caller never passed, while THEORY §9.6 accepts any
+  positive shape and an explicit bound that excludes every patch already
+  returned `[]`. An explicit `max_patch_size` below `min_patch_size` still
+  raises. The docstring no longer promises at least one entry, which was false
+  for both cases.
+
+### Changed
+
+- **The stated reason for the exactness rule is corrected.** The pages said the
+  round trip is exact because dividing a float by a power of two never rounds.
+  That leaves out the sum: k equal values added one at a time and divided by k
+  come back exact for k = 2 and 4, and for k = 8 they do not, since 3x, 5x, 6x
+  and 7x round (48% of 2 million float32 values fail). The rule itself stands,
+  because a coverage of three on either axis puts a 3 in the map, so over all
+  126,736 legal geometries a map of powers of two holds only 1, 2 and 4. The
+  READMEs, THEORY §1, the `reconstruct` docstring, ADR 0003 (with a dated
+  correction) and the outreach sources now give that reason.
+- Exact inside the rule means equal as values, which is what `torch.equal`
+  checks, and THEORY and the `reconstruct` docstring now say so: the fold sums
+  into `+0.0`, so on an overlapping grid a `-0.0` comes back `+0.0` and a NaN
+  may change its bits. Both paths do the same, and a test now pins it, which
+  `torch.equal` could not.
+- THEORY §9.2 said promotion cut the bfloat16 error from 9.3e-03 to 1.9e-03.
+  Those two numbers measured the input's cast from float32, not the library:
+  on data drawn in bfloat16 the native fold misses by 7.8e-03 and the promoted
+  round trip returns the input bit for bit, at counts 3, 6 and 9. THEORY,
+  GUIDE and the code comment now say so, and a test pins it.
+- THEORY §2 and §2.5 and USAGE §5 described the `reconstruct` and `stitch`
+  implementation from before 0.5.0 (a second fold of ones, a floor on every
+  denominator). They now describe the closed-form count map, the separable
+  window denominator and the non-overlapping rearrangement. USAGE §5 checks
+  the overlapping round trip with `torch.equal` instead of `torch.allclose`.
+- THEORY §9.6 said `tilings` returns a sorted list. Its order is patch size
+  ascending with the exact tile first, which `sorted()` does not give, and a
+  test now pins it.
+- The accelerator parity tests compare bits instead of `torch.equal`, and
+  include `stride == patch_size`, where hann and gaussian still fold now that
+  uniform takes the fast path.
+- Errata for 0.5.5, whose entry says it "changes no bit": that holds for
+  returned values in eager mode. Under the uniform window at `stride ==
+  patch_size`, derivatives pass a `-0.0` or a signaling NaN through unchanged
+  and `torch.compile` folds the `+ 0.0` away; the code comment now says so.
 
 ## [0.5.5] - 2026-09-26
 

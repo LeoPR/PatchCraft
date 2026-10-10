@@ -120,7 +120,7 @@ It helps when you tile one image for an inference pass too large to run in a sin
 
 ## When the round trip is bit for bit
 
-The round trip is exact when every value in the count map is a power of two. The reason is that reconstruction divides each pixel by the number of patches that covered it, and dividing a float by a power of two is the one division that never rounds.
+The round trip is exact when every value in the count map is a power of two. Reconstruction adds up the patches covering each pixel and divides by how many there were, and in a legal geometry a map of powers of two holds only the counts 1, 2 and 4, where both steps are exact: adding two or four copies of a value never rounds, and neither does dividing by 2 or 4.
 
 That makes the geometry the deciding axis rather than the dtype, so `float64` is not a safe harbour: outside the rule the per-pixel error is bounded by `(k+1)·eps·|v|`, with `k` the pixel's coverage count. A wider float buys a smaller miss and never exactness.
 

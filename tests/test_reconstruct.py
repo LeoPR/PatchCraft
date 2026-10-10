@@ -368,6 +368,20 @@ def test_float16_overflows_the_fold_but_bfloat16_cannot():
     assert numerators[torch.bfloat16].max().item() < torch.finfo(torch.bfloat16).max
 
 
+def test_bfloat16_promotion_buys_an_exact_round_trip():
+    """THEORY 9.2: on data drawn in bfloat16, at p3 s1 (counts 3, 6, 9), a
+    native fold misses by two bfloat16 steps near 1, and the promoted round
+    trip returns the input bit for bit."""
+    img = rand_image(1, 16, 16, torch.bfloat16, seed=0)
+    patches = extract(img, 3, stride=1)
+    cols = patches.permute(1, 2, 3, 0).reshape(9, -1).unsqueeze(0)
+    num = F.fold(cols, output_size=(16, 16), kernel_size=3, stride=1)[0]
+    den = F.fold(torch.ones_like(cols), output_size=(16, 16), kernel_size=3, stride=1)[0]
+    native = num / den
+    assert (native.float() - img.float()).abs().max().item() > 0
+    assert bit_equal(reconstruct(patches, img.shape, stride=1), img)
+
+
 @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
 def test_half_precision_round_trip_survives_the_overflow_case(dtype):
     """Whatever the reason for the promotion, neither format may return inf."""

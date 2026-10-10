@@ -149,16 +149,16 @@ True
 
 ```
 
-`F.fold` plus a same-geometry fold-of-ones count map. When
-`stride == patch_size` every pixel is covered exactly once and
-reconstruction is a cheap copy (count is all-ones; division is no-op).
+When `stride == patch_size` every pixel is covered exactly once, so
+`reconstruct` only rearranges the patches: no fold, no count map and no
+arithmetic.
 
 ### Overlap: weighted, exact under the count-map rule
 
 ```python
 >>> ps_overlap = extract(img, patch_size=4, stride=2)  # 169 overlapping patches
 >>> recon_overlap = reconstruct(ps_overlap, image_shape=img.shape, stride=2)
->>> torch.allclose(recon_overlap, img)
+>>> torch.equal(recon_overlap, img)
 True
 
 ```

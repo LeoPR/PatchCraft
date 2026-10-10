@@ -102,6 +102,15 @@ class TestTilingsExact:
 
 
 class TestTilingsOverlap:
+    def test_order_within_one_patch_size(self) -> None:
+        """THEORY 9.6: the exact tile first, then the strides ascending,
+        which is not what sorted() would give."""
+        specs = tilings((28, 28), allow_overlap=True)
+        p4 = [(t.patch_size[0], t.stride[0]) for t in specs if t.patch_size == (4, 4)]
+        assert p4 == [(4, 4), (4, 1), (4, 2), (4, 3)]
+        sizes = [t.patch_size[0] for t in specs]
+        assert sizes == sorted(sizes)
+
     def test_28x28_includes_classic_overlap_specs(self) -> None:
         """All half-overlap (s = p/2) geometries on 28x28."""
         specs = tilings((28, 28), allow_overlap=True)
@@ -162,6 +171,18 @@ class TestTilingsRejects:
     def test_min_greater_than_max(self) -> None:
         with pytest.raises(ValueError, match=r"min_patch_size.*max_patch_size"):
             tilings((28, 28), min_patch_size=10, max_patch_size=5)
+
+
+class TestTilingsEmpty:
+    """Nothing fits is an answer, not an error the caller did not cause."""
+
+    def test_bounds_that_exclude_every_divisor(self) -> None:
+        assert tilings((29, 29), max_patch_size=10) == []
+
+    @pytest.mark.parametrize("shape", [(1, 5), (3, 1, 7)])
+    def test_image_smaller_than_the_default_minimum(self, shape: tuple[int, ...]) -> None:
+        assert tilings(shape) == []  # type: ignore[arg-type]
+        assert tilings(shape, allow_overlap=True) == []  # type: ignore[arg-type]
 
 
 class TestTilingsRoundtripGuarantee:

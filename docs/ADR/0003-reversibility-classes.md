@@ -58,8 +58,13 @@ be false over part of their accepted input.
 **Geometry.** The `extract`/`reconstruct` round trip is bit-exact when every
 value of the overlap coverage map is a power of two, and not otherwise. The
 reason is arithmetic rather than statistical: the fold sums `k` copies of a value
-and divides by `k`, which is exact in binary floating point exactly when `k` is a
-power of two. Every exact tiling qualifies, since all its counts are 1.
+and divides by `k`. Dividing by a power of two never rounds, and for `k` = 2 and 4
+the sum of equal values is exact too, short of overflow. For `k` = 8 it is not,
+since the partial sums 3x, 5x, 6x and 7x round; the rule holds anyway because a
+coverage of three or more on either axis puts a 3 in the map, so a map of powers
+of two only ever holds 1, 2 and 4, which is what all 126,736 legal geometries
+show. (Corrected 2026-10-10: the earlier wording credited every power of two.)
+Every exact tiling qualifies, since all its counts are 1.
 
 **Accumulator.** ADR 0004 measured the sentence above to carry an unstated
 premise, which is the accumulator the library happens to use. Over 76 legal
