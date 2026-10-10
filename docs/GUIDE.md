@@ -1018,7 +1018,7 @@ Installing from the sdist compiles the accelerator when a Rust toolchain is pres
   author  = {Marques de Souza, Leonardo},
   title   = {PatchCraft: image patch extraction, reconstruction, pairing
              and seam-aware stitching},
-  version = {0.5.6},   % check CHANGELOG.md for the release you used
+  version = {0.5.7},   % check CHANGELOG.md for the release you used
   year    = {2026},
   url     = {https://github.com/LeoPR/PatchCraft}
 }

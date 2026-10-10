@@ -6,7 +6,7 @@
 
 ## Where the project is
 
-**0.5.6 is on PyPI**, published through Trusted Publishing on a tag push: one
+**0.5.7 is on PyPI**, published through Trusted Publishing on a tag push: one
 sdist, five `cp312-abi3` platform wheels carrying the Rust accelerator, and one
 universal `py3-none-any` wheel. There is no extra to enable and no second
 package.
@@ -24,14 +24,14 @@ pillow 10.1, Rust 1.82) that runs it on both paths.
 
 ## What is in flight
 
-**Integer images are on `main` and not on PyPI.** `extract` takes every dtype,
-and `reconstruct` takes the five integer dtypes and returns them exactly in
-every legal geometry, with disagreeing patches rounded half to even and no
+**Nothing unreleased.** 0.5.7 brings integer images: `extract` takes every
+dtype, and `reconstruct` takes the five integer dtypes and returns them exactly
+in every legal geometry, with disagreeing patches rounded half to even and no
 intermediate overflowing. They are ADR 0004's steps 1 and 2, shipped together.
 The full suite and the 126,736-geometry sweep, which now includes an integer
-round trip, pass on both paths. **Releasing it waits on the owner.**
+round trip, pass on both paths.
 
-**0.5.6 is the release on PyPI.** It is a fix release: `torch.vmap` over `extract`,
+0.5.6, the release before it, was a fix release: `torch.vmap` over `extract`,
 `reconstruct` and `stitch`, which the documentation offers as a way to batch,
 failed on most calls since 0.5.0 and works again, pinned by
 `tests/test_vmap.py`; and `tilings` returns `[]` for an image smaller than the

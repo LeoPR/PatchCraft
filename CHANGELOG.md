@@ -6,6 +6,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.7] - 2026-10-10
+
+Integer images, end to end. `extract` takes every dtype at every dilation,
+and `reconstruct` takes the five integer dtypes and returns them exactly in
+every legal geometry, since integer sums do not round. Every float result is
+unchanged: `extract`'s new single path is bit-identical to the one it
+replaces. The full suite passes on both code paths at the declared floor and
+at the newest releases, and the 126,736-geometry sweep, now with an integer
+round trip, passes on both paths.
+
 ### Added
 
 - **Integer images through `extract` and `reconstruct`, exact in every legal
@@ -1197,7 +1207,8 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) covers installation, the car-vs-track metaphor,
   validation lab.
 
-[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.6...HEAD
+[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.7...HEAD
+[0.5.7]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.7
 [0.5.6]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.6
 [0.5.5]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.5
 [0.5.4]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.4
