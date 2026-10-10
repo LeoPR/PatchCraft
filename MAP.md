@@ -58,7 +58,8 @@ PatchCraft/
 │   ├── FOCO-1.0.md ........... what 1.0 freezes, and the six blockers, all closed
 │   ├── ADR/ .................. one file per decision; the choice, not the research
 │   ├── design/ ............... one spec per work phase: alternatives measured, then chosen
-│   └── STUDIES/ .............. background reading, and the Strata conformity review
+│   ├── STUDIES/ .............. background reading, and the Strata conformity review
+│   └── PAPER/ ................ an article in preparation, on means that stay in their domain; not shipped
 │
 ├── tools/
 │   ├── benchmark.py .......... accelerated vs pure, and proves they agree before timing

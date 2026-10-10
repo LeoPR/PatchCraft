@@ -1,4 +1,4 @@
-# STATUS: 2026-09-26
+# STATUS: 2026-10-10
 
 > The snapshot. Where things are *right now*, and who each open item waits on.
 > Where things **are** is [MAP.md](MAP.md); the rules are [AGENTS.md](AGENTS.md);
@@ -11,7 +11,7 @@ sdist, five `cp312-abi3` platform wheels carrying the Rust accelerator, and one
 universal `py3-none-any` wheel. There is no extra to enable and no second
 package.
 
-**1620 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
+**1771 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
 deselected, plus two full-sweep gates behind `PATCHCRAFT_SWEEP_FULL=1`
 that enumerate all 126,736 legal geometries. CI is green on
 {Ubuntu, Windows} x {3.12, 3.13, 3.14} on the pure path, plus a two-OS job that
@@ -22,15 +22,20 @@ builds the Rust kernel and runs the whole suite through it.
 
 ## What is in flight
 
-**Nothing unreleased.** 0.5.5 is a performance release that changes no bit:
-`stitch` folds its window without a Python loop and skips the fold for the
-uniform window on non-overlapping grids, `reconstruct` builds its count map
-with fewer operations, both divide in place, and `tilings` visits only the
-strides that can work. The full 126,736-geometry sweep passes on both paths
-(`PATCHCRAFT_SWEEP_FULL=1 pytest tests/test_exactness.py`), and the 0.5.5
-entry of CHANGELOG records the bit-identity comparison against the 0.5.4 code. Alongside it, the surface pages lost their
-development history, GUIDE section 8 became "Where this applies today", and
-docs/PERFORMANCE.md was re-measured on the code that ships.
+**Two fixes are on `main` and not on PyPI.** `torch.vmap` over `extract`,
+`reconstruct` and `stitch`, which the documentation offers as a way to batch,
+failed on most calls since 0.5.0 and works again, pinned by
+`tests/test_vmap.py`; and `tilings` returns `[]` for an image smaller than the
+default minimum patch instead of raising. With them come documentation
+corrections, the main one being the stated reason for the exactness rule. The
+CHANGELOG `[Unreleased]` section lists all of it, and the full
+126,736-geometry sweep passes on both paths. **Releasing it as 0.5.6 waits on
+the owner.**
+
+**`docs/PAPER/` is a scaffold** for an article on means that never leave
+their domain: outline, formal statements, measurements and references, with
+the prose not yet written. It does not ship. Its first open item, a search for
+prior art on the integer carry, **waits on the owner**, as does the writing.
 
 ## What is blocked, and on whom
 

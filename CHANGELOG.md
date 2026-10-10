@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `docs/PAPER/`, the scaffold of an article on computing a mean whose every
+  intermediate stays in the input's domain, drawing on PatchCraft's
+  patch-grid mean: outline, formal statements with proofs, measurements with
+  the scripts that reproduce them, and checked references. It is not
+  documentation of the library and does not ship: `MANIFEST.in` prunes it and
+  `tools/check_dist.py` fails a release that carries it.
+
 ### Fixed
 
 - **`torch.vmap` works again over `extract`, `reconstruct` and `stitch`.** The
@@ -38,7 +47,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   round trip is exact because dividing a float by a power of two never rounds.
   That leaves out the sum: k equal values added one at a time and divided by k
   come back exact for k = 2 and 4, and for k = 8 they do not, since 3x, 5x, 6x
-  and 7x round (48% of 2 million float32 values fail). The rule itself stands,
+  and 7x round (3,914,684 of the 8,388,608 float32 values in [1, 2) fail,
+  `python docs/PAPER/experiments/float_mean.py`). The rule itself stands,
   because a coverage of three on either axis puts a 3 in the map, so over all
   126,736 legal geometries a map of powers of two holds only 1, 2 and 4. The
   READMEs, THEORY §1, the `reconstruct` docstring, ADR 0003 (with a dated

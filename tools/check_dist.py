@@ -151,6 +151,9 @@ def _check_sdist(path: Path, problems: list[str]) -> str:
     inner = sorted(n for n in names if n.startswith("accel/target/"))
     if inner:
         problems.append(f"{path.name}: sdist carries cargo build output, e.g. {inner[0]}")
+    paper = sorted(n for n in names if n.startswith("docs/PAPER/"))
+    if paper:
+        problems.append(f"{path.name}: sdist carries the article in preparation, e.g. {paper[0]}")
     return f"sdist, {len(names)} entries"
 
 

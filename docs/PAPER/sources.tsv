@@ -1,0 +1,88 @@
+# key	kind	locator	expected text (must appear in the fetched page, PDF text, or Crossref title)
+# numerical analysis and integer averaging
+higham1993	doi	10.1137/0914050	The Accuracy of Floating Point Summation
+higham1993	pdf	https://nhigham.com/wp-content/uploads/2023/10/high93s.pdf	We will assume that no floating point underflows occur
+higham2002asna	doi	10.1137/1.9780898718027	Accuracy and Stability of Numerical Algorithms
+kahan1965	doi	10.1145/363707.363723	further remarks on reducing truncation errors
+neumaier1974	doi	10.1002/zamm.19740540106	Rundungsfehleranalyse einiger Verfahren zur Summation endlicher Summen
+welford1962	doi	10.1080/00401706.1962.10490022	Note on a Method for Calculating Corrected Sums of Squares and Products
+west1979	doi	10.1145/359146.359153	Updating mean and variance estimates
+chan1983	doi	10.1080/00031305.1983.10483115	Algorithms for Computing the Sample Variance
+goldberg1991	doi	10.1145/103162.103163	What every computer scientist should know about floating-point arithmetic
+ieee754-2019	doi	10.1109/IEEESTD.2019.8766229	IEEE Standard for Floating-Point Arithmetic
+boldo2015	doi	10.1007/978-3-319-25423-4_2	Formal Verification of Programs Computing the Floating-Point Average
+goualard2014	doi	10.1145/2493882	How do you compute the midpoint of an interval?
+herring2019-p0811r3	url	https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0811r3.html	Well-behaved interpolation for numbers and pointers
+cppref-midpoint	url	https://en.cppreference.com/w/cpp/numeric/midpoint	std::midpoint
+cppref-lerp	url	https://en.cppreference.com/w/cpp/numeric/lerp	std::lerp
+cxx-draft-midpoint	url	https://eel.is/c++draft/numeric.ops.midpoint	midpoint
+warren2013	pdf	https://www.informit.com/content/images/9780321842688/samplepages/0321842685.pdf	Average of Two Integers
+dietz-magic	url	https://aggregate.org/MAGIC/	Average of Integers
+dietz2012	doi	10.1109/ICSE.2012.6227142	Understanding integer overflow in C/C++
+ruggieri2003	doi	10.1016/S0020-0190(03)00263-1	On computing the semi-sum of two integers
+wong1999	url	https://patents.google.com/patent/US6007232A/en	average of two integer numbers
+chen2022	url	https://devblogs.microsoft.com/oldnewthing/20220207-00/?p=106223	average of two unsigned integers without overflow
+croci2022	doi	10.1098/rsos.211631	Stochastic rounding: implementation, error analysis and applications
+higham2019squeeze	doi	10.1137/18M1229511	Squeezing a Matrix into Half Precision
+ogita2005	doi	10.1137/030601818	Accurate Sum and Dot Product
+cpython-sum	url	https://raw.githubusercontent.com/python/cpython/v3.13.0/Python/bltinmodule.c	Neumaier
+# imaging and systems
+knutsson-westin-1993	doi	10.1109/CVPR.1993.341081	Normalized and differential convolution
+knutsson-westin-1993	url	https://mlanthology.org/cvpr/1993/knutsson1993cvpr-normalized/	Normalized and Differential Convolution
+piroddi-petrou-2003	url	https://homepages.inf.ed.ac.uk/rbf/CVonline/LOCAL_COPIES/PIRODDI1/NormConv/node2.html	divide the first convolution by the second one
+pytorch-fold-docs	url	https://docs.pytorch.org/docs/2.14/generated/torch.nn.Fold.html	divisor = fold(unfold(input_ones))
+pytorch-fold-docs	url	https://docs.pytorch.org/docs/2.14/generated/torch.nn.Fold.html	by summing all values from all containing blocks
+pytorch-col2im	url	https://raw.githubusercontent.com/pytorch/pytorch/v2.14.0/aten/src/ATen/native/im2col.h	data_im[(c_im * height + h_im) * width + w_im] +=
+pytorch-col2im	url	https://raw.githubusercontent.com/pytorch/pytorch/v2.14.0/aten/src/ATen/native/Col2Im.cpp	AT_DISPATCH_FLOATING_AND_COMPLEX_TYPES_AND3(kBFloat16, kHalf, kBool
+pytorch-opmathtype	url	https://raw.githubusercontent.com/pytorch/pytorch/v2.14.0/aten/src/ATen/OpMathType.h	For FP16 or BFloat16 inputs, ops should perform internal math in FP32
+pytorch-accumulatetype	url	https://raw.githubusercontent.com/pytorch/pytorch/v2.14.0/aten/src/ATen/AccumulateType.h	acc_type is especially important for reduced
+pytorch-accumulatetype	url	https://raw.githubusercontent.com/pytorch/pytorch/v2.14.0/aten/src/ATen/AccumulateType.h	CPU_ACC_TYPE(Half, float)
+pytorch-numerical-accuracy	url	https://docs.pytorch.org/docs/2.14/notes/numerical_accuracy.html	intermediate results may overflow the range of the used datatype
+pytorch-numerical-accuracy	url	https://docs.pytorch.org/docs/2.14/notes/numerical_accuracy.html	Half-precision GEMM operations are typically done with intermediate accumulations
+pytorch-sum-docs	url	https://docs.pytorch.org/docs/2.14/generated/torch.sum.html	This is useful for preventing data type overflows
+pytorch-istft-docs	url	https://docs.pytorch.org/docs/2.14/generated/torch.istft.html	Signal estimation from modified short-time Fourier transform
+numpy-mean-docs	url	https://numpy.org/doc/2.5/reference/generated/numpy.mean.html	For integer inputs, the default is float64
+numpy-mean-docs	url	https://numpy.org/doc/2.5/reference/generated/numpy.mean.html	float16 results are computed using float32 intermediates
+numpy-sum-docs	url	https://numpy.org/doc/2.5/reference/generated/numpy.sum.html	Arithmetic is modular when using integer types, and no error is raised on overflow
+numpy-sum-docs	url	https://numpy.org/doc/2.5/reference/generated/numpy.sum.html	the accumulator in which the elements are summed
+numpy-methods-src	url	https://raw.githubusercontent.com/numpy/numpy/v2.5.2/numpy/_core/_methods.py	ret, rcount, out=ret, casting='unsafe', subok=False)
+numpy-types-overflow	url	https://numpy.org/doc/2.5/user/basics.types.html	-1486618624
+opencv-saturate-docs	url	https://docs.opencv.org/4.13.0/db/de0/group__core__utils.html	the result is not formed just by taking low bits of the input, but instead the value is clipped
+opencv-saturate-docs	url	https://docs.opencv.org/4.13.0/db/de0/group__core__utils.html	For 32-bit integers, no clipping is done
+opencv-addweighted-docs	url	https://docs.opencv.org/4.13.0/d2/de8/group__core__array.html	The function addWeighted calculates the weighted sum of two arrays as follows
+opencv-addweighted-docs	url	https://docs.opencv.org/4.13.0/d2/de8/group__core__array.html	Saturation is not applied when the output array has the depth CV_32S
+opencv-intro	url	https://docs.opencv.org/4.13.0/d1/dfb/intro.html	the so-called saturation arithmetics is used
+opencv-motion-docs	url	https://docs.opencv.org/4.13.0/d7/df3/group__imgproc__motion.html	so that dst becomes a running average of a frame sequence
+opencv-motion-docs	url	https://docs.opencv.org/4.13.0/d7/df3/group__imgproc__motion.html	and a depth of CV_32F or CV_64F
+scipy-check-nola	url	https://docs.scipy.org/doc/scipy-1.18.0/reference/generated/scipy.signal.check_NOLA.html	normalization factors in the denominator of the overlap-add inversion equation are not zero
+griffin-lim-1984	doi	10.1109/TASSP.1984.1164317	Signal estimation from modified short-time Fourier transform
+dabov-2007	doi	10.1109/TIP.2007.901238	Image Denoising by Sparse 3-D Transform-Domain Collaborative Filtering
+dabov-2007	pdf	https://webpages.tuni.fi/foi/GCF-BM3D/BM3D_TIP_2007.pdf	simple element-wise division between the two buffers
+elad-aharon-2006	doi	10.1109/TIP.2006.881969	Image Denoising Via Sparse and Redundant Representations Over Learned Dictionaries
+elad-aharon-2006	pdf	https://legacy.sites.fas.harvard.edu/~cs278/papers/sparse.pdf	all it says is that averaging of the denoised patches is to be done
+pielawski-2020	doi	10.1371/journal.pone.0229839	Introducing Hann windows for reducing edge-effects in patch-based image segmentation
+pielawski-2020	url	https://pmc.ncbi.nlm.nih.gov/articles/PMC7067425/	We also avoid additional floating point errors by using windows that integrate to one
+pielawski-2020	url	https://pmc.ncbi.nlm.nih.gov/articles/PMC7067425/	so that the sum of all overlapping windows over the full image is 1
+swinir-2021	url	https://arxiv.org/abs/2108.10257	SwinIR: Image Restoration Using Swin Transformer
+swinir-code	url	https://raw.githubusercontent.com/JingyunLiang/SwinIR/6545850fbf8df298df73d81f3e8cba638787c8bd/main_test_swinir.py	output = E.div_(W)
+hasinoff-2016	doi	10.1145/2980179.2980254	Burst photography for high dynamic range and low-light imaging on mobile cameras
+hasinoff-2016	pdf	https://www.hdrplusdata.org/hdrplus.pdf	we merge to 14 bits to preserve the precision gained from merging
+hasinoff-2016	pdf	https://www.hdrplusdata.org/hdrplus.pdf	the total contribution from all tiles sum to one at every position
+wronski-2019	doi	10.1145/3306346.3323024	Handheld multi-frame super-resolution
+wronski-2019	pdf	https://storage.googleapis.com/gweb-research2023-media/pubtools/5211.pdf	we divide the accumulated color contributions by the accumulated weights
+szeliski-2006	doi	10.1561/0600000009	Image Alignment and Stitching: A Tutorial
+szeliski-2006	pdf	https://people.cs.umass.edu/~elm/Teaching/Docs/Image%20Align%20Szel.pdf	this kind of summation can be performed in an accumulation buffer
+haeberli-akeley-1990	doi	10.1145/97879.97913	The accumulation buffer: hardware support for high-quality rendering
+haeberli-akeley-1990	url	https://www.microsoft.com/en-us/research/publication/the-accumulation-buffer-hardware-support-for-high-quality-rendering/	with an additional high-precision image buffer
+glaccum-manpage	url	https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/glAccum.xml	The accumulation buffer is an extended-range color buffer
+glaccum-manpage	url	https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/glAccum.xml	the contents of an accumulation buffer pixel component are undefined
+redbook-accpersp	url	https://gitlab.freedesktop.org/mesa/demos/-/raw/649baedafcb90313ade69909fdef1ee156ab5f8d/src/redbook/accpersp.c	glAccum(GL_ACCUM, 1.0/ACSIZE);
+micikevicius-2018	url	https://arxiv.org/abs/1710.03740	Mixed Precision Training
+micikevicius-2018	pdf	https://arxiv.org/pdf/1710.03740v3	Large reductions (sums across elements of a vector) should be carried out in FP32
+bloch2006	url	https://research.google/blog/extra-extra-read-all-about-it-nearly-all-binary-searches-and-mergesorts-are-broken/	it fails if the sum of low and high is greater than the maximum positive int value
+intel-sdm-pavgb	pdf	https://cdrdv2.intel.com/v1/dl/getContent/671110	Temp sum before shifting is 9 bits
+cmsis-dsp-mean	url	https://raw.githubusercontent.com/ARM-software/CMSIS-DSP/83a2d7bc98c81b4bbe4a6f48b1f2ecf179868a0b/Source/StatisticsFunctions/arm_mean_q15.c	accumulated in a 32-bit
+cmsis-dsp-mean	url	https://arm-software.github.io/CMSIS-DSP/latest/group__mean.html	There is no risk of internal overflow with this approach
+cmsis-dsp-cfft-q15	url	https://raw.githubusercontent.com/ARM-software/CMSIS-DSP/83a2d7bc98c81b4bbe4a6f48b1f2ecf179868a0b/Source/TransformFunctions/arm_cfft_q15.c	Number of bits to upscale
+hernandez-mier-2025	doi	10.3390/jimaging11090308	Unsupervised Optical Mark Recognition on Answer Sheets for Massive Printed Multiple-Choice Tests
+hernandez-mier-2025	url	https://pmc.ncbi.nlm.nih.gov/articles/PMC12470569/	compute the mean of the grayscale values for each option circle

@@ -42,3 +42,7 @@ prune .vscode
 # Presentation material, not source. It is tracked, so the file finder offers
 # it and only this line keeps it out.
 prune outreach
+# An article in preparation, not documentation of the library. Without this
+# line its experiment scripts would ship too, since the finder offers every
+# tracked file.
+prune docs/PAPER

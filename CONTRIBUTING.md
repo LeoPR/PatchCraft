@@ -207,7 +207,8 @@ PatchCraft/
 │   ├── FOCO-1.0.md                 what 1.0 freezes, and the six blockers, all closed
 │   ├── ADR/                        one file per decision; the choice only, evidence in STUDIES/
 │   ├── STUDIES/                    background reading behind those decisions
-│   └── design/                     one spec per work phase: the alternatives measured and the decision
+│   ├── design/                     one spec per work phase: the alternatives measured and the decision
+│   └── PAPER/                      an article in preparation, with its experiments; not shipped
 ├── outreach/                       material for presenting the project publicly, not shipped
 │   ├── README.md                   how it is organized and what to check before publishing
 │   ├── 2026-10-10-lancamento.md    the current dated news source the channel texts derive from
