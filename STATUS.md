@@ -34,8 +34,9 @@ the owner.**
 
 **ADR 0005 is `Proposed`**: padding a grid that does not cover the image, with
 the design taken from kornia's auto-padding and MONAI's `padding_mode`, one
-keyword with a default that changes no call. Nothing is implemented. Whether to
-build it now or as the 1.1 that FOCO-1.0 names **waits on the owner**.
+keyword with a default that changes no call. Nothing is implemented. The owner
+recorded it in the ROADMAP as the 1.1 candidate rather than scheduling it, so it
+**waits on a consumer**.
 
 **`docs/PAPER/` is a scaffold** for an article on means that never leave
 their domain: outline, formal statements, measurements and references, with

@@ -14,6 +14,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the scripts that reproduce them, and checked references. It is not
   documentation of the library and does not ship: `MANIFEST.in` prunes it and
   `tools/check_dist.py` fails a release that carries it.
+- **USAGE walks a 4×4 image through every call.** Its sections now show
+  the pixels, not only the shapes: the patches `extract` returns and their
+  order, where each patch lands in `reconstruct`, the per-pixel mean when
+  patches disagree, the step `uniform` leaves and the ramp `hann` and
+  `gaussian` make, an LR patch beside its HR patch in `pair`, a resize down
+  and back up, and the one patch `per_patch_mse` singles out. Every example
+  runs as a doctest. GUIDE §1 shows the uncovered band on a 5×5 count map, and
+  GUIDE §4 shows the count map beside the pixels that come back different.
+- GUIDE §4 still gave the old reason for the exactness rule, that division by
+  a power of two is exact; it now gives the corrected one, as the other pages
+  do since the entry below.
+- ADR 0005 is recorded in the ROADMAP as the 1.1 candidate, not scheduled.
 - ADR 0005 (`Proposed`) records how a grid that does not cover the image
   would be padded, borrowed rather than designed: kornia's auto-padding on the
   way in and unpadding on the way back, MONAI's `padding_mode` with `F.pad`'s

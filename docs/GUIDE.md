@@ -93,6 +93,25 @@ patchcraft.reconstruct: patch grid leaves pixels uncovered (partial coverage for
 
 That is 23 percent of the image coming back zeroed with no exception raised. `reconstruct` refuses the geometry instead, and its message names the covered extent against the requested one, so the number you need in order to pick a legal geometry is already in the error.
 
+The band is easy to see on a 5×5 image cut into 2×2 patches at stride 2. The count map is zero on the last row and column, which no patch reaches, and a hand-rolled fold divides there by zero:
+
+```python
+import torch
+import torch.nn.functional as F
+
+cols = F.unfold(torch.ones(1, 1, 5, 5), kernel_size=2, stride=2)        # a 2x2 grid of 2x2 patches
+count = F.fold(torch.ones_like(cols), output_size=(5, 5), kernel_size=2, stride=2)
+print(count[0, 0].int())
+```
+
+```
+tensor([[1, 1, 1, 1, 0],
+        [1, 1, 1, 1, 0],
+        [1, 1, 1, 1, 0],
+        [1, 1, 1, 1, 0],
+        [0, 0, 0, 0, 0]], dtype=torch.int32)
+```
+
 ### `extract` does not enforce the same rule, and that asymmetry is real
 
 The coverage guard lives on the way back and not on the way out. `extract` will happily tile a 130 pixel axis with 32 pixel patches, discard the last two rows and columns, and say nothing about it.
@@ -428,7 +447,48 @@ for dtype in (torch.float64, torch.float32, torch.bfloat16, torch.float16):
 
 ### The rule
 
-A pixel covered by `k` patches is summed `k` times and then divided by `k`. In binary floating point that division is exact when `k` is a power of two, and it rounds otherwise.
+A pixel covered by `k` patches is summed `k` times and then divided by `k`. Both steps are exact when `k` is 1, 2 or 4: adding two or four copies of a value never rounds, and neither does dividing by 2 or 4. With `k` = 3 either step can round, and so can adding eight or more copies one at a time. A legal geometry whose map holds only powers of two holds only 1, 2 and 4, because a coverage of three on either axis puts a 3 in the map.
+
+The map tells you where to look. A 6×6 image with patch 3 and stride 1 has every count from 1 to 9 on it, and here it is next to the pixels that came back different:
+
+```python
+import torch
+import torch.nn.functional as F
+from patchcraft import extract, num_patches, reconstruct
+
+shape, patch, stride = (1, 6, 6), 3, 1
+nh, nw = num_patches(shape, patch_size=patch, stride=stride)
+count = F.fold(torch.ones(1, patch * patch, nh * nw), output_size=shape[1:],
+               kernel_size=patch, stride=stride)[0, 0].int()
+
+torch.manual_seed(0)
+image = torch.rand(shape)
+back = reconstruct(extract(image, patch_size=patch, stride=stride), image.shape, stride=stride)
+
+print("count map:")
+print(count)
+print("pixels that came back different (1 = different):")
+print((back != image)[0].int())
+```
+
+```
+count map:
+tensor([[1, 2, 3, 3, 2, 1],
+        [2, 4, 6, 6, 4, 2],
+        [3, 6, 9, 9, 6, 3],
+        [3, 6, 9, 9, 6, 3],
+        [2, 4, 6, 6, 4, 2],
+        [1, 2, 3, 3, 2, 1]], dtype=torch.int32)
+pixels that came back different (1 = different):
+tensor([[0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 1, 1, 0, 1, 1],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0]], dtype=torch.int32)
+```
+
+Every pixel that changed sits on a 3, a 6 or a 9, and no pixel on a 1, 2 or 4 changed. Not every 3, 6 or 9 changed either, which is the shape of the contract: inside the rule the round trip is guaranteed, and outside it, it is merely not promised.
 
 So the round trip in `float32` and `float64` is `torch.equal` exact **when every value in the count map is a power of two**. Two geometries guarantee that without any checking at all: `stride == patch_size` on both axes, where the map is all ones, and `stride == patch_size / 2`, where the map holds only 1, 2 and 4.
 

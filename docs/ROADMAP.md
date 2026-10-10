@@ -108,5 +108,11 @@ would be speculative.
   the per-patch metrics, the fp16/bf16 fold overflow, the integer-dtype guard
   in `reconstruct`, and the `WeightKind` export all shipped; see
   `CHANGELOG.md` under `[0.2.1]`.
+- **Border policy, recorded for 1.1.** [ADR 0005](ADR/0005-border-policy.md)
+  (`Proposed`, 2026-10-10) records how a grid that does not cover the image
+  would be padded, borrowed from kornia and MONAI: one `padding_mode` keyword,
+  the padding split between both sides, `None` as the default that changes no
+  call. It is the candidate [FOCO-1.0](FOCO-1.0.md) §3 names for 1.1. Not
+  scheduled: it is built when a consumer asks for it or the owner schedules it.
 - Potential auxiliary #2 for quantum components (naming TBD), gated, unchanged.
 - Companion package `patchcraft-quant` for quantization primitives (THEORY §6) if a second consumer surfaces the need, gated, unchanged.

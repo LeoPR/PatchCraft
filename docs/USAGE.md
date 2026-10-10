@@ -15,6 +15,17 @@ argument-by-argument manual with the measurements, read [GUIDE.md](GUIDE.md);
 for what each function accepts and rejects, [THEORY.md](THEORY.md) §9 is the
 arbiter.
 
+Most sections start from the same tiny image, 4×4 with one channel, whose
+pixels hold 0 to 15 in reading order. Every value names its own position, so
+you can follow each pixel through each call:
+
+```
+ 0  1  2  3
+ 4  5  6  7
+ 8  9 10 11
+12 13 14 15
+```
+
 ---
 
 ## 0. Setup
@@ -101,6 +112,46 @@ round-trip stays bit-exact then depends on the count map (see §5).
 ```python
 >>> import torch
 >>> from patchcraft import extract
+>>> tiny = torch.arange(16, dtype=torch.float32).reshape(1, 4, 4)
+>>> tiny_patches = extract(tiny, patch_size=2, stride=2)
+>>> tiny_patches.shape   # (L, C, ph, pw): four 2x2 patches of one channel
+torch.Size([4, 1, 2, 2])
+>>> tiny_patches[:, 0]   # top-left, top-right, bottom-left, bottom-right
+tensor([[[ 0.,  1.],
+         [ 4.,  5.]],
+<BLANKLINE>
+        [[ 2.,  3.],
+         [ 6.,  7.]],
+<BLANKLINE>
+        [[ 8.,  9.],
+         [12., 13.]],
+<BLANKLINE>
+        [[10., 11.],
+         [14., 15.]]])
+
+```
+
+The patches come in reading order: across the first row of the grid, then
+the next. With a stride smaller than the patch the window moves less than its
+own width, so neighbouring patches share pixels. At stride 1 there are nine
+patches, and pixel 5 is in the first two below and in two more further on:
+
+```python
+>>> extract(tiny, patch_size=2, stride=1)[:3, 0]
+tensor([[[0., 1.],
+         [4., 5.]],
+<BLANKLINE>
+        [[1., 2.],
+         [5., 6.]],
+<BLANKLINE>
+        [[2., 3.],
+         [6., 7.]]])
+
+```
+
+The same call on a 28×28 image, the size of an MNIST digit:
+
+```python
 >>> img = torch.arange(28 * 28, dtype=torch.float32).reshape(1, 28, 28)
 >>> img.shape
 torch.Size([1, 28, 28])
@@ -127,6 +178,8 @@ callers decide whether that's an error.
 Patchify(patch_size=(4, 4), stride=(2, 2), dilation=(1, 1))
 >>> patchify(img).shape   # 13*13 = 169 overlapping patches
 torch.Size([169, 1, 4, 4])
+>>> torch.equal(Patchify(patch_size=2, stride=2)(tiny), tiny_patches)   # extract, frozen
+True
 
 ```
 
@@ -151,7 +204,18 @@ True
 
 When `stride == patch_size` every pixel is covered exactly once, so
 `reconstruct` only rearranges the patches: no fold, no count map and no
-arithmetic.
+arithmetic. Filling patch `k` with the number `k` shows where each one lands,
+here six 2×2 patches on a 4×6 image:
+
+```python
+>>> labels = torch.arange(6.).view(6, 1, 1, 1).expand(6, 1, 2, 2)
+>>> reconstruct(labels, image_shape=(1, 4, 6), stride=2)[0]
+tensor([[0., 0., 1., 1., 2., 2.],
+        [0., 0., 1., 1., 2., 2.],
+        [3., 3., 4., 4., 5., 5.],
+        [3., 3., 4., 4., 5., 5.]])
+
+```
 
 ### Overlap: weighted, exact under the count-map rule
 
@@ -171,6 +235,25 @@ does too (counts 1, 2, 4, as above). Otherwise the error is bounded
 per pixel by `(k+1)·eps·|v|`,
 whatever the dtype: the deciding axis is the geometry, not the
 precision.
+
+When the patches disagree, which is what a model's output does, each pixel
+gets the mean of what its patches say. Below, nine overlapping patches cover
+the tiny image; the middle one says 1 and the other eight say 0:
+
+```python
+>>> votes = extract(torch.zeros(1, 4, 4), patch_size=2, stride=1)
+>>> votes[4] = 1.0
+>>> reconstruct(votes, image_shape=(1, 4, 4), stride=1)[0]
+tensor([[0.0000, 0.0000, 0.0000, 0.0000],
+        [0.0000, 0.2500, 0.2500, 0.0000],
+        [0.0000, 0.2500, 0.2500, 0.0000],
+        [0.0000, 0.0000, 0.0000, 0.0000]])
+
+```
+
+Each of the four pixels the middle patch covers is covered by four patches in
+all, so it comes back as the mean of one 1 and three 0s. That mean is the
+least-squares answer, which [`THEORY.md`](THEORY.md) §2.6 derives.
 
 `reconstruct` rejects `dilation != 1` and `stride > patch_size`
 (partial coverage forbidden, see [`THEORY.md`](THEORY.md) §9.2).
@@ -238,6 +321,24 @@ True
 
 ```
 
+Where `stitch` earns its place is where patches disagree. Two 1×4 patches,
+one saying 0 and the other 1, overlap on columns 2 and 3 of a 1×6 strip:
+
+```python
+>>> two = torch.stack([torch.zeros(1, 1, 4), torch.ones(1, 1, 4)])
+>>> for weight in ("uniform", "hann", "gaussian"):
+...     out = stitch(two, image_shape=(1, 1, 6), stride=(1, 2), weight=weight)
+...     print(f"{weight:9s}", out[0, 0].round(decimals=2))
+uniform   tensor([0.0000, 0.0000, 0.5000, 0.5000, 1.0000, 1.0000])
+hann      tensor([0.0000, 0.0000, 0.2800, 0.7200, 1.0000, 1.0000])
+gaussian  tensor([0.0000, 0.0000, 0.2700, 0.7300, 1.0000, 1.0000])
+
+```
+
+Uniform splits the difference into a step. Hann and gaussian let each patch
+dominate near its own centre, so the step becomes a ramp, and a ramp is what
+hides a seam.
+
 Use `stitch` for "I have model output and want a single image";
 use `reconstruct` for "I have unmodified patches and want my
 original image back, exactly." `stitch` accepts only floating-point
@@ -249,29 +350,37 @@ and §9.9 for the full contract.
 
 ## 7. `pair`: LR / HR correspondences
 
+The HR image below is the tiny image with every pixel blown up into a 2×2
+block, so the two sides show the same content at two scales:
+
 ```python
 >>> from patchcraft import pair
->>> lr = torch.arange(8 * 8,   dtype=torch.float32).reshape(1, 8,  8)
->>> hr = torch.arange(16 * 16, dtype=torch.float32).reshape(1, 16, 16)
+>>> lr = tiny
+>>> hr = lr.repeat_interleave(2, dim=1).repeat_interleave(2, dim=2)   # 1x8x8
 >>> result = pair(lr, hr,
-...               lr_patch_size=4, scale_factor=2, stride=4,
+...               lr_patch_size=2, scale_factor=2, stride=2,
 ...               image_id='demo-0')
->>> result.lr_patches.shape
-torch.Size([4, 1, 4, 4])
->>> result.hr_patches.shape
-torch.Size([4, 1, 8, 8])
+>>> result.lr_patches.shape, result.hr_patches.shape
+(torch.Size([4, 1, 2, 2]), torch.Size([4, 1, 4, 4]))
 >>> len(result)
 4
->>> result.metas[0]
-PatchMeta(patch_index=0, row=0, col=0,
-          lr_patch_size=(4, 4), hr_patch_size=(8, 8),
-          image_id='demo-0')
->>> result.metas[-1]
-PatchMeta(patch_index=3, row=4, col=4,
-          lr_patch_size=(4, 4), hr_patch_size=(8, 8),
+>>> result.lr_patches[1, 0]
+tensor([[2., 3.],
+        [6., 7.]])
+>>> result.hr_patches[1, 0]
+tensor([[2., 2., 3., 3.],
+        [2., 2., 3., 3.],
+        [6., 6., 7., 7.],
+        [6., 6., 7., 7.]])
+>>> result.metas[1]
+PatchMeta(patch_index=1, row=0, col=2,
+          lr_patch_size=(2, 2), hr_patch_size=(4, 4),
           image_id='demo-0')
 
 ```
+
+Patch 1 is the top-right one on both sides: the LR patch holds pixels 2, 3,
+6 and 7, and the HR patch holds the same four as 2×2 blocks.
 
 LR coords (`row`, `col`) are in pixel space; multiply by
 `scale_factor` to get HR coords. `image_id` is opaque metadata
@@ -303,6 +412,28 @@ both spatial axes.
 ('Tensor', (3, 8, 8), torch.float32)
 
 ```
+
+On the tiny image, going down by 2 with the torch backend's default
+bilinear averages each 2×2 block, and going back up with `"nearest"` repeats
+each value as a block:
+
+```python
+>>> down = resize(tiny, target_size=(2, 2), backend="torch")
+>>> down[0]
+tensor([[ 2.5000,  4.5000],
+        [10.5000, 12.5000]])
+>>> resize(down, target_size=(4, 4), backend="torch", resample="nearest")[0]
+tensor([[ 2.5000,  2.5000,  4.5000,  4.5000],
+        [ 2.5000,  2.5000,  4.5000,  4.5000],
+        [10.5000, 10.5000, 12.5000, 12.5000],
+        [10.5000, 10.5000, 12.5000, 12.5000]])
+
+```
+
+The round trip does not return `tiny`: a resize discards what it averages,
+which is why ADR 0003 counts it among the inexact operations. The averaging
+holds at a factor of 2; at larger factors the torch backend samples rather
+than averages, because it does not antialias, while the PIL backend does.
 
 PIL in → PIL out. Tensor in → Tensor out. Cross-backend
 (tensor + `backend="pil"`, or PIL + `backend="torch"`) is supported
@@ -423,6 +554,19 @@ your pick based on how big a patch you want vs how many examples.
 
 >>> per_patch_psnr(patches_a, patches_b)
 tensor([40.0000, 40.0000, ..., 40.0000, 40.0000], dtype=torch.float64)
+
+```
+
+One value per patch is what finds the patch that went wrong. On the tiny
+image, only the bottom-right patch is changed:
+
+```python
+>>> from patchcraft import per_patch_mse
+>>> a = extract(tiny / 16, patch_size=2, stride=2)
+>>> b = a.clone()
+>>> b[3] += 0.1
+>>> per_patch_mse(a, b)
+tensor([0.0000, 0.0000, 0.0000, 0.0100], dtype=torch.float64)
 
 ```
 
