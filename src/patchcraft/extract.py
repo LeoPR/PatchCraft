@@ -80,13 +80,17 @@ def extract(
         nh = (h - ph) // sh + 1
         nw = (w - pw) // sw + 1
         windows = image.unfold(1, ph, sh).unfold(2, pw, sw)  # (C, nh, nw, ph, pw)
-        out = windows.permute(1, 2, 0, 3, 4).reshape(nh * nw, c, ph, pw)
-        if out.untyped_storage().data_ptr() == image.untyped_storage().data_ptr():
-            # Degenerate geometry (e.g. ph == pw == 1): the permuted window is
-            # contiguous, reshape returned a view aliasing the image, and the
-            # contract promises independent memory.
-            out = out.clone()
-        return out
+        # Exactly one copy in every case. A reshape would copy too, except on
+        # degenerate geometries (e.g. ph == pw == 1), where the permuted window
+        # is already contiguous and reshape would return a view aliasing the
+        # image, which the contract forbids. Cloning unconditionally covers
+        # that case without asking the tensor for its storage, which a
+        # torch.vmap batched tensor does not have.
+        return (
+            windows.permute(1, 2, 0, 3, 4)
+            .clone(memory_format=torch.contiguous_format)
+            .view(nh * nw, c, ph, pw)
+        )
 
     unfolded = F.unfold(
         image.unsqueeze(0),

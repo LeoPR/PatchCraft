@@ -87,15 +87,17 @@ def reconstruct(
         # Non-overlapping grid: every pixel is covered exactly once, so
         # reconstruction is a pure rearrangement -- no fold, no count map, and
         # no widening for half precision (nothing accumulates).
+        # Exactly one copy, as in `extract`: on a single-patch grid the permuted
+        # view is already contiguous and a reshape would alias the caller's
+        # patches, so a later write to them would change an image this
+        # function already returned. Cloning unconditionally avoids asking the
+        # tensor for its storage, which a torch.vmap batched tensor lacks.
         grid = patches.reshape(num_h, num_w, c, ph, pw)
-        out = grid.permute(2, 0, 3, 1, 4).reshape(c, h, w)
-        if out.untyped_storage().data_ptr() == patches.untyped_storage().data_ptr():
-            # Single-patch grid: the permuted view is already contiguous, so
-            # reshape aliased the caller's patches and a later write to them
-            # would change an image this function already returned. `extract`
-            # guards the mirror image of this case.
-            out = out.clone()
-        return out
+        return (
+            grid.permute(2, 0, 3, 1, 4)
+            .clone(memory_format=torch.contiguous_format)
+            .view(c, h, w)
+        )
 
     # Half-precision accumulates in float32, for one reason in float16 and a
     # different one in bfloat16. float16 genuinely overflows: F.fold sums every

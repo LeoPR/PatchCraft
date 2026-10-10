@@ -68,7 +68,8 @@ def fold_weighted(
 
     Returns ``None`` when the accelerator is unavailable or the input is
     ineligible (non-CPU device, dtype outside float32/float64, mismatched
-    kernel); the caller then uses its pure-torch path. Geometry is NOT
+    kernel, or a tensor without storage such as torch.vmap passes in); the
+    caller then uses its pure-torch path. Geometry is NOT
     validated here, because callers validate with ``check_fold_geometry`` first.
     """
     mod = None if _env_disabled() else _load()
@@ -96,9 +97,17 @@ def fold_weighted(
     out = torch.empty((c, h, w), dtype=work.dtype, device=work.device)
     if work.numel() == 0 or out.numel() == 0:
         return None
+    try:
+        work_ptr = work.data_ptr()
+        kern_ptr = kern.data_ptr() if kern is not None else None
+    except RuntimeError:
+        # A tensor without storage, which is what torch.vmap and the other
+        # torch.func transforms pass in. It is ineligible like any other, so
+        # the caller's pure-torch path handles it.
+        return None
 
     mod.fold_add(
-        work.data_ptr(),
+        work_ptr,
         out.data_ptr(),
         n,
         c,
@@ -108,7 +117,7 @@ def fold_weighted(
         w,
         sh,
         sw,
-        kern.data_ptr() if kern is not None else None,
+        kern_ptr,
         "f32" if work.dtype == torch.float32 else "f64",
     )
     # `work` and `kern` must stay alive until the native call returns; it is

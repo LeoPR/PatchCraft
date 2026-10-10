@@ -6,6 +6,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`torch.vmap` works again over `extract`, `reconstruct` and `stitch`.** The
+  documentation names vmap as one of the three ways to batch (README, SCOPE,
+  USAGE, THEORY §0 and §9.1), and since 0.5.0 it failed on most calls: `extract`
+  at every geometry without dilation and `reconstruct` at `stride ==
+  patch_size` asked the tensor for its storage to guard against aliasing, which
+  a vmap batched tensor does not have, and with the accelerator every
+  overlapping `reconstruct` and `stitch` failed reading a data pointer. Both
+  guards are now an unconditional clone, which is the one copy those paths
+  always made, and the accelerator treats a tensor without storage as
+  ineligible and hands it to the torch path, as its docstring already said.
+  Bit-identical to 0.5.5 on ordinary calls in 144 comparisons per path,
+  including the degenerate geometries the guard existed for, with no output
+  sharing memory with its input and no change in time. `tests/test_vmap.py`
+  pins vmap to a plain loop bit for bit, on both paths and in four dtypes; 70
+  of its 114 cases fail against 0.5.5. The test helper `bit_equal` gained
+  bfloat16.
+
 ## [0.5.5] - 2026-09-26
 
 A performance release that changes no bit. Every change to `src/` below was

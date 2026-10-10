@@ -37,6 +37,7 @@ __all__ = [
 
 _INT_VIEW: dict[torch.dtype, torch.dtype] = {
     torch.float16: torch.int16,
+    torch.bfloat16: torch.int16,
     torch.float32: torch.int32,
     torch.float64: torch.int64,
 }
