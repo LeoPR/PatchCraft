@@ -66,6 +66,7 @@ PatchCraft/
 │   ├── benchmark.py .......... accelerated vs pure, and proves they agree before timing
 │   ├── check_dist.py ......... release gate: extension present, versions agree, tag respected
 │   ├── compare_exactness_rules.py  the power-of-two rule against k_max <= 4, measured
+│   ├── compare_border_strategies.py  truncate, pad or move the last window, measured
 │   └── make_outreach_figures.py    every outreach figure and generated page, computed
 │
 ├── outreach/ ................. material for presenting the project; not shipped

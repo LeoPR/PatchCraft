@@ -88,7 +88,7 @@ A contradição que este bloco nomeava já tinha caído em `33d3002`, durante a 
 
 ## 3. Fora do 1.0
 
-**T2 a T14, inteiros.** Cada tarefa do estudo adiciona superfície, e 1.0 é a versão que para de adicionar superfície. Duas ressalvas: **T2 (padding)** é a única com pressão real, porque hoje a resposta a "minha imagem não tem tiling exato" é um `ValueError`; fica fora mesmo assim, registrada como candidata nomeada da 1.1, porque `pad` é puramente aditivo. **T3 e T7** foram confirmados no lab, e `lab/.gitignore` é `*`, então a única evidência existe nesta máquina. Ou os scripts que sustentam afirmação em documento entram no git, ou a afirmação sai do documento.
+**T2 a T14, inteiros.** Cada tarefa do estudo adiciona superfície, e 1.0 é a versão que para de adicionar superfície. Duas ressalvas: **T2 (padding)** é a única com pressão real, porque hoje a resposta a "minha imagem não tem tiling exato" é um `ValueError`; fica fora mesmo assim, registrada como candidata nomeada da 1.1, porque `pad` é puramente aditivo. A forma proposta, tomada de empréstimo do kornia e do MONAI, está no [ADR 0005](ADR/0005-border-policy.md). **T3 e T7** foram confirmados no lab, e `lab/.gitignore` é `*`, então a única evidência existe nesta máquina. Ou os scripts que sustentam afirmação em documento entram no git, ou a afirmação sai do documento.
 
 Fora também, e reais: CITATION.cff, SECURITY.md, code of conduct, templates, pre-commit, dependabot, badges, link refs do CHANGELOG, e os ADRs 0001/0002 citando `archive/` que não existe mais. AGENTS.md merece nota: não bloqueia, e é o único item da lista que protege o trabalho das próximas sessões.
 

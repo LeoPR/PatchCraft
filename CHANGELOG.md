@@ -14,6 +14,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the scripts that reproduce them, and checked references. It is not
   documentation of the library and does not ship: `MANIFEST.in` prunes it and
   `tools/check_dist.py` fails a release that carries it.
+- ADR 0005 (`Proposed`) records how a grid that does not cover the image
+  would be padded, borrowed rather than designed: kornia's auto-padding on the
+  way in and unpadding on the way back, MONAI's `padding_mode` with `F.pad`'s
+  values, the padding split between both sides, and `None` as the default
+  that changes no call. Nothing is implemented. The survey and the
+  measurements behind it are in `docs/STUDIES/2026-10-10-border-policy.md`,
+  reproduced by `tools/compare_border_strategies.py`.
 - **THEORY §2.6 states the operator behind `reconstruct` and `stitch`.**
   `extract` is a selection matrix `U`, the fold is `Uᵀ`, `UᵀU` is the count
   map, `reconstruct` is the least-squares inverse `(UᵀU)⁻¹Uᵀ` and `stitch` the

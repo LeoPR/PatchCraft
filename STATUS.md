@@ -32,6 +32,11 @@ CHANGELOG `[Unreleased]` section lists all of it, and the full
 126,736-geometry sweep passes on both paths. **Releasing it as 0.5.6 waits on
 the owner.**
 
+**ADR 0005 is `Proposed`**: padding a grid that does not cover the image, with
+the design taken from kornia's auto-padding and MONAI's `padding_mode`, one
+keyword with a default that changes no call. Nothing is implemented. Whether to
+build it now or as the 1.1 that FOCO-1.0 names **waits on the owner**.
+
 **`docs/PAPER/` is a scaffold** for an article on means that never leave
 their domain: outline, formal statements, measurements and references, with
 the prose not yet written. It does not ship. Its first open item, a search for
