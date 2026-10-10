@@ -6,6 +6,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.6] - 2026-10-10
+
+A fix release. `torch.vmap` works again over `extract`, `reconstruct` and
+`stitch`, which it had not since 0.5.0, and `tilings` returns `[]` for an
+image smaller than the default minimum patch instead of raising. No other
+returned value changes. The full suite passes on both code paths at the
+declared floor (Python 3.12, torch 2.6.0, numpy 1.26.0, pillow 10.1.0, Rust
+1.82) and at the newest releases (Python 3.14, torch 2.14.1, numpy 2.5.4,
+pillow 12.3.0), and the 126,736-geometry exactness sweep passes on both paths.
+The rest is documentation, a CI job that now holds the floor to that claim,
+and the CI actions moved to Node 24.
+
 ### Added
 
 - `docs/PAPER/`, the scaffold of an article on computing a mean whose every
@@ -1156,7 +1168,8 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) covers installation, the car-vs-track metaphor,
   validation lab.
 
-[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.5...HEAD
+[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.6...HEAD
+[0.5.6]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.6
 [0.5.5]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.5
 [0.5.4]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.4
 [0.5.3]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.3

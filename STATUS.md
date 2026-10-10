@@ -6,7 +6,7 @@
 
 ## Where the project is
 
-**0.5.5 is on PyPI**, published through Trusted Publishing on a tag push: one
+**0.5.6 is on PyPI**, published through Trusted Publishing on a tag push: one
 sdist, five `cp312-abi3` platform wheels carrying the Rust accelerator, and one
 universal `py3-none-any` wheel. There is no extra to enable and no second
 package.
@@ -24,15 +24,15 @@ pillow 10.1, Rust 1.82) that runs it on both paths.
 
 ## What is in flight
 
-**Two fixes are on `main` and not on PyPI.** `torch.vmap` over `extract`,
+**Nothing unreleased.** 0.5.6 is a fix release: `torch.vmap` over `extract`,
 `reconstruct` and `stitch`, which the documentation offers as a way to batch,
 failed on most calls since 0.5.0 and works again, pinned by
 `tests/test_vmap.py`; and `tilings` returns `[]` for an image smaller than the
-default minimum patch instead of raising. With them come documentation
-corrections, the main one being the stated reason for the exactness rule. The
-CHANGELOG `[Unreleased]` section lists all of it, and the full
-126,736-geometry sweep passes on both paths. **Releasing it as 0.5.6 waits on
-the owner.**
+default minimum patch instead of raising. With them came the corrected reason
+for the exactness rule, THEORY §2.6 on the operator, the USAGE walk through a
+4×4 image, and a CI job at the declared floor, whose first run found a claim
+that held only at the top. The full 126,736-geometry sweep passes on both
+paths.
 
 **ADR 0005 is `Proposed`**: padding a grid that does not cover the image, with
 the design taken from kornia's auto-padding and MONAI's `padding_mode`, one
