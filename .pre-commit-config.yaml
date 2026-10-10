@@ -1,8 +1,8 @@
 # Runs the gates CI runs, before the commit rather than after it.
 #
 # Deliberately absent: `ruff-format`. This project has never used it and
-# adopting it here would reformat 36 of 65 files in a commit that changed no
-# behaviour. `ruff check` is the gate; formatting is not.
+# adopting it here would reformat about half the tree (CONTRIBUTING.md has the
+# count) in a commit that changed no behaviour. `ruff check` is the gate; formatting is not.
 #
 # `mypy` runs through the project environment rather than through a pre-commit
 # virtualenv, because it needs torch to resolve any annotation in `src/` and

@@ -69,7 +69,7 @@ blended = stitch(edited, image.shape, stride=16, weight="hann")
 assert blended.shape == image.shape                  # seams smoothed, geometry preserved
 ```
 
-PatchCraft accepts float tensors only. An 8-bit image has to become `image.float() / 255` before it reaches `extract`, because `extract` passes the tensor straight to `F.unfold`, and torch has no integer kernel there: it raises `NotImplementedError: "im2col_out_cpu" not implemented for 'Byte'`.
+PatchCraft accepts float tensors only. An 8-bit image has to become `image.float() / 255` before it reaches `extract`, because `extract` routes an integer tensor to `F.unfold`, and torch has no integer kernel there: it raises `NotImplementedError: "im2col_out_cpu" not implemented for 'Byte'`.
 
 ## reconstruct or stitch
 
@@ -86,7 +86,7 @@ Uniform averaging is the default, and it is the option that reports what the mod
 
 ## Why not unfold and fold directly
 
-Nothing stops you, and PatchCraft is a thin contract over exactly those two calls. What the contract buys is the pixel order and the boundary checks, because the intuitive reshape after `F.unfold` returns a tensor of the right shape whose pixels are scrambled.
+Nothing stops you. What PatchCraft adds is the pixel order and the boundary checks, done once with tests around them, and a faster fold where the wheel carries one, because the intuitive reshape after `F.unfold` returns a tensor of the right shape whose pixels are scrambled.
 
 ```python
 import torch
@@ -102,7 +102,7 @@ assert scrambled.shape == patches.shape                      # the right shape
 assert not torch.equal(scrambled, patches)                   # and the wrong pixels
 ```
 
-The saving is real on the other side too. Tiling an image, running a per-patch model and blending the result back with a Hann window took 17 non-blank lines by hand against 3 with `extract` and `stitch`, and the two outputs agreed to about 1.2e-05 on a value in [0, 1], summation-order rounding more than 300 times smaller than one 8-bit step.
+The saving is real on the other side too. Tiling an image, running a per-patch model and blending the result back with a Hann window costs 17 non-blank lines by hand against 3 with `extract` and `stitch`, and the two outputs agree to about 1.2e-05 on a value in [0, 1], summation-order rounding more than 300 times smaller than one 8-bit step.
 
 ## The geometry has to cover the image
 
@@ -136,7 +136,7 @@ Where it applies today: on GPU the functions accept CUDA tensors and keep the de
 
 - [Guide](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md), the manual, with every figure on this page shown as runnable code
 - [Performance](https://github.com/LeoPR/PatchCraft/blob/main/docs/PERFORMANCE.md), what the native accelerator is worth and how to re-measure it
-- [Usage](https://github.com/LeoPR/PatchCraft/blob/main/docs/USAGE.md), a walkthrough of each of the 20 public symbols, executed as a doctest
+- [Usage](https://github.com/LeoPR/PatchCraft/blob/main/docs/USAGE.md), a walkthrough of the public surface, executed as a doctest
 - [Theory](https://github.com/LeoPR/PatchCraft/blob/main/docs/THEORY.md), the math and the per-function contract
 - [Scope](https://github.com/LeoPR/PatchCraft/blob/main/docs/SCOPE.md), the line between this library and your pipeline
 - [Repository](https://github.com/LeoPR/PatchCraft), [issues](https://github.com/LeoPR/PatchCraft/issues) and [contributing](https://github.com/LeoPR/PatchCraft/blob/main/CONTRIBUTING.md)

@@ -11,27 +11,27 @@
 <rect x="40.0" y="94.0" width="820.0" height="1.0" fill="rgb(206, 206, 206)"/>
 <text x="40" y="125" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">3x512x512, patch 32, stride 16</text>
 <text x="340" y="125" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">reconstruct</text>
-<text x="500" y="125" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">16,3 ms</text>
+<text x="500" y="125" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">13,3 ms</text>
 <text x="650" y="125" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">2,3 ms</text>
-<text x="790" y="125" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="bold" fill="rgb(28, 108, 76)">7,1x</text>
+<text x="790" y="125" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="bold" fill="rgb(28, 108, 76)">5,8x</text>
 <rect x="40.0" y="140.0" width="820.0" height="1.0" fill="rgb(206, 206, 206)"/>
 <text x="40" y="171" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">3x1024x1024, patch 64, stride 32</text>
 <text x="340" y="171" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">reconstruct</text>
-<text x="500" y="171" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">53,5 ms</text>
-<text x="650" y="171" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">7,8 ms</text>
-<text x="790" y="171" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="bold" fill="rgb(28, 108, 76)">6,9x</text>
+<text x="500" y="171" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">73,3 ms</text>
+<text x="650" y="171" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">7,2 ms</text>
+<text x="790" y="171" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="bold" fill="rgb(28, 108, 76)">10,1x</text>
 <rect x="40.0" y="186.0" width="820.0" height="1.0" fill="rgb(206, 206, 206)"/>
 <text x="40" y="217" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">3x2048x2048, patch 64, stride 32</text>
 <text x="340" y="217" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">reconstruct</text>
-<text x="500" y="217" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">453,7 ms</text>
-<text x="650" y="217" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">32,1 ms</text>
-<text x="790" y="217" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="bold" fill="rgb(28, 108, 76)">14,1x</text>
+<text x="500" y="217" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">470,0 ms</text>
+<text x="650" y="217" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">28,5 ms</text>
+<text x="790" y="217" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="bold" fill="rgb(28, 108, 76)">16,5x</text>
 <rect x="40.0" y="232.0" width="820.0" height="1.0" fill="rgb(206, 206, 206)"/>
 <text x="40" y="263" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">3x2048x2048, patch 64, stride 32</text>
 <text x="340" y="263" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">stitch hann</text>
-<text x="500" y="263" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">460,9 ms</text>
-<text x="650" y="263" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">37,9 ms</text>
-<text x="790" y="263" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="bold" fill="rgb(28, 108, 76)">12,2x</text>
+<text x="500" y="263" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">453,3 ms</text>
+<text x="650" y="263" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="rgb(110, 110, 110)">31,0 ms</text>
+<text x="790" y="263" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="bold" fill="rgb(28, 108, 76)">14,6x</text>
 <rect x="40.0" y="278.0" width="820.0" height="1.0" fill="rgb(206, 206, 206)"/>
 <text x="40" y="310" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="rgb(110, 110, 110)">Medido em docs/PERFORMANCE.md, com máquina, versões e data.</text>
 <text x="40" y="329" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="rgb(110, 110, 110)">O benchmark compara os dois caminhos com torch.equal antes de cronometrar.</text>

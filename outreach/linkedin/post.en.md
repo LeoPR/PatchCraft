@@ -4,7 +4,7 @@
 # Short LinkedIn post
 
 > Ready to publish. Every number was measured and reproduces in the repository.
-> Source: [`../2026-09-04-release.en.md`](../2026-09-04-release.en.md).
+> Source: [`../2026-10-10-release.en.md`](../2026-10-10-release.en.md).
 >
 > **What this text is:** the summary that leads to the article and to the repository.
 > Objective and informative, with flow, no suspense and no question-and-answer game. It
@@ -41,9 +41,9 @@ sums the overlaps, so putting the image back means dividing each pixel by the nu
 times it was covered. And when the stride does not close the image, the grid stops before the
 edge and the remainder comes back as zero.
 
-PatchCraft covers those cases. It validates the geometry before cutting, divides by the
-coverage on the way back, refuses configurations that would drop pixels silently, and
-documents the condition under which the round trip returns exactly the same bits. It also
+PatchCraft covers those cases. It returns the patches in the right order, divides by the
+coverage on the way back, refuses to reassemble a grid that would leave pixels at zero, and
+documents the condition under which the round trip returns the input exactly. It also
 brings windowed blending, for when the seam between patches is visible, and a native kernel
 for the overlapping path.
 

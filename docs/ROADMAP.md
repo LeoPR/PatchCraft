@@ -98,7 +98,7 @@ would be speculative.
 - **Consumer gate.** QPatchSR, which motivated the v0.2.0 additions, was
   abandoned. Its replacement, **PatchSR**, has not started. The gate is: PatchSR
   consumes `patchcraft` v0.2 as published, and only a need it surfaces in real
-  use justifies a 20th public symbol, via a new ADR. Nothing gets built ahead of
+  use justifies a 21st public symbol, via a new ADR. Nothing gets built ahead of
   that. (The 19th symbol, `WeightKind`, was not gated: it already appeared in
   `stitch`'s public signature in 0.2.0 but was unreachable from the namespace,
   a defect closed in 0.2.1.)

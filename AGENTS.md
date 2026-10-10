@@ -128,9 +128,11 @@ connectives; one idea per paragraph. `README.md` is a call page, not a manual:
 the manual is [`docs/GUIDE.md`](docs/GUIDE.md), and complex examples belong
 there.
 
-Documents that state a version go stale. There is exactly one version string
-left in the documentation, the BibTeX entry in GUIDE section 9, plus
-[`CITATION.cff`](CITATION.cff). Do not add a third.
+Documents that state a version go stale. A release bumps three: the BibTeX
+entry in GUIDE section 9, [`CITATION.cff`](CITATION.cff), and the release
+named at the top of [`STATUS.md`](STATUS.md). [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)
+names the version it measured, and changes only when it is re-measured. Do
+not add another.
 
 ## 2. Before you touch anything
 

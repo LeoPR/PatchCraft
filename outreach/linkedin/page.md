@@ -82,13 +82,17 @@ An MNIST digit is 28 by 28. At patch 7 and stride 7, 28 divided by 7 is exactly 
 grid covers the digit with nothing left over and no overlap: every coverage count is 1, and
 the round trip is bit for bit identical.
 
-It is the commonest case and the only one with nothing to decide. The three problems above
-appear when the stride stops dividing the side of the image.
+It is the commonest case. Even here the intuitive reshape scrambles, because that does not
+depend on the stride. The other two problems appear outside it: overlap, when the stride is
+smaller than the patch, and an uncovered border, when the stride does not divide the side
+minus the patch.
 
 ## Reproduction
 
 ```
-pip install patchcraft
+git clone https://github.com/LeoPR/PatchCraft
+cd PatchCraft
+pip install patchcraft torchvision
 python tools/make_outreach_figures.py
 ```
 

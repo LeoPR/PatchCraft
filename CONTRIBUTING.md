@@ -34,7 +34,7 @@ is silently inert here. Either make that global hook delegate, or set
 whatever else the global hooks were doing.
 
 `ruff-format` is deliberately not among the hooks. This project has never used
-it, and adopting it would reformat 37 of 82 files in a commit that changed no
+it, and adopting it would reformat 37 files in a commit that changed no
 behaviour.
 
 ```
@@ -210,8 +210,8 @@ PatchCraft/
 │   └── design/                     one spec per work phase: the alternatives measured and the decision
 ├── outreach/                       material for presenting the project publicly, not shipped
 │   ├── README.md                   how it is organized and what to check before publishing
-│   ├── 2026-09-04-lancamento.md    the current dated news source the channel texts derive from
-│   ├── 2026-09-03-lancamento.md    the previous one, kept as the record of 0.5.1
+│   ├── 2026-10-10-lancamento.md    the current dated news source the channel texts derive from
+│   ├── 2026-09-0*-lancamento.md    the earlier ones, kept as the records of 0.5.4 and 0.5.1
 │   └── linkedin/                   post, artigo, the illustrated page and the figures, PT and EN
 └── archive/                        reference-only; gitignored (pruned 2026-05-17, only HISTORY.md kept)
 ```
@@ -347,7 +347,7 @@ silent: a version that walks backwards rather than an error.
 ## Releasing (maintainer only)
 
 1. Close the `[Unreleased]` section in [`CHANGELOG.md`](CHANGELOG.md) as `[X.Y.Z] YYYY-MM-DD`.
-2. Update `version` and `date-released` in [`CITATION.cff`](CITATION.cff), and the `version` field of the BibTeX entry in [`docs/GUIDE.md`](docs/GUIDE.md) section 9. Those are the only version strings left in the repository, because a citation needs a concrete one. `uvx --from cffconvert cffconvert --validate` checks the file.
+2. Update `version` and `date-released` in [`CITATION.cff`](CITATION.cff), the `version` field of the BibTeX entry in [`docs/GUIDE.md`](docs/GUIDE.md) section 9, and the release named at the top of [`STATUS.md`](STATUS.md). Those are the version strings a release bumps, because a citation needs a concrete one and a snapshot names its release; [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) names the version it measured and changes only when the table is re-measured. `uvx --from cffconvert cffconvert --validate` checks the file.
 3. Update [`docs/ROADMAP.md`](docs/ROADMAP.md) milestone checkboxes.
 4. Commit: `release: vX.Y.Z`.
 5. Tag + push: `git tag -a vX.Y.Z -m "..."` then `git push origin vX.Y.Z`.

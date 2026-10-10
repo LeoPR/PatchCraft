@@ -26,9 +26,9 @@ builds the Rust kernel and runs the whole suite through it.
 `stitch` folds its window without a Python loop and skips the fold for the
 uniform window on non-overlapping grids, `reconstruct` builds its count map
 with fewer operations, both divide in place, and `tilings` visits only the
-strides that can work. Each was compared against the 0.5.4 code through
-integer views, 53,716 cases with 0 differences, and the full 126,736-geometry
-sweep passes on both paths. Alongside it, the surface pages lost their
+strides that can work. The full 126,736-geometry sweep passes on both paths
+(`PATCHCRAFT_SWEEP_FULL=1 pytest tests/test_exactness.py`), and the 0.5.5
+entry of CHANGELOG records the bit-identity comparison against the 0.5.4 code. Alongside it, the surface pages lost their
 development history, GUIDE section 8 became "Where this applies today", and
 docs/PERFORMANCE.md was re-measured on the code that ships.
 

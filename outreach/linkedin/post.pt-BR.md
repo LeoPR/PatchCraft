@@ -4,7 +4,7 @@
 # Post curto para o LinkedIn
 
 > Pronto para publicar. Todo número foi medido e é reproduzível no repositório.
-> Fonte: [`../2026-09-04-lancamento.md`](../2026-09-04-lancamento.md).
+> Fonte: [`../2026-10-10-lancamento.md`](../2026-10-10-lancamento.md).
 >
 > **O que este texto é:** o resumo que leva ao artigo e ao repositório. Objetivo e
 > informativo, com fluxo, sem suspense e sem jogo de pergunta e resposta. Apresenta o
@@ -40,9 +40,9 @@ soma as sobreposições, então remontar exige dividir cada pixel pelo número d
 foi coberto. E quando o stride não fecha a imagem, a grade para antes da borda e o
 resto volta em zero.
 
-O PatchCraft cobre esses casos. Valida a geometria antes de recortar, divide pela cobertura
-na remontagem, recusa configurações que descartariam pixels em silêncio, e documenta em que
-condição a ida e a volta devolvem exatamente os mesmos bits. Traz também colagem com janela
+O PatchCraft cobre esses casos. Devolve os patches na ordem certa, divide pela cobertura na
+remontagem, recusa remontar uma grade que deixaria pixels em zero, e documenta em que
+condição a ida e a volta devolvem exatamente a entrada. Traz também colagem com janela
 de suavização, para quando a emenda entre patches fica visível, e um kernel nativo para o
 caminho com sobreposição.
 

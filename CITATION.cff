@@ -28,10 +28,9 @@ abstract: >
   every value of the overlap coverage map is a power of two, always true at
   stride equal to patch size, and outside that rule the per-pixel error is
   bounded by (k+1) times eps times the absolute value, with k the pixel's
-  coverage count. An earlier and weaker form of that claim was published, then
-  measured false and publicly retracted; a falsification suite now enumerates
-  the 126,736 legal geometries of the space independently of the predicate and
-  tries to break both halves of it.
+  coverage count. A falsification suite enumerates the 126,736 legal
+  geometries of the space independently of the predicate and tries to break
+  both halves of it.
 
   Five of the six published wheels carry a Rust kernel for the overlapping
   fold, compiled into the wheel itself rather than into a separate package, and

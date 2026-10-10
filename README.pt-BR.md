@@ -106,7 +106,7 @@ assert scrambled.shape == patches.shape                      # a forma certa
 assert not torch.equal(scrambled, patches)                   # e os pixels errados
 ```
 
-O segundo é um stride que não cobre a imagem. Numa imagem de 128 por 128 com `patch=32, stride=20`, a grade para no pixel 112, o que deixa 3840 dos 16384 pixels em zero, e um `fold` escrito à mão devolve essa imagem parcialmente preta sem reclamar.
+O segundo é um stride, a distância de um patch para o próximo, que não cobre a imagem. Numa imagem de 128 por 128 com `patch=32, stride=20`, a grade para no pixel 112, o que deixa 3840 dos 16384 pixels em zero, e um `fold` escrito à mão devolve essa imagem parcialmente preta sem reclamar.
 
 Escrever o laço de recortar e remontar à mão custa 17 linhas não vazias contra 3 aqui, e os dois resultados concordam em cerca de 1,2e-05 num valor em [0, 1], mais de 300 vezes menos que um degrau de 8 bits, com as duas rotas diferindo só na ordem em que somam uma janela separável. [O manual](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) roda as duas versões lado a lado.
 
@@ -156,7 +156,7 @@ Em GPU as funções preservam o dispositivo que você passa, e o kernel Rust é 
 |---|---|
 | O manual: cada argumento acima, medido, com a saída | [docs/GUIDE.md](docs/GUIDE.md) |
 | Quanto vale o acelerador nativo, e como remedir | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
-| Um passeio por cada um dos 20 símbolos públicos, executado como doctest | [docs/USAGE.md](docs/USAGE.md) |
+| Um passeio pela superfície pública, executado como doctest | [docs/USAGE.md](docs/USAGE.md) |
 | A linha entre esta biblioteca e o seu pipeline | [docs/SCOPE.md](docs/SCOPE.md) |
 | A matemática, as decisões e o contrato por função | [docs/THEORY.md](docs/THEORY.md) |
 | Por que a API tem essa cara | [docs/ADR/](docs/ADR) |

@@ -19,7 +19,9 @@ source first.
 
 | Path | What it is |
 |---|---|
-| [`2026-09-04-lancamento.md`](2026-09-04-lancamento.md) / [`2026-09-04-release.en.md`](2026-09-04-release.en.md) | the current news source (PT / EN) |
+| [`2026-10-10-lancamento.md`](2026-10-10-lancamento.md) / [`2026-10-10-release.en.md`](2026-10-10-release.en.md) | the current news source, for 0.5.5 (PT / EN) |
+| `2026-09-04-*.md` | the record of 0.5.4, the source of the published article; dated, never rewritten |
+| `2026-09-03-*.md` | the record of 0.5.1; dated, never rewritten |
 | [`linkedin/`](linkedin/) | LinkedIn: `post.*` (short), `artigo.*` (long technical), `page.md` (illustrated) and the figures |
 
 **Published on 2026-09-04**, the Portuguese article is at
@@ -46,9 +48,10 @@ None of them is an illustration. The image panels are the tensors `extract` and
 difference amplified until it is visible, the refusal text is what `reconstruct` raises, and
 the coverage maps come from torch's own fold and unfold over a tensor of ones.
 
-There are three per language, numbered in reading order: `1-cut` shows `unfold` and the
-reshape that scrambles, `2-stride` compares the hand-written `fold` with PatchCraft across
-four strides, and `3-mnist` shows the typical case on a digit.
+There are five per language, numbered in reading order: `0-capa` is the cover the article
+editor asks for, `1-cut` shows `unfold` and the reshape that scrambles, `2-stride` compares
+the hand-written `fold` with PatchCraft across four strides, `3-mnist` shows the typical case
+on a digit, and `4-tabela` is the article's performance table as an image.
 
 **The prose lives outside the images**, in `linkedin/pagina.md` and `linkedin/page.md`, the
 assembled page with the figures linked. That keeps the text editable and lets the images be
@@ -77,11 +80,16 @@ audience these texts are aimed at reads Portuguese first. English is the transla
 
 ## Before you publish
 
-**Every number was verified**, not estimated, and re-checked on 2026-09-03: the 3840 pixels
-left at zero, the reshape that keeps the shape and loses the pixels, the 126,736 enumerated
-geometries, the 3936 of 14969 mispredictions of the old rule against 8 of the new one, and
-the whole benchmark table. The measurements live in `docs/PERFORMANCE.md` and the
-`0.5.0`/`0.5.1` entries of the changelog.
+**Re-run what the texts cite**, because a number that does not reproduce does not go to a
+channel:
+
+- `python tools/benchmark.py --markdown`, the accelerator table, which has to match
+  `docs/PERFORMANCE.md`;
+- `python tools/compare_exactness_rules.py`, the 13,870 false promises of the maximum rule,
+  none from the power-of-two rule, and the worst miss outside the rule;
+- `PATCHCRAFT_SWEEP_FULL=1 pytest tests/test_exactness.py`, the 126,736 geometries;
+- `python tools/make_outreach_figures.py`, the figures and the generated pages, with the 3840
+  pixels left at zero and the reshape that keeps the shape and loses the pixels.
 
 **What these texts avoid on purpose:**
 

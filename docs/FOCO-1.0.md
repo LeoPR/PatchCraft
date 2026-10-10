@@ -2,9 +2,9 @@
 
 ## 0. A fronteira verdadeira, e por que as duas versões anteriores erraram
 
-O predicado do ADR 0003 na árvore de trabalho, `k_max <= 4`, é falso. O predicado correto é: **o round-trip `extract` + `reconstruct` é bit a bit exato quando todo valor do count map é potência de dois.**
+*Corrigido em 2026-08-30 (§4, commit zero): o predicado abaixo é o que está em vigor.* O predicado do ADR 0003 na árvore de trabalho, `k_max <= 4`, era falso. O predicado correto é: **o round-trip `extract` + `reconstruct` é bit a bit exato quando todo valor do count map é potência de dois.**
 
-A justificativa é aritmética, não estatística, e é isto que precisa entrar no ADR no lugar da contagem de geometrias. Para patches não modificados, o valor reconstruído de um pixel é a soma de `k` parcelas idênticas dividida por `k`, onde `k` é a contagem **daquele pixel**. Em IEEE 754, somar `k` cópias de um mesmo valor e dividir por `k` é exato quando `k` é potência de dois, porque cada passo é um deslocamento de expoente sem perda de mantissa. O ADR aplicou esse argumento ao **máximo** do mapa, e um mapa com máximo 4 admite pixels com contagem 3. Dividir por 3 não é exato. Daí o erro.
+A justificativa é aritmética, não estatística, e é isto que precisa entrar no ADR no lugar da contagem de geometrias. Para patches não modificados, o valor reconstruído de um pixel é a soma de `k` parcelas idênticas dividida por `k`, onde `k` é a contagem **daquele pixel**. Em IEEE 754, somar `k` cópias de um mesmo valor e dividir por `k` é exato para `k` = 2 e 4, salvo estouro; para `k` = 8 já não é, porque as somas parciais 3x, 5x, 6x e 7x arredondam. A regra vale mesmo assim, porque uma cobertura de três num eixo põe um 3 no mapa, e num mapa só de potências de dois aparecem apenas 1, 2 e 4 (corrigido em 2026-10-10; a forma anterior atribuía a exatidão a toda potência de dois). O ADR aplicou esse argumento ao **máximo** do mapa, e um mapa com máximo 4 admite pixels com contagem 3. Dividir por 3 não é exato. Daí o erro.
 
 A varredura entra como falsificador do predicado, nunca como sua origem. Enumerei o espaço legal com H, W em 4..24, patch 2..9 e stride de cobertura exata: 126.736 geometrias. Sobre uma amostra de 1.500 delas nos dois dtypes:
 
@@ -31,10 +31,10 @@ Scripts: `...\scratchpad\final_check.py`, `final_check2.py`, rodados com `.venv/
 
 Cinco coisas, e apenas essas cinco.
 
-1. **Os 19 nomes e suas assinaturas.** Nome, ordem dos parâmetros, keyword-only, tipo de retorno. Inclui os campos e a ordem dos quatro carregadores de dados (`TilingSpec`, `PairedTilingSpec`, `PatchPair`, `PatchMeta`). Duas correções de fato que o texto precisa refletir: `tilings` e `paired_tilings` retornam `list`, não tupla, e `scale_factor` retorna `int | None`.
+1. **Os 20 nomes e suas assinaturas.** Nome, ordem dos parâmetros, keyword-only, tipo de retorno. Inclui os campos e a ordem dos quatro carregadores de dados (`TilingSpec`, `PairedTilingSpec`, `PatchPair`, `PatchMeta`). Duas correções de fato que o texto precisa refletir: `tilings` e `paired_tilings` retornam `list`, não tupla, e `scale_factor` retorna `int | None`.
 2. **`WeightKind` é um `Literal`, não um carregador de dados** (`stitch.py:26`). Congelá-lo fecha o conjunto de janelas: acrescentar uma quarta depois de 1.0 muda um tipo público e quebra qualquer consumidor com verificação de exaustividade sob `mypy --strict`. Isso não é crescimento aditivo por keyword-only. A política de compatibilidade tem que declarar o conjunto **aberto** (novas janelas são adição compatível, o consumidor não pode assumir exaustividade) ou **fechado**. Recomendo aberto, escrito.
 3. **O conjunto aceita/rejeita do THEORY §9.** Toda entrada que hoje funciona continua funcionando, todo `ValueError` de hoje continua `ValueError`. O texto da mensagem fica livre.
-4. **O contrato numérico como predicado que o caller avalia antes de chamar**, escrito na comparação em que vale. A frase congelada é: dentro do predicado, `reconstruct` devolve os mesmos bits, verificável por `torch.equal` para entradas sem NaN e por comparação da view inteira em qualquer caso; fora do predicado, o erro é limitado a 1 ULP.
+4. **O contrato numérico como predicado que o caller avalia antes de chamar**, escrito na comparação em que vale. A frase congelada é: dentro do predicado, `reconstruct` devolve os mesmos valores, verificável por `torch.equal` para entradas sem NaN; como bits, também são os mesmos, salvo o sinal do zero e os bits de um NaN numa grade com sobreposição, porque o fold soma a partir de `+0.0`. Fora do predicado, o erro por pixel é limitado por `(k+1)·eps·|v|`, com `k` a contagem de cobertura daquele pixel (a forma "1 ULP" foi medida falsa: chega a 19 ULP com k = 81).
 5. **A saída de enumeração de `tilings` e `paired_tilings`.** É dado consumido em loop, então mudar o conjunto retornado depois de 1.0 é quebra.
 
 Não congela: implementação interna, texto de mensagem de erro, performance, layout de `lab/`, `docs/STUDIES`.
@@ -59,7 +59,7 @@ O grep de verificação precisa incluir a raiz do repositório, porque `README.m
 
 **Fechado em 0.5.0.** `tests/test_exactness.py` enumera as 126.736 geometrias legais independentemente do predicado e procura os dois contraexemplos. Os geradores de falso negativo foram trocados pelo helper auditado em `tests/_rng.py`.
 
-A metade negativa precisa ser escrita como afirmação sobre um conjunto de sementes, não sobre uma execução. Medido na geometria `(1, 4, 14)`, patch `(4, 4)`, stride `(1, 1)`, fora do predicado: `torch.equal` devolve True em 63 de 300 sementes float32 e 57 de 300 float64. Exatidão fora do predicado é propriedade da amostra, não da geometria. A forma correta é: **pelo menos uma de N sementes é inexata, e toda semente tem erro dentro de 1 ULP.** Escrita como assert simples, essa metade instala flake no CI e chama isso de detector.
+A metade negativa precisa ser escrita como afirmação sobre um conjunto de sementes, não sobre uma execução. Medido na geometria `(1, 4, 14)`, patch `(4, 4)`, stride `(1, 1)`, fora do predicado: `torch.equal` devolve True em 63 de 300 sementes float32 e 57 de 300 float64. Exatidão fora do predicado é propriedade da amostra, não da geometria. A forma correta é: **pelo menos uma de N sementes é inexata, e toda semente tem erro dentro de `(k+1)·eps·|v|`.** Escrita como assert simples, essa metade instala flake no CI e chama isso de detector.
 
 **B3. Nada fixa a superfície pública.** `tests/test_import.py` verifica duas coisas. Fixar os 19 nomes com `inspect.signature`, mais a decisão do item 2 da seção 1.
 
@@ -106,7 +106,7 @@ O §8 do THEORY (channels-last, PIL, batched) sai de "pergunta aberta" e vira "a
 **G2, as duas páginas e o contrato ratificado. Sai como 1.0.0.** Os dois editam o THEORY §9 e ambos escrevem o escopo "medido em CPU", então colidem no mesmo arquivo. Escopo: `USAGE.md` regenerado contra 0.2.x com `WeightKind` e as quatro mudanças de comportamento da 0.2.1; doctests ligados no `addopts` e nos dois workflows, com `NORMALIZE_WHITESPACE` e `ELLIPSIS` declarados no contrato; `README.pypi.md` corrigido e fiado no `pyproject.toml` com comentário inline dando a razão, ou descartado; §9.2 corrigido; §8 convertido em decisões adiadas; linhas de regime só onde há regime; ADR 0003 para Accepted; seção de política de compatibilidade em prosa.
 *Verificação:* `pytest --doctest-glob='*.md' docs/` verde nos dois sistemas operacionais do CI; `twine check --strict`; um job que instala a wheel construída em ambiente limpo e importa o pacote; um script que lista cada bullet "Aceita"/"Rejeita" do §9 sem id de teste correspondente, e sai vazio.
 
-**G3, higiene. Sem versão própria.** SECURITY, CITATION, templates, pre-commit, dependabot, badges, link refs, AGENTS.md.
+**G3, higiene. Sem versão própria.** SECURITY, CITATION, templates, pre-commit, dependabot, badges, link refs, AGENTS.md. **Fechado em 0.5.3**, salvo o dependabot, que é o único item ausente.
 *Verificação:* o community profile do GitHub fecha todos os itens.
 
 ---

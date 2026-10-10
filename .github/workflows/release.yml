@@ -67,7 +67,7 @@ jobs:
               raise SystemExit(1)
           print(f"tag and setuptools-scm agree on {scm}")
           PY
-      - run: uv run ruff check src tests
+      - run: uv run ruff check src tests tools
       - run: uv run mypy --strict src
       - run: uv run pytest -m "not gpu"
 

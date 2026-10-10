@@ -49,7 +49,7 @@ jobs:
         run: uv sync --locked --extra cache --extra dev
 
       - name: Ruff
-        run: uv run ruff check src tests
+        run: uv run ruff check src tests tools
 
       - name: Mypy (strict, src only)
         run: uv run mypy --strict src

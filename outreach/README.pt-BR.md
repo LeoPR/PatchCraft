@@ -19,8 +19,9 @@ antes.
 
 | Caminho | O que é |
 |---|---|
-| [`2026-09-04-lancamento.md`](2026-09-04-lancamento.md) / [`2026-09-04-release.en.md`](2026-09-04-release.en.md) | a fonte de notícia atual (PT / EN) |
-| `2026-09-03-*.md` | a fonte anterior, registro da 0.5.1; datada, não se reescreve |
+| [`2026-10-10-lancamento.md`](2026-10-10-lancamento.md) / [`2026-10-10-release.en.md`](2026-10-10-release.en.md) | a fonte de notícia atual, da 0.5.5 (PT / EN) |
+| `2026-09-04-*.md` | registro da 0.5.4, a fonte do artigo publicado; datada, não se reescreve |
+| `2026-09-03-*.md` | registro da 0.5.1; datada, não se reescreve |
 | [`linkedin/`](linkedin/) | LinkedIn: `post.*` (curto), `artigo.*` (longo técnico), `pagina.md` (ilustrada) e as figuras |
 
 **Publicado em 2026-09-04**, o artigo em português está em
@@ -46,9 +47,10 @@ devolvem de fato, o erro no canto do painel aproximado é a diferença real ampl
 ficar visível, o texto da recusa é o que o `reconstruct` levanta, e os mapas de cobertura
 saem do `fold` e do `unfold` do torch sobre um tensor de uns.
 
-São três por língua, numeradas na ordem de leitura: `1-recorte` mostra o `unfold` e o
-reshape que embaralha, `2-stride` compara o `fold` escrito à mão com o PatchCraft em quatro
-strides, e `3-mnist` mostra o caso típico num dígito.
+São cinco por língua, numeradas na ordem de leitura: `0-capa` é a capa que o editor de
+artigos pede, `1-recorte` mostra o `unfold` e o reshape que embaralha, `2-stride` compara o
+`fold` escrito à mão com o PatchCraft em quatro strides, `3-mnist` mostra o caso típico num
+dígito, e `4-tabela` é a tabela de desempenho do artigo como imagem.
 
 **O texto fica fora das imagens**, em `linkedin/pagina.md` e `linkedin/page.md`, que é a
 página montada com as figuras vinculadas. Assim o texto é editável e as imagens podem ser
@@ -76,11 +78,16 @@ que estes textos se dirigem lê português primeiro. O inglês é a tradução.
 
 ## Antes de publicar
 
-**Todo número foi verificado**, e não estimado, e reconferido em 2026-09-04: os 3840 pixels
-deixados em zero, o reshape que preserva a forma e perde os pixels, as 126.736 geometrias
-enumeradas, os 3936 erros em 14969 da regra antiga contra 8 da nova, e a tabela inteira do
-benchmark. As medições estão em `docs/PERFORMANCE.md` e nas entradas `0.5.0` e `0.5.1` do
-changelog.
+**Rode de novo o que os textos citam**, porque um número que não se reproduz não vai para
+um canal:
+
+- `python tools/benchmark.py --markdown`, a tabela do acelerador, que precisa bater com
+  `docs/PERFORMANCE.md`;
+- `python tools/compare_exactness_rules.py`, as 13.870 promessas falsas da regra do máximo,
+  nenhuma da potência de dois, e o pior erro fora da regra;
+- `PATCHCRAFT_SWEEP_FULL=1 pytest tests/test_exactness.py`, as 126.736 geometrias;
+- `python tools/make_outreach_figures.py`, as figuras e as páginas geradas, com os 3840
+  pixels deixados em zero e o reshape que preserva a forma e perde os pixels.
 
 **O que estes textos evitam de propósito:**
 

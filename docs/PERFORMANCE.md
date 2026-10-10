@@ -21,7 +21,7 @@ the fold like an overlapping one.
 
 ## How to read the timings
 
-They are the median of 25 runs after a warm-up call, on one machine, on one
+They are the median of 15 runs after a warm-up call, on one machine, on one
 torch build. The ratio depends on your CPU, on how many threads torch decides
 to use, and on the geometry, so a ratio here is not a promise about your
 machine. Run the script.

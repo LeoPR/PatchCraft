@@ -475,6 +475,7 @@ is the integration point.
 ```python
 from patchcraft import Patchify
 from torchvision import transforms
+from torchvision.datasets import MNIST
 from torch.utils.data import DataLoader
 
 transform = transforms.Compose([

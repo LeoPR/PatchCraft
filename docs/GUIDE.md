@@ -22,7 +22,7 @@ You do not have to read it from the top. Each section stands on its own, so jump
 
 ## 1. Why not `unfold` and `fold` directly
 
-Because three defects wait there, all three silent, and you meet the first two within the first hour of writing the code yourself.
+Because two defects wait there, both silent, and you meet them within the first hour of writing the code yourself. A third behaviour follows them, because `extract` shares it with torch and you need it before choosing either route.
 
 ### The reshape after `unfold` scrambles the pixels
 
@@ -188,7 +188,7 @@ Seventeen non-blank lines against three, for a result that agrees to about 1.2e-
 
 **That number is not 0.0, and the reason is worth a sentence.** The two versions compute the same quantity by different routes. `stitch` builds its denominator from two 1-D window folds, because a separable kernel allows it, while the hand-rolled version folds a replicated 2-D kernel. Same value, different summation order, so the float result differs in the last few bits. Nothing here is a correctness gap.
 
-The exception is `weight="uniform"`, where `stitch` still agrees with `reconstruct` bit for bit, because the ones-kernel multiply is exact. The one bit that can differ is the sign of a zero on a non-overlapping grid: there `reconstruct` only rearranges and keeps a `-0.0`, while `stitch` computes `0.0 + x`, which returns `+0.0`. Both compare equal as numbers.
+The exception is `weight="uniform"`, where `stitch` still agrees with `reconstruct` under `torch.equal`, because the ones-kernel multiply is exact. The one bit that can differ is the sign of a zero on a non-overlapping grid: there `reconstruct` only rearranges and keeps a `-0.0`, while `stitch` computes `0.0 + x`, which returns `+0.0`. Both compare equal as numbers.
 
 The by-hand version above is also the correct one, since it already has the coverage check, the right permutation and the strictly positive window. Getting to that version is the work.
 
@@ -277,7 +277,7 @@ Which values appear in this map is what decides whether the round trip comes bac
 
 ### Float tensors only
 
-`extract` hands the tensor straight to `F.unfold`, which has no integer kernel, so an 8-bit image fails with torch's own message rather than with one of ours. Convert on the way in, which costs you one division.
+`extract` routes an integer tensor to `F.unfold`, which has no integer kernel, so an 8-bit image fails with torch's own message rather than with one of ours. Convert on the way in, which costs you one division.
 
 ```python
 import torch
@@ -433,11 +433,11 @@ The maximum is 4, the geometry is legal and fully covering, and the round trip s
 
 ### Three honest details
 
-**Outside the predicate, exactness is a property of the data rather than of the geometry.** The guarantee runs one way only: all powers of two means exact, and anything else means not guaranteed. Some inputs do come back exact on a mixed map by luck of rounding, so a geometry that survived one image tells you nothing about the next. What does hold either way is the size of the miss: bounded per pixel by `(k+1)·eps·|v|`, with `k` the pixel's coverage count, which is `2.384e-07` in float32 and `4.441e-16` in float64 on the geometries above, and larger where the count map reaches higher, so there is no fixed ULP figure.
+**Outside the predicate, exactness is a property of the data rather than of the geometry.** The guarantee runs one way only: all powers of two means exact, and anything else means not guaranteed. Some inputs do come back exact on a mixed map by luck of rounding, so a geometry that survived one image tells you nothing about the next. What does hold either way is the size of the miss, bounded per pixel by `(k+1)·eps·|v|` with `k` the pixel's coverage count. On the geometries above the measured miss is `2.384e-07` in float32 and `4.441e-16` in float64, two eps each, inside a bound of 17 eps at k = 16, and it grows where the count map reaches higher, so there is no fixed ULP figure.
 
 **float64 is not a safe harbour.** The deciding axis is the count map and not the dtype, so float64 misses the round trip at exactly the geometry where float32 misses it. Reaching for a wider float buys you a smaller error, and it never buys you exactness.
 
-**Half precision comes back exact here for a reason worth knowing, and not because of a stronger guarantee.** PatchCraft accumulates `float16` and `bfloat16` in a float32 buffer and rounds once on return, and that final rounding is far coarser than the float32 error, so those rows land back on the value they started from. The promotion exists for a different reason entirely, and for a different one in each format. `float16` genuinely overflows: the folded sum passes its finite range before the division ever happens, and a constant image at 10000.0 comes back as `inf` in 144 of 256 pixels without the promotion. `bfloat16` carries `float32`'s exponent and cannot overflow there, so its promotion buys exactness instead, turning a 7.8e-03 miss into a round trip that returns the input bit for bit, at the same geometry. [THEORY.md](THEORY.md) §9.2 records both measurements.
+**Half precision comes back exact here for a reason worth knowing, and not because of a stronger guarantee.** PatchCraft accumulates `float16` and `bfloat16` in a float32 buffer and rounds once on return, and that final rounding is far coarser than the float32 error, so those rows land back on the value they started from. The promotion exists for a different reason entirely, and for a different one in each format. `float16` genuinely overflows: the folded sum passes its finite range before the division ever happens, and a constant (1, 16, 16) image at 10000.0 comes back as `inf` in 144 of 256 pixels without the promotion. `bfloat16` carries `float32`'s exponent and cannot overflow there, so its promotion buys exactness instead, turning a 7.8e-03 miss into a round trip that returns the input bit for bit, at the same geometry. [THEORY.md](THEORY.md) §9.2 records both measurements.
 
 ### Where this rule is written down
 
@@ -568,7 +568,7 @@ The reason is visible in the uniform column, which does not move at all. Uniform
 ### The three windows, and what each costs
 
 - **`"uniform"`** is the default. Every covering patch contributes equally, which is exactly `reconstruct`'s arithmetic, and it puts the whole disagreement on the grid lines.
-- **`"hann"`** is the strong seam suppressor and the cheapest to compute. It is the interior of a longer symmetric Hann window, `hann_window(n + 2, periodic=False)[1:-1]`, so it is strictly positive on every sample and never zeroes a pixel. A plain symmetric window is exactly zero at both endpoints and would zero every pixel covered only by patch edges; [THEORY.md](THEORY.md) §2.5 measures it.
+- **`"hann"`** is the strong seam suppressor. On an overlapping grid the three windows cost the same, since the fold dominates, and only uniform skips the fold where `stride == patch_size`. It is the interior of a longer symmetric Hann window, `hann_window(n + 2, periodic=False)[1:-1]`, so it is strictly positive on every sample and never zeroes a pixel. A plain symmetric window is exactly zero at both endpoints and would zero every pixel covered only by patch edges; [THEORY.md](THEORY.md) §2.5 measures it.
 - **`"gaussian"`** keeps far more weight at the patch edge than hann does, so it suppresses seams less at the larger patch sizes in the sweep, and it wins at the smallest one. THEORY §2.5 states the tradeoff as weaker seam suppression than Hann in exchange for a flatter window.
 
 **Hann costs fidelity, and the cost is already in the numbers above.** Measured against the model's own patches, uniform keeps 29.60 dB mean and hann keeps 27.15 dB. Hann is trading exactness for smoothness on purpose, so if what you want back is the model's output rather than a pleasant image, uniform is the honest choice.
@@ -788,13 +788,13 @@ with tempfile.TemporaryDirectory() as directory:
 (16,)
 ```
 
-The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_factor`, are walked through in [USAGE.md](USAGE.md) §7 and §11. One warning about them belongs here too: in `PatchMeta`, `row` and `col` already have the stride applied, so multiplying them by the stride again lands you on the wrong patch.
+The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_factor`, are walked through in [USAGE.md](USAGE.md) §7, §10 and §11. One warning about them belongs here too: in `PatchMeta`, `row` and `col` already have the stride applied, so multiplying them by the stride again lands you on the wrong patch.
 
 ## 8. Where this applies today
 
 **Before 1.0, and with no external consumer yet.** A real project consuming the published API is the gate [ROADMAP.md](ROADMAP.md) sets for calling the shape settled. Until then a new `0.y` may still change what comes out; pin `~=0.5.0` to take fixes only.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 1620 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 1771 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Where the evidence is thinner, this is what it means for you.
 
@@ -844,7 +844,7 @@ Installing from the sdist compiles the accelerator when a Rust toolchain is pres
 
 ```bibtex
 @software{souza_patchcraft_2026,
-  author  = {Souza, Leonardo Marques de},
+  author  = {Marques de Souza, Leonardo},
   title   = {PatchCraft: image patch extraction, reconstruction, pairing
              and seam-aware stitching},
   version = {0.5.5},   % check CHANGELOG.md for the release you used

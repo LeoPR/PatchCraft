@@ -40,7 +40,7 @@ reshape intuitivo para (L, C, ph, pw) entrega a forma certa com os pixels errado
 assert de shape passa, o treino roda, a perda desce um pouco menos, e não há mensagem de
 erro em lugar nenhum.
 
-[IMAGEM: 1-recorte.png — legenda: a mesma imagem antes e depois do reshape intuitivo]
+[IMAGEM: 1-recorte.png, legenda: a mesma imagem antes e depois do reshape intuitivo]
 
 O segundo mora no stride, a distância que a janela anda de um patch para o próximo. Numa imagem de 128 por 128, com patch 32 e stride 20, a grade
 para no pixel 112 e deixa 3840 dos 16384 pixels em zero. Um fold escrito à mão devolve
@@ -59,8 +59,9 @@ tensor, bit a bit.
 > dois. Fora disso, o erro por pixel é limitado por (k+1)·eps·|v|, com k a contagem de
 > cobertura daquele pixel.
 
-A razão é uma só: dividir um float por uma potência de dois é a única divisão que nunca
-arredonda. stride == patch_size sempre satisfaz isso, porque toda contagem vale 1.
+Numa geometria legal isso quer dizer que toda contagem é 1, 2 ou 4, e nesses casos as duas
+contas são exatas: somar duas ou quatro cópias de um valor não arredonda, e dividir por 2 ou
+por 4 também não. stride == patch_size sempre satisfaz isso, porque toda contagem vale 1.
 
 O que faz disso um contrato, e não uma promessa, é a segunda metade: a condição se calcula a
 partir da geometria, sem rodar nada. Quem vai chamar sabe de antemão em que regime está.
@@ -73,14 +74,15 @@ nenhuma que volte exata. python tools/compare_exactness_rules.py reproduz a cont
 
 É isso que decide qual das duas vale. Um contrato pode prometer de menos. Não
 pode prometer demais, porque quem confia nele não tem como perceber a diferença: fora da
-regra o erro por pixel cresce com a cobertura, e chega a 19 ULP em float32 (19 vezes o
-menor passo que o float32 consegue representar naquele valor) sem nada sinalizar.
+regra o erro por pixel cresce com a cobertura sem nada sinalizar. Na pior geometria medida,
+num pixel coberto 81 vezes, ele chega a 19 ULP em float32, 19 vezes o menor passo que o
+float32 consegue representar naquele valor, e o mesmo comando mede esse pior caso.
 
 ## Como o contrato é verificado
 
 O contrato acima tem, na suíte, um teste cuja função explícita é falsificá-lo.
 
-[IMAGEM: 2-stride.png — legenda: cobertura, fold à mão e PatchCraft, em quatro strides]
+[IMAGEM: 2-stride.png, legenda: cobertura, fold à mão e PatchCraft, em quatro strides]
 
 Ele enumera as 126.736 geometrias legais do espaço sem consultar o predicado, para que o
 enumerador e a coisa testada sejam independentes. Sobre uma amostra semeada, procura os
@@ -104,11 +106,11 @@ sobrepõem. Cinco das seis wheels trazem um kernel Rust para ele, compilado dent
 wheel, sem extra para habilitar. As demais plataformas recebem a wheel universal e rodam o
 caminho em torch, que devolve os mesmos valores.
 
-[IMAGEM: 4-tabela.png — legenda: a tabela de desempenho]
+[IMAGEM: 4-tabela.png, legenda: a tabela de desempenho]
 
 A objeção óbvia é que o kernel apenas usa mais núcleos do que o torch usa. Ela merece uma
 medição, não uma resposta. Forçando o torch a 4, 8, 16 e 36 threads no caso maior, o caminho
-puro fica entre 365 ms e 465 ms, e com 36 threads não fica melhor do que com 8. O F.fold
+puro fica entre 390 ms e 448 ms, e com 36 threads não fica melhor do que com 8. O F.fold
 não escala com lote 1, e é essa a razão de o kernel existir.
 
 O benchmark roda cada caso duas vezes, uma com o acelerador e outra com ele desligado, e
@@ -124,30 +126,25 @@ qual binário está rodando.
 ## Onde isto se aplica hoje
 
 **Em CPU.** O acelerador só aceita tensor na CPU e devolve o resto ao torch, então numa GPU
-a biblioteca funciona e não acelera. Esse caminho nunca executou, nem na CI nem fora dela,
-então em CUDA trate o que está aqui como o caminho em torch puro: correto, e sem o ganho da
-tabela acima.
+a biblioteca funciona e não acelera. A CI não tem GPU e nenhum teste rodou em CUDA, então
+lá vale conferir a exatidão no seu dispositivo antes de contar com ela.
 
-**Em Linux e Windows x86-64**, o kernel Rust roda na CI a cada commit, e é onde os números
-desta página foram medidos. As wheels de macOS e aarch64 carregam o kernel, construído e com
-o conteúdo conferido, mas ele nunca foi executado em CI. Nessas duas vale conferir contra os
-seus próprios dados antes de confiar no ganho.
+**Em Linux e Windows x86-64**, o kernel Rust roda na CI a cada commit, e a tabela acima foi
+medida numa estação Windows. As wheels de macOS e aarch64 carregam o kernel, construído e
+com o conteúdo conferido, mas ele nunca foi executado em CI. Nessas duas, uma execução com
+PATCHCRAFT_ACCEL=0 ao lado da normal mostra se os dois caminhos concordam nos seus dados.
 
 **Antes da 1.0**, e sem consumidor externo ainda, que é o critério que o projeto escolheu
 para se dizer estável. Na prática isso quer dizer que o dígito do meio ainda pode mexer no
 que sai, e que cada mudança entra no changelog com a medição atrás.
 
-Vale uma última: cada número desta página é medido, o que não é o mesmo que provado. É
-razoável supor que exista um que eu ainda não medi.
-
-[IMAGEM: 3-mnist.png — legenda: um dígito do MNIST, a grade de patches, e um patch]
+[IMAGEM: 3-mnist.png, legenda: um dígito do MNIST, a grade de patches, e um patch]
 
 ## Prático
 
-Python 3.12 a 3.14, torch 2.6 ou mais novo, MIT, pré-1.0. São 1619 testes passando e 1656
-coletados, com CI em {Ubuntu, Windows} x {3.12, 3.13, 3.14} e um job acelerado nos dois
-sistemas. A superfície
-pública são 20 nomes, congelados por teste.
+Python 3.12 a 3.14, torch 2.6 ou mais novo, MIT, pré-1.0. A CI roda em {Ubuntu, Windows} x
+{3.12, 3.13, 3.14}, mais um job acelerado nos dois sistemas. A superfície pública são 20
+nomes, congelados por teste.
 
 
 pip install patchcraft

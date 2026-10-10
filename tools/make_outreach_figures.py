@@ -274,6 +274,11 @@ def mnist_digit() -> torch.Tensor | None:
         from torchvision import datasets
 
         root = Path(os.environ.get("PATCHCRAFT_DATASETS", r"Z:\caches\datasets")) / "mnist"
+        if not root.is_absolute():
+            # The default is a Windows path; elsewhere it would become a
+            # literal directory inside the checkout.
+            print("  (set PATCHCRAFT_DATASETS for the MNIST figure; third figure skipped)")
+            return None
         ds = datasets.MNIST(root=str(root), train=False, download=True)
         arr = np.array(ds[0][0], dtype="float32") / 255.0
         return torch.from_numpy(arr)[None].repeat(3, 1, 1)
@@ -470,7 +475,7 @@ FIG = {
         ],
         "title_label": "=== TÍTULO (cole no campo Título) ===",
         "body_label": "=== CORPO (cole abaixo) ===",
-        "marker": "[IMAGEM: {}.png — legenda: {}]",
+        "marker": "[IMAGEM: {}.png, legenda: {}]",
         "alt_table": "a tabela de desempenho",
         "placements": [
             (
@@ -484,7 +489,7 @@ FIG = {
                 "cobertura, fold à mão e PatchCraft, em quatro strides",
             ),
             (
-                "razoável supor que exista um que eu ainda não medi.",
+                "cada mudança entra no changelog com a medição atrás.",
                 "3-mnist",
                 "um dígito do MNIST, a grade de patches, e um patch",
             ),
@@ -570,8 +575,9 @@ Um dígito do MNIST tem 28 por 28. Com patch 7 e stride 7, 28 dividido por 7 dá
 grade cobre o dígito sem sobra e sem sobreposição: toda contagem de cobertura vale 1, e a
 volta é bit a bit idêntica.
 
-É o caso mais comum e o único em que não há nada a decidir. Os três problemas acima aparecem
-quando o stride deixa de dividir o lado da imagem.
+É o caso mais comum. Mesmo nele o reshape intuitivo embaralha, porque isso não depende do
+stride. Os outros dois problemas aparecem fora dele: a sobreposição, quando o stride é menor
+que o patch, e a borda descoberta, quando o stride não divide o lado menos o patch.
 """,
         "md": """<!-- l10n: doc_id=patchcraft-outreach-pagina · lang=pt-BR · canonical -->
 **Português** · [English](page.md)
@@ -651,7 +657,9 @@ que lista as geometrias que fecham.
 ## Reprodução
 
 ```
-pip install patchcraft
+git clone https://github.com/LeoPR/PatchCraft
+cd PatchCraft
+pip install patchcraft torchvision
 python tools/make_outreach_figures.py
 ```
 
@@ -685,7 +693,7 @@ Repositório: https://github.com/LeoPR/PatchCraft
                 "coverage, the hand-written fold and PatchCraft, across four strides",
             ),
             (
-                "is reasonable to assume there is one I have not measured yet.",
+                "every change enters the changelog with the measurement behind it.",
                 "3-mnist",
                 "an MNIST digit, the patch grid, and one patch",
             ),
@@ -772,8 +780,10 @@ An MNIST digit is 28 by 28. At patch 7 and stride 7, 28 divided by 7 is exactly 
 grid covers the digit with nothing left over and no overlap: every coverage count is 1, and
 the round trip is bit for bit identical.
 
-It is the commonest case and the only one with nothing to decide. The three problems above
-appear when the stride stops dividing the side of the image.
+It is the commonest case. Even here the intuitive reshape scrambles, because that does not
+depend on the stride. The other two problems appear outside it: overlap, when the stride is
+smaller than the patch, and an uncovered border, when the stride does not divide the side
+minus the patch.
 """,
         "md": """<!-- l10n: doc_id=patchcraft-outreach-pagina · lang=en · translation_of=pagina.md · source_lang=pt-BR -->
 **English** · [Português](pagina.md)
@@ -854,7 +864,9 @@ the geometries that close.
 ## Reproduction
 
 ```
-pip install patchcraft
+git clone https://github.com/LeoPR/PatchCraft
+cd PatchCraft
+pip install patchcraft torchvision
 python tools/make_outreach_figures.py
 ```
 

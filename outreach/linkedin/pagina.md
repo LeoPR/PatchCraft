@@ -81,13 +81,16 @@ Um dígito do MNIST tem 28 por 28. Com patch 7 e stride 7, 28 dividido por 7 dá
 grade cobre o dígito sem sobra e sem sobreposição: toda contagem de cobertura vale 1, e a
 volta é bit a bit idêntica.
 
-É o caso mais comum e o único em que não há nada a decidir. Os três problemas acima aparecem
-quando o stride deixa de dividir o lado da imagem.
+É o caso mais comum. Mesmo nele o reshape intuitivo embaralha, porque isso não depende do
+stride. Os outros dois problemas aparecem fora dele: a sobreposição, quando o stride é menor
+que o patch, e a borda descoberta, quando o stride não divide o lado menos o patch.
 
 ## Reprodução
 
 ```
-pip install patchcraft
+git clone https://github.com/LeoPR/PatchCraft
+cd PatchCraft
+pip install patchcraft torchvision
 python tools/make_outreach_figures.py
 ```
 

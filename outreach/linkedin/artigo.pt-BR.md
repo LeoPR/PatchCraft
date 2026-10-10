@@ -57,8 +57,9 @@ nenhuma que volte exata. `python tools/compare_exactness_rules.py` reproduz a co
 
 É isso que decide qual das duas vale. Um contrato pode prometer de menos. Não
 pode prometer demais, porque quem confia nele não tem como perceber a diferença: fora da
-regra o erro por pixel cresce com a cobertura, e chega a 19 ULP em float32 (19 vezes o
-menor passo que o float32 consegue representar naquele valor) sem nada sinalizar.
+regra o erro por pixel cresce com a cobertura sem nada sinalizar. Na pior geometria medida,
+num pixel coberto 81 vezes, ele chega a 19 ULP em float32, 19 vezes o menor passo que o
+float32 consegue representar naquele valor, e o mesmo comando mede esse pior caso.
 
 ## Como o contrato é verificado
 
@@ -88,14 +89,14 @@ caminho em torch, que devolve os mesmos valores.
 
 | Geometria | Chamada | Torch puro | Acelerado | Ganho |
 |---|---|---|---|---|
-| 3x512x512, patch 32, stride 16 | `reconstruct` | 16,3 ms | 2,3 ms | 7,1x |
-| 3x1024x1024, patch 64, stride 32 | `reconstruct` | 53,5 ms | 7,8 ms | 6,9x |
-| 3x2048x2048, patch 64, stride 32 | `reconstruct` | 453,7 ms | 32,1 ms | 14,1x |
-| 3x2048x2048, patch 64, stride 32 | `stitch` hann | 460,9 ms | 37,9 ms | 12,2x |
+| 3x512x512, patch 32, stride 16 | `reconstruct` | 13,3 ms | 2,3 ms | 5,8x |
+| 3x1024x1024, patch 64, stride 32 | `reconstruct` | 73,3 ms | 7,2 ms | 10,1x |
+| 3x2048x2048, patch 64, stride 32 | `reconstruct` | 470,0 ms | 28,5 ms | 16,5x |
+| 3x2048x2048, patch 64, stride 32 | `stitch` hann | 453,3 ms | 31,0 ms | 14,6x |
 
 A objeção óbvia é que o kernel apenas usa mais núcleos do que o torch usa. Ela merece uma
 medição, não uma resposta. Forçando o torch a 4, 8, 16 e 36 threads no caso maior, o caminho
-puro fica entre 365 ms e 465 ms, e com 36 threads não fica melhor do que com 8. O `F.fold`
+puro fica entre 390 ms e 448 ms, e com 36 threads não fica melhor do que com 8. O `F.fold`
 não escala com lote 1, e é essa a razão de o kernel existir.
 
 O benchmark roda cada caso duas vezes, uma com o acelerador e outra com ele desligado, e
@@ -111,28 +112,23 @@ qual binário está rodando.
 ## Onde isto se aplica hoje
 
 **Em CPU.** O acelerador só aceita tensor na CPU e devolve o resto ao torch, então numa GPU
-a biblioteca funciona e não acelera. Esse caminho nunca executou, nem na CI nem fora dela,
-então em CUDA trate o que está aqui como o caminho em torch puro: correto, e sem o ganho da
-tabela acima.
+a biblioteca funciona e não acelera. A CI não tem GPU e nenhum teste rodou em CUDA, então
+lá vale conferir a exatidão no seu dispositivo antes de contar com ela.
 
-**Em Linux e Windows x86-64**, o kernel Rust roda na CI a cada commit, e é onde os números
-desta página foram medidos. As wheels de macOS e aarch64 carregam o kernel, construído e com
-o conteúdo conferido, mas ele nunca foi executado em CI. Nessas duas vale conferir contra os
-seus próprios dados antes de confiar no ganho.
+**Em Linux e Windows x86-64**, o kernel Rust roda na CI a cada commit, e a tabela acima foi
+medida numa estação Windows. As wheels de macOS e aarch64 carregam o kernel, construído e
+com o conteúdo conferido, mas ele nunca foi executado em CI. Nessas duas, uma execução com
+`PATCHCRAFT_ACCEL=0` ao lado da normal mostra se os dois caminhos concordam nos seus dados.
 
 **Antes da 1.0**, e sem consumidor externo ainda, que é o critério que o projeto escolheu
 para se dizer estável. Na prática isso quer dizer que o dígito do meio ainda pode mexer no
 que sai, e que cada mudança entra no changelog com a medição atrás.
 
-Vale uma última: cada número desta página é medido, o que não é o mesmo que provado. É
-razoável supor que exista um que eu ainda não medi.
-
 ## Prático
 
-Python 3.12 a 3.14, torch 2.6 ou mais novo, MIT, pré-1.0. São 1619 testes passando e 1656
-coletados, com CI em {Ubuntu, Windows} x {3.12, 3.13, 3.14} e um job acelerado nos dois
-sistemas. A superfície
-pública são 20 nomes, congelados por teste.
+Python 3.12 a 3.14, torch 2.6 ou mais novo, MIT, pré-1.0. A CI roda em {Ubuntu, Windows} x
+{3.12, 3.13, 3.14}, mais um job acelerado nos dois sistemas. A superfície pública são 20
+nomes, congelados por teste.
 
 ```
 pip install patchcraft

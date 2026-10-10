@@ -68,6 +68,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   returned values in eager mode. Under the uniform window at `stride ==
   patch_size`, derivatives pass a `-0.0` or a signaling NaN through unchanged
   and `torch.compile` folds the `+ 0.0` away; the code comment now says so.
+- **Documentation that said more than the code does.** GUIDE called hann the
+  cheapest window, where on an overlapping grid the three cost the same; GUIDE
+  and the PyPI page said `extract` hands every tensor to `F.unfold`, where only
+  an integer one goes there; PERFORMANCE said 25 runs where the benchmark
+  takes 15; GUIDE's two bound figures now read as the measured misses inside
+  the `(k+1)·eps·|v|` bound, with the shape of the fp16 example stated.
+  FOCO-1.0 freezes values rather than bits, the bound rather than "1 ULP",
+  and 20 names. CONTRIBUTING and AGENTS name the three version strings a
+  release bumps, STATUS among them. The CITATION abstract no longer carries
+  development history, and the BibTeX author reads `Marques de Souza`.
+- `tools/compare_exactness_rules.py` also reports the worst miss outside the
+  rule: 19.0 ULP in float32, at `(h, w, ph, pw, sh, sw) = (18, 23, 9, 9, 1,
+  1)`, on a pixel covered 81 times. CI's ruff step checks `tools/` as well.
+- Outreach: a news source dated 2026-10-10 carries the 0.5.5 table, and the
+  2026-09-04 one stays as the record of 0.5.4. The articles follow it, scope
+  the 19 ULP figure to the geometry that produced it, and say where each path
+  was executed instead of calling the GPU path correct. The post no longer
+  says `extract` validates the geometry, the MNIST page states when each of
+  the three problems appears, and every reproduction block clones the
+  repository, since the wheel carries neither `tools/` nor `tests/`.
 
 ## [0.5.5] - 2026-09-26
 

@@ -58,8 +58,9 @@ tensor, bit for bit.
 > power of two. Outside that, the per-pixel error is bounded by (k+1)·eps·|v|, with k
 > that pixel's coverage count.
 
-There is one reason for it: dividing a float by a power of two is the one division that
-never rounds. stride == patch_size always satisfies it, because every count is 1.
+In a legal geometry that means every count is 1, 2 or 4, and for those counts both steps
+are exact: adding two or four copies of a value never rounds, and neither does dividing by 2
+or 4. stride == patch_size always satisfies it, because every count is 1.
 
 What makes this a contract rather than a promise is the second half: the condition is
 computed from the geometry alone, without running anything. The caller knows which regime
@@ -73,9 +74,10 @@ back exact. python tools/compare_exactness_rules.py reproduces the count.
 
 That is what settles which of the two is worth having. A contract may
 under-promise. It may not over-promise, because whoever trusts it has no way to notice the
-difference: outside the rule the per-pixel error grows with the coverage and reaches 19 ULP
-in float32 (19 times the smallest step float32 can represent at that value) with nothing to
-signal it.
+difference: outside the rule the per-pixel error grows with the coverage with nothing to
+signal it. On the worst geometry measured, on a pixel covered 81 times, it reaches 19 ULP in
+float32, 19 times the smallest step float32 can represent at that value, and the same
+command measures that worst case.
 
 ## How the contract is verified
 
@@ -109,7 +111,7 @@ which returns the same values.
 
 The obvious objection is that the kernel simply uses more cores than torch does. That
 deserves a measurement rather than an answer. Forcing torch to 4, 8, 16 and 36 threads on
-the largest case, the pure path lands between 365 ms and 465 ms, and 36 threads is no better
+the largest case, the pure path lands between 390 ms and 448 ms, and 36 threads is no better
 than 8. F.fold does not scale at batch size 1, and that is why the kernel exists.
 
 The benchmark runs each case twice, once with the accelerator and once with it disabled, and
@@ -125,30 +127,26 @@ running.
 ## Where this applies today
 
 **On CPU.** The accelerator only takes CPU tensors and hands everything else back to torch,
-so on a GPU the library works and does not accelerate. That path has never executed, in CI
-or anywhere else, so under CUDA treat what is here as the pure torch path: correct, without
-the gain in the table above.
+so on a GPU the library works and does not accelerate. CI has no GPU and no test has run
+under CUDA, so there it is worth checking exactness on your device before relying on it.
 
-**On Linux and Windows x86-64**, the Rust kernel runs in CI on every commit, and that is
-where the numbers on this page were measured. The macOS and aarch64 wheels carry the kernel,
-built and with their contents checked, but it has never been executed in CI. On those two it
-is worth checking against your own data before trusting the speedup.
+**On Linux and Windows x86-64**, the Rust kernel runs in CI on every commit, and the table
+above was measured on a Windows workstation. The macOS and aarch64 wheels carry the kernel,
+built and with their contents checked, but it has never been executed in CI. On those two,
+one run with PATCHCRAFT_ACCEL=0 beside the normal one shows whether the two paths agree on
+your data.
 
 **Before 1.0**, and with no external consumer yet, which is the criterion the project chose
 for calling its shape settled. In practice that means the middle digit can still move the
 output, and that every change enters the changelog with the measurement behind it.
 
-One last thing: every number on this page is measured, which is not the same as proven. It
-is reasonable to assume there is one I have not measured yet.
-
 [IMAGE: 3-mnist.png - caption: an MNIST digit, the patch grid, and one patch]
 
 ## Practical
 
-Python 3.12 to 3.14, torch 2.6 or newer, MIT, pre-1.0. 1619 tests pass and 1656 are
-collected, with CI on {Ubuntu, Windows} x {3.12, 3.13, 3.14} plus an accelerated job on
-both systems. The public
-surface is 20 names, frozen by test.
+Python 3.12 to 3.14, torch 2.6 or newer, MIT, pre-1.0. CI runs on {Ubuntu, Windows} x
+{3.12, 3.13, 3.14}, plus an accelerated job on both systems. The public surface is 20 names,
+frozen by test.
 
 
 pip install patchcraft

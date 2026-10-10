@@ -7,7 +7,9 @@ both against the ground truth, which is the round trip itself on seeded random
 full-mantissa float32 data, over every geometry in the space that
 tests/test_exactness.py enumerates, and reports how often each rule promises
 exactness it does not deliver, and how often it withholds a promise it could
-have made.
+have made. It then reports the worst miss outside the rule in ULP of the
+pixel's own value, over the geometries where coverage reaches 36 or more,
+which is where the bound (k+1)*eps*|v| is largest.
 
     python tools/compare_exactness_rules.py
 
@@ -45,6 +47,31 @@ def exact_on_every_seed(g: tuple[int, int, int, int, int, int]) -> bool:
     return True
 
 
+def worst_ulp(min_count: int = 36) -> tuple[float, tuple[int, ...], int]:
+    """Largest |out - img| / ulp(img) over the high-coverage geometries."""
+    worst, where, at_k = 0.0, (), 0
+    for g in _SPACE:
+        counts = coverage_counts(*g)
+        if counts.max() < min_count:
+            continue
+        h, w, ph, pw, sh, sw = g
+        for seed in SEEDS:
+            img = rand_image(1, h, w, torch.float32, seed)
+            out = reconstruct(
+                extract(img, patch_size=(ph, pw), stride=(sh, sw)),
+                image_shape=img.shape,
+                stride=(sh, sw),
+            )
+            ulp = torch.nextafter(img.abs(), torch.tensor(float("inf"))) - img.abs()
+            ratio = ((out - img).abs() / ulp)[0]
+            val = float(ratio.max())
+            if val > worst:
+                idx = int(ratio.argmax())
+                worst, where = val, g
+                at_k = int(counts.flat[idx])
+    return worst, where, at_k
+
+
 def main() -> None:
     start = time.perf_counter()
     over = {"power of two": 0, "k_max <= 4": 0}
@@ -70,6 +97,9 @@ def main() -> None:
             f"  {rule:>12}: promises exact and is not {over[rule]:>6,}"
             f"   exact without being promised {under[rule]:>6,}"
         )
+    ulps, where, k = worst_ulp()
+    print(f"worst miss outside the rule: {ulps:.1f} ULP, at (h, w, ph, pw, sh, sw) = {where}, "
+          f"on a pixel covered {k} times")
     print(f"{time.perf_counter() - start:.0f} s")
 
 
