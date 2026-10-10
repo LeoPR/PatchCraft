@@ -156,6 +156,25 @@ Visualizing the three 2-D kernels at `patch_size=4` (`+` = full weight, `X` = hi
 
 **Design decision.** `patchcraft.stitch(patches, image_shape, stride, *, weight="uniform"|"hann"|"gaussian", dilation=1) -> Tensor[C, H, W]` in `src/patchcraft/stitch.py`. Lives next to `reconstruct`; uses the same `F.fold` geometry; shares the same rejections (`dilation != 1`, `stride > patch_size`, ndim check, grid-consistency check). Adds: float-only patches, weight-kind validation. Output dtype and device preserved. The `weight="uniform"` path is mathematically equivalent to `reconstruct` and inherits the same count-map rule (bit-exact when every count is a power of two, per-pixel error ≤ `(k+1)·eps·|v|` otherwise; pinned by the two-half falsification suite in `tests/test_exactness.py`).
 
+## 2.6 The operator behind `reconstruct` and `stitch`
+
+**Topic.** §2 and §2.5 describe the two functions by what they compute at each pixel. The same computation has a standard name in linear algebra, and the name says what the functions do with patches that have been modified, which is what they receive most of the time.
+
+**`extract` is a selection matrix.** Flatten the image to a vector `x` of length `C·H·W` and the patch stack to a vector of length `L·C·ph·pw`. Then `extract(x) = U x`, where every row of `U` holds a single 1, in the column of the pixel that entry copies. Nothing is computed, only copied, so any pointwise operation `f` (a quantization, a gamma curve, a global threshold) commutes with it: `extract(f(x)) = f(extract(x))`, bit for bit.
+
+**The fold is its transpose.** `Uᵀ P` adds every patch value back into the pixel it came from, which is what `F.fold` and the native kernel do. Two consequences follow. The gradient of `extract` is the fold and the gradient of the fold is `extract`, which is how autograd differentiates both. And `UᵀU` is diagonal, with the count map `K` on the diagonal, because the entry for a pixel counts the patches that copied it. On a regular grid `K` is the outer product of two per-axis counts, which is why §2 computes it in closed form.
+
+**`reconstruct` is the least-squares inverse.** Coverage validation guarantees every count is at least 1, so `UᵀU` is invertible and `reconstruct(P) = (UᵀU)⁻¹ Uᵀ P`, the Moore-Penrose pseudo-inverse of `U` applied to `P`. For patches that came from `extract`, `P = U x` and the result is `x`: that is the round trip of §2, and whether it is exact in floating point is §9.2's rule. For any other patch stack the result is the image that minimises `‖extract(x) − P‖²`, which at each pixel is the mean of the values the covering patches assign to it. Uniform averaging is therefore not an approximation picked for convenience; it is the least-squares answer.
+
+**`stitch` is the weighted least-squares inverse.** Let `W` be the diagonal matrix that gives every patch entry its window weight `w(i, j)`. Then `stitch(P) = (UᵀW U)⁻¹ Uᵀ W P`, the image that minimises `Σ w(i, j)·(extract(x) − P)²`, which is the per-pixel weighted mean of §2.5. `UᵀW U` is the denominator of §2.5, and the coverage guard together with a strictly positive window is exactly the condition that it be invertible. This is the weighted overlap-add that inverts a short-time Fourier transform, whose least-squares form is due to Griffin and Lim (1984) and whose invertibility condition is called NOLA, nonzero overlap-add (`scipy.signal.check_NOLA` tests it). It is also the aggregation step of patch-based denoisers, which estimate every patch and then average the overlaps (Elad and Aharon 2006; BM3D, Dabov et al. 2007).
+
+**What does not commute, and what to do instead.** Two kinds of per-patch processing do not pass through `U` the way a pointwise operation does.
+
+- A filter with a footprint of radius `r`, such as a blur or any convolution kernel, applied to a patch meets an edge where the image has neighbours, so it is wrong within `r` of every patch boundary. Tiles that carry a halo of `r` pixels on each side, filtered without padding, give back the whole-image filter: the overlap-save method of block convolution. [GUIDE §5](GUIDE.md#5-seams-reconstruct-against-stitch-measured) measures it.
+- A decision that depends on the patch, such as a threshold taken from the patch's own statistics or a per-patch palette, can give a shared pixel different values in different patches, and their mean lies between them, outside the set of values the decision produces. [GUIDE §2](GUIDE.md#2-the-patch-stack-and-the-count-map) measures it. Without overlap there is nothing to average and the values survive.
+
+**Pinned by** `tests/test_operator.py`: the adjoint identity, `UᵀU = diag(K)`, the zero gradient of both least-squares objectives at the output of `reconstruct` and of `stitch` (three windows, both code paths), and the three recipes GUIDE builds on this section.
+
 ## 3. LR ↔ HR pairing
 
 **Topic.** Given a scale factor `r` and LR/HR shapes related by `HR = r · LR`, define patch sizes and strides on both sides so that the *k*-th LR patch corresponds to the *k*-th HR patch (same `k`). Invariant:

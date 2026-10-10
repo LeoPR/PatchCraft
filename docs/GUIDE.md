@@ -273,6 +273,40 @@ Corners are covered once, edges twice and the interior four times. When `stride 
 
 Which values appear in this map is what decides whether the round trip comes back bit for bit, and specifically whether every one of them is a power of two. That is the subject of [section 4](#4-when-the-round-trip-is-bit-for-bit). The math behind the fold and the division is in [THEORY.md](THEORY.md) §2.
 
+### What `reconstruct` returns when the patches disagree
+
+`reconstruct` returns, at every pixel, the mean of what the covering patches say about it. Patches straight from `extract` all say the same thing, and the mean is the pixel. Patches that disagree get the least-squares answer, which [THEORY.md](THEORY.md) §2.6 derives, and that answer is still a mean, so it lands between the values it averages.
+
+```python
+import torch
+from patchcraft import extract, reconstruct
+
+torch.manual_seed(0)
+image = torch.rand(1, 16, 16)
+
+for stride in (4, 2):
+    patches = extract(image, patch_size=4, stride=stride)
+    threshold = patches.mean(dim=(1, 2, 3), keepdim=True)   # each patch decides on its own
+    binary = (patches > threshold).float()
+    back = reconstruct(binary, image.shape, stride=stride)
+    print(f"stride {stride}: values in the result {sorted(back.unique().tolist())}")
+
+global_first = extract((image > 0.5).float(), patch_size=4, stride=2)
+global_after = (extract(image, patch_size=4, stride=2) > 0.5).float()
+print("one threshold for the whole image, before or after cutting:",
+      torch.equal(global_first, global_after))
+```
+
+```
+stride 4: values in the result [0.0, 1.0]
+stride 2: values in the result [0.0, 0.25, 0.5, 0.75, 1.0]
+one threshold for the whole image, before or after cutting: True
+```
+
+That matters when each patch makes its own discrete decision. Above, every patch binarizes against its own mean. Without overlap each pixel gets one decision and the result stays in {0, 1}; at stride 2 a pixel covered by four patches can get two votes each way and comes back 0.5. A per-patch palette, a per-patch Otsu threshold or any other per-patch quantizer behaves the same.
+
+There are three ways out, depending on what you need. Decide once for the whole image, before cutting, since a pointwise operation passes through `extract` unchanged, which is the last line above. Cut without overlap, so that nothing is averaged. Or keep the overlap and decide again after `reconstruct`, for instance by thresholding the mean at 0.5, which is a majority vote with the ties left to you.
+
 ## 3. Dtypes and files
 
 ### Float tensors only
@@ -611,6 +645,46 @@ Read the two rows carefully, because the conclusion reverses between them. On an
 
 One independent level per patch, which is the first row, is what a real model's disagreement actually looks like, and every other measurement in this section uses it. So if you build your own seam benchmark, check what your synthetic error does across neighbouring patches before you trust the number it gives you.
 
+### A filter that needs its neighbours: tiles with a halo
+
+Blending hides the seams a model creates. A fixed filter, such as a blur or any convolution kernel, should not create them in the first place, and with the right geometry it does not.
+
+```python
+import torch
+import torch.nn.functional as F
+from patchcraft import extract, reconstruct
+
+torch.manual_seed(0)
+image = torch.rand(1, 64, 64)
+r, tile = 2, 16                                     # a 5x5 box blur, 16x16 tiles
+kernel = torch.ones(1, 1, 2 * r + 1, 2 * r + 1) / (2 * r + 1) ** 2
+
+padded = F.pad(image.unsqueeze(0), (r, r, r, r), mode="reflect")[0]
+whole = F.conv2d(padded.unsqueeze(0), kernel)[0]    # the blur of the whole image
+
+# Without a halo: every tile is padded on its own, as if it were the whole image.
+tiles = extract(image, patch_size=tile, stride=tile)
+blurred = F.conv2d(F.pad(tiles, (r, r, r, r), mode="reflect"), kernel)
+no_halo = reconstruct(blurred, image.shape, stride=tile)
+
+# With a halo: tiles of tile + 2r at stride tile, blurred without padding.
+tiles = extract(padded, patch_size=tile + 2 * r, stride=tile)
+halo = reconstruct(F.conv2d(tiles, kernel), image.shape, stride=tile)
+
+print("no halo: max |difference| from the whole-image blur:",
+      round((no_halo - whole).abs().max().item(), 4))
+print(f"halo of {r}: bit-identical to the whole-image blur:", torch.equal(halo, whole))
+```
+
+```
+no halo: max |difference| from the whole-image blur: 0.2448
+halo of 2: bit-identical to the whole-image blur: True
+```
+
+Without a halo, each tile meets an edge where the image goes on, and the blur there is computed from reflected pixels instead of the real neighbours, so it is wrong within `r` of every tile boundary. With a halo, each tile carries `r` extra pixels on every side, the convolution runs without padding and returns exactly the 16×16 centre, and `reconstruct`, at `stride == patch_size`, only puts the centres side by side. This is the overlap-save method of block convolution, and it is why nothing needed blending.
+
+The tiles still have to cover the padded image exactly, which here means the image side is a multiple of the tile; [section 6](#6-planning-the-geometry-before-you-allocate) shows how to pad when it is not. The equality is bit for bit in this run, but convolution chooses its own summation order by input size, so `tests/test_operator.py` asserts agreement to 1e-6 rather than bit equality. A model whose footprint you know works the same way, with its receptive field as the halo. When the footprint is unbounded no halo is big enough, and blending with `stitch` is the remedy.
+
 ## 6. Planning the geometry before you allocate
 
 `reconstruct` and `stitch` both require exact coverage, so the legal geometries are worth knowing before you extract anything at all. `tilings` enumerates them from the shape alone and returns a list of `TilingSpec`.
@@ -640,7 +714,7 @@ Nothing is read and nothing is allocated here. Enumeration is arithmetic on the 
 
 The obvious geometry for an HD frame, which is 256 pixel patches at 50 percent overlap, is not legal. Seven rows of stride 128 reach pixel 1024 and the frame is 1080 tall, so `reconstruct` refuses it exactly as it refused the geometry in [section 1](#1-why-not-unfold-and-fold-directly).
 
-The recovery is a filter over the enumeration rather than padding, because padding would synthesize pixels you never had.
+One recovery is a filter over the enumeration, which keeps every pixel of every patch real. The other is padding, which keeps the geometry you wanted, at a cost the next subsection measures.
 
 ```python
 from patchcraft import num_patches, tilings
@@ -666,7 +740,38 @@ the largest: TilingSpec(patch_size=(240, 240), stride=(120, 120), dilation=(1, 1
 
 240 at stride 120 is the largest 50 percent overlap tiling that covers a 1080p frame exactly. Because its stride is half its patch size, its count map holds only powers of two, so by the rule in [section 4](#4-when-the-round-trip-is-bit-for-bit) it also round-trips bit for bit.
 
-The alternatives to picking a legal geometry are cropping the frame to a covering extent or resizing it. Both of those are your call and not this library's, since both of them change the pixels the caller asked about.
+Cropping the frame to a covering extent or resizing it would also give a legal geometry, and both are your call rather than this library's, since both change the pixels you asked about.
+
+### Padding, and what it costs
+
+```python
+import torch
+import torch.nn.functional as F
+from patchcraft import extract, reconstruct
+
+torch.manual_seed(0)
+image = torch.rand(3, 1080, 1920)                  # an HD frame
+patch, stride = 256, 128
+
+pad_h = -(1080 - patch) % stride                   # rows to the next height the grid covers
+pad_w = -(1920 - patch) % stride
+padded = F.pad(image.unsqueeze(0), (0, pad_w, 0, pad_h), mode="reflect")[0]
+
+patches = extract(padded, patch_size=patch, stride=stride)
+back = reconstruct(patches, padded.shape, stride=stride)[:, :1080, :1920]
+
+print("padded to", tuple(padded.shape[1:]), "with", pad_h, "rows and", pad_w, "columns")
+print(len(patches), "patches; round trip bit-identical:", torch.equal(back, image))
+```
+
+```
+padded to (1152, 1920) with 72 rows and 0 columns
+112 patches; round trip bit-identical: True
+```
+
+Padding 72 rows at the bottom brings the frame to 1152 rows, which stride 128 covers exactly, and cropping after `reconstruct` returns the frame untouched. The round trip is bit for bit because stride 128 is half of 256, so every count is 1, 2 or 4 ([section 4](#4-when-the-round-trip-is-bit-for-bit)).
+
+The cost is in the patches, not in the output. The bottom row of patches holds 72 rows of reflected pixels that were never in the frame, a model sees them as if they were real, and whatever it returns for them is cut away. For a convolutional model that is what already happens at every image border. For anything that pools statistics over a patch it shifts those statistics, and then the legal geometry above is the safer route. The padding mode is yours: `reflect` keeps edges continuous, `replicate` repeats the last row and `constant` writes a value you choose, all documented under [`torch.nn.functional.pad`](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.pad.html).
 
 ### The memory arithmetic
 
@@ -794,7 +899,7 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 **Before 1.0, and with no external consumer yet.** A real project consuming the published API is the gate [ROADMAP.md](ROADMAP.md) sets for calling the shape settled. Until then a new `0.y` may still change what comes out; pin `~=0.5.0` to take fixes only.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 1771 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 1818 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Where the evidence is thinner, this is what it means for you.
 

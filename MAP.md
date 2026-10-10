@@ -44,6 +44,7 @@ PatchCraft/
 ├── tests/ .................... the contract, executable
 │   ├── test_exactness.py ..... enumerates 126,736 geometries and tries to FALSIFY the predicate
 │   ├── test_reference.py ..... a naive loop the fast paths must agree with
+│   ├── test_operator.py ...... extract as a matrix U: the fold is U^T, reconstruct and stitch are least squares
 │   ├── test_public_api.py .... freezes the 20 names, their signatures and carrier fields
 │   └── _rng.py ............... audited data generation; integer ramps hid a real defect once
 │
@@ -83,6 +84,7 @@ PatchCraft/
 | **Work on it as an agent**, or learn what this repo insists on | [AGENTS.md](AGENTS.md) |
 | **Use it**: every argument, measured, with its printed output | [docs/GUIDE.md](docs/GUIDE.md) |
 | Know **when the round trip is exact**, as a rule I can evaluate myself | [docs/GUIDE.md §4](docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit), and [docs/ADR/0003](docs/ADR/0003-reversibility-classes.md) for the contract |
+| Know **what `reconstruct` and `stitch` compute** for patches a model changed, and how to filter or pad around them | [docs/THEORY.md §2.6](docs/THEORY.md), then [docs/GUIDE.md](docs/GUIDE.md) §2, §5 and §6 for the measured recipes |
 | Know **what each function accepts and rejects**, precisely | [docs/THEORY.md §9](docs/THEORY.md), which is the arbiter where documents disagree |
 | Know **whether this library is the right tool** | [docs/SCOPE.md](docs/SCOPE.md) |
 | Know **what the native accelerator is worth**, and re-measure it | [docs/PERFORMANCE.md](docs/PERFORMANCE.md), then `python tools/benchmark.py` |

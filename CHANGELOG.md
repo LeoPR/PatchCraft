@@ -14,6 +14,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the scripts that reproduce them, and checked references. It is not
   documentation of the library and does not ship: `MANIFEST.in` prunes it and
   `tools/check_dist.py` fails a release that carries it.
+- **THEORY §2.6 states the operator behind `reconstruct` and `stitch`.**
+  `extract` is a selection matrix `U`, the fold is `Uᵀ`, `UᵀU` is the count
+  map, `reconstruct` is the least-squares inverse `(UᵀU)⁻¹Uᵀ` and `stitch` the
+  window-weighted one, the same weighted overlap-add that inverts an STFT.
+  `tests/test_operator.py` pins each statement on both code paths. GUIDE
+  gains three recipes built on it, run against 0.5.5: what averaging does to a
+  per-patch quantization (§2), a filter applied per tile with a halo, which
+  comes back bit-identical to the whole-image filter (§5), and the padded
+  round trip for a frame no tiling covers (§6). Section 6 used to rule
+  padding out because it puts pixels the frame never had into the edge
+  patches; it now offers it with that cost stated.
 
 ### Fixed
 
