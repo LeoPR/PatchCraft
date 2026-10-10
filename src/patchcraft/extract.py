@@ -1,4 +1,4 @@
-"""Patch extraction: strided-window fast path, F.unfold for dilation > 1.
+"""Patch extraction: a strided window view and one copy, for every dtype.
 
 Contract: docs/THEORY.md §1 and §9.1, docs/ADR/0001-patch-extraction-api.md,
 docs/ADR/0002-patchify-transform.md.
@@ -6,27 +6,8 @@ docs/ADR/0002-patchify-transform.md.
 from __future__ import annotations
 
 import torch
-import torch.nn.functional as F  # noqa: N812 (torch convention)
 
 __all__ = ["Patchify", "extract"]
-
-
-# Dtypes that F.unfold (im2col) supports on CPU in torch 2.x. The dilation == 1
-# fast path is restricted to these to keep the accept/reject contract unchanged:
-# Tensor.unfold views accept any dtype, but integer dtypes must still raise
-# from im2col (NotImplementedError, or RuntimeError on torch 2.6), so they fall
-# through to F.unfold as before.
-_FAST_PATH_DTYPES = frozenset(
-    {
-        torch.bool,
-        torch.float16,
-        torch.bfloat16,
-        torch.float32,
-        torch.float64,
-        torch.complex64,
-        torch.complex128,
-    }
-)
 
 
 def _as_pair(value: int | tuple[int, int], name: str) -> tuple[int, int]:
@@ -57,7 +38,9 @@ def extract(
     Returns `Tensor[L, C, ph, pw]` in row-major order. Patch `k` has its
     top-left at `(k // num_w * sh, k % num_w * sw)`. Truncation is the only
     boundary policy: if the geometry fits no patch, returns `Tensor[0, C, ph, pw]`.
-    Dtype and device of `image` are preserved.
+    Dtype and device of `image` are preserved. Every dtype is accepted, the
+    integer ones and bool included, at every dilation: extraction only copies,
+    so each patch holds the image's own values bit for bit.
     """
     if not isinstance(image, torch.Tensor):
         raise TypeError(f"image must be torch.Tensor, got {type(image).__name__}")
@@ -75,32 +58,28 @@ def extract(
     if h < eff_h or w < eff_w:
         return torch.empty(0, c, ph, pw, dtype=image.dtype, device=image.device)
 
-    if dh == 1 and dw == 1 and image.dtype in _FAST_PATH_DTYPES:
-        # Fast path: strided window view + one copy. Measured 13-21x faster
-        # than F.unfold (im2col) on CPU, bit-exact (same pixels, same order).
-        nh = (h - ph) // sh + 1
-        nw = (w - pw) // sw + 1
-        windows = image.unfold(1, ph, sh).unfold(2, pw, sw)  # (C, nh, nw, ph, pw)
-        # Exactly one copy in every case. A reshape would copy too, except on
-        # degenerate geometries (e.g. ph == pw == 1), where the permuted window
-        # is already contiguous and reshape would return a view aliasing the
-        # image, which the contract forbids. Cloning unconditionally covers
-        # that case without asking the tensor for its storage, which a
-        # torch.vmap batched tensor does not have.
-        return (
-            windows.permute(1, 2, 0, 3, 4)
-            .clone(memory_format=torch.contiguous_format)
-            .view(nh * nw, c, ph, pw)
-        )
-
-    unfolded = F.unfold(
-        image.unsqueeze(0),
-        kernel_size=(ph, pw),
-        dilation=(dh, dw),
-        stride=(sh, sw),
+    # A strided window view and exactly one copy, for every dtype and dilation.
+    # The window spans the dilated footprint and the slice keeps every d-th
+    # pixel of it. Against F.unfold (im2col), which this replaced: the same
+    # values bit for bit, 13 to 21 times faster at dilation 1 and 3.9 times at
+    # dilation 2 on 3x1024x1024, and a kernel for every dtype where im2col has
+    # none for integers.
+    nh = (h - eff_h) // sh + 1
+    nw = (w - eff_w) // sw + 1
+    windows = image.unfold(1, eff_h, sh).unfold(2, eff_w, sw)  # (C, nh, nw, eh, ew)
+    if dh > 1 or dw > 1:
+        windows = windows[..., ::dh, ::dw]                      # (C, nh, nw, ph, pw)
+    # Exactly one copy in every case. A reshape would copy too, except on
+    # degenerate geometries (e.g. ph == pw == 1), where the permuted window
+    # is already contiguous and reshape would return a view aliasing the
+    # image, which the contract forbids. Cloning unconditionally covers
+    # that case without asking the tensor for its storage, which a
+    # torch.vmap batched tensor does not have.
+    return (
+        windows.permute(1, 2, 0, 3, 4)
+        .clone(memory_format=torch.contiguous_format)
+        .view(nh * nw, c, ph, pw)
     )
-    return unfolded[0].view(c, ph, pw, -1).permute(3, 0, 1, 2).contiguous()
-
 
 class Patchify:
     """Callable that extracts patches with a frozen geometry.

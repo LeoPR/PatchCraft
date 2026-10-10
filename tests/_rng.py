@@ -52,9 +52,12 @@ def rand_image(c: int, h: int, w: int, dtype: torch.dtype, seed: int) -> torch.T
 
 def bit_equal(a: torch.Tensor, b: torch.Tensor) -> bool:
     """Bitwise equality via the integer view, which is NaN-safe unlike
-    ``torch.equal`` (which is not reflexive on NaN)."""
+    ``torch.equal`` (which is not reflexive on NaN). Integer and bool tensors
+    have no signed zero and no NaN, so for them equal values are equal bits."""
     if a.shape != b.shape or a.dtype != b.dtype:
         return False
+    if not a.is_floating_point():
+        return torch.equal(a, b)
     return bool((a.view(_INT_VIEW[a.dtype]) == b.view(_INT_VIEW[b.dtype])).all())
 
 

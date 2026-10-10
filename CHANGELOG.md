@@ -6,6 +6,35 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Integer images through `extract` and `reconstruct`, exact in every legal
+  geometry.** These are steps 1 and 2 of ADR 0004, shipped together as the ADR
+  requires. `extract` takes every dtype at every dilation, because it is now
+  one strided window view and one copy for all of them: bit-identical to the
+  `F.unfold` path it replaced for floats, and 3.9 times faster at dilation 2
+  on 3x1024x1024. `reconstruct` takes `uint8`, `int8`, `int16`, `int32` and
+  `int64` and returns each pixel's exact mean rounded half to even, the
+  rounding `resize` already applies to integers. For patches from `extract`
+  that mean is the pixel itself in every legal geometry, with no count-map
+  rule, since integer sums do not round. Nothing overflows: up to `int32` the
+  sum is taken in `int64`, and `int64` values are split by their pixel's count
+  into a quotient and a remainder before they are added. `bool` and complex
+  patches are refused with a `ValueError`, `stitch` stays float-only, and the
+  accelerator leaves integers to torch. `tests/test_integer.py` checks the
+  round trip over the sampled geometry space, all 126,736 geometries under
+  `PATCHCRAFT_SWEEP_FULL=1`, for `uint8` and `int64`, and the mean of
+  disagreeing patches against Python integers in every dtype; deliberately
+  breaking the rounding or the accumulator fails 63 and 90 of its cases.
+
+### Changed
+
+- THEORY §1 and SCOPE §2.1 described `extract` as built on `F.unfold`, which
+  had been true only at dilation above 1 since 0.3.0 and is not true at all
+  now. Both describe the strided view and the copy. THEORY §9.1 and §9.2,
+  GUIDE §3, USAGE §5, the three READMEs and ADR 0004 state the integer
+  contract.
+
 ## [0.5.6] - 2026-10-10
 
 A fix release. `torch.vmap` works again over `extract`, `reconstruct` and

@@ -233,8 +233,25 @@ value; sum is `k * value`; division by the count map gives back
 `stride == patch_size` always qualifies and `stride == patch_size / 2`
 does too (counts 1, 2, 4, as above). Otherwise the error is bounded
 per pixel by `(k+1)·eps·|v|`,
-whatever the dtype: the deciding axis is the geometry, not the
+whatever the float dtype: the deciding axis is the geometry, not the
 precision.
+
+Integer images have no such rule. Their sums do not round, so they come
+back exact in every legal geometry, here at patch 3 and stride 1, where
+counts reach 9:
+
+```python
+>>> as_int = img.to(torch.int16)   # the 28x28 image above, as integers
+>>> back = reconstruct(extract(as_int, patch_size=3, stride=1),
+...                    image_shape=as_int.shape, stride=1)
+>>> back.dtype, torch.equal(back, as_int)
+(torch.int16, True)
+
+```
+
+Patches that disagree get their exact mean rounded half to even, and
+`bool` patches are refused, since their mean is a vote
+([`THEORY.md`](THEORY.md) §9.2).
 
 When the patches disagree, which is what a model's output does, each pixel
 gets the mean of what its patches say. Below, nine overlapping patches cover

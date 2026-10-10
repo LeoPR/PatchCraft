@@ -41,9 +41,11 @@ external consumer, and Strata §9's default verdict all point the same way.
 
 **So this ADR asks nothing.** It records a design that is not built, the names precedent
 determines, the constraint that would make a preset safe, and the order. It stays `Proposed`
-because none of it is implemented, not because a decision is pending.
+because none of its parameters is implemented, not because a decision is pending.
 
-**Nothing here is implemented.**
+**What is implemented is the integer path without a knob:** steps 1 and 2 below shipped
+together on 2026-10-10, ahead of the 1.0 the table assigned them to, because the owner moved
+them forward. None of the parameters exists.
 
 ## 1. The names, determined by precedent
 
@@ -146,8 +148,8 @@ this heading, was posed on top of a table that had already answered it.
 |---|---|---|---|
 | 0. Record this ADR, and qualify the four copies of "widening the dtype does not help" | 0.5 to 1 day | no | before 1.0, and it is the only item that must be |
 | A. Fix three defects as bugs, no knob | done, 2026-09-03 | no signature change | done before 1.0, as planned |
-| 1. `extract` accepts the five integer dtypes, by adding them to the fast-path set | ~1 day | no | after 1.0, never alone |
-| 2. Exact integer `reconstruct`, unrestricted, `int32` accumulator, every legal geometry | 4 to 6 days | no signature change | after 1.0, shipped with step 1 as one 1.1 |
+| 1. `extract` accepts the five integer dtypes, by adding them to the fast-path set | ~1 day | no | **done, 2026-10-10**, with step 2: every dtype now takes one strided-view path, at every dilation |
+| 2. Exact integer `reconstruct`, unrestricted, `int32` accumulator, every legal geometry | 4 to 6 days | no signature change | **done, 2026-10-10**, with step 1: an `int64` sum up to `int32` and a quotient-and-remainder split for `int64`, so nothing overflows; disagreeing patches round half to even, as `resize` does |
 | 3. Byte-native `uint8` quotient-and-remainder path | 2 to 3 days | no | do not build yet: 1.7x over an `int32` accumulator, at the cost of a second, different predicate on the doc surface |
 | 4. `accum_dtype=` on `reconstruct` and `stitch` | 1 day, 2 alongside step 2 | yes, signature | after 1.0 |
 | 5. `rounding_mode=` on `stitch` | 1 day | yes, signature | after 1.0, and only if a real caller appears |
@@ -206,5 +208,7 @@ only if one appears do the knobs follow, and the preset last of all.
    once: 0.2.1 added the `reconstruct` integer guard, turning a raw `NotImplementedError`
    into a framed `ValueError`.
 4. Integers with `dilation > 1`: a framed `ValueError`, or torch's raw error in that corner?
+   *Answered by the implementation, 2026-10-10:* neither. `extract` no longer goes through
+   `F.unfold`, so a dilated integer extraction is the same strided copy as any other.
 5. CUDA. Everything here was measured on CPU, and the accelerator refuses non-CPU tensors
    outright. No accept text may say "integers work" without a device qualifier.

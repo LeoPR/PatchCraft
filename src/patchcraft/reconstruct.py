@@ -2,7 +2,8 @@
 
 Non-overlapping grids are a pure rearrangement; overlapping grids sum the
 patches with a closed-form O(H+W) count map, or via the optional native
-accelerator (built into this wheel where available) or F.fold.
+accelerator (built into this wheel where available) or F.fold. Integer patches
+take an exact integer mean instead.
 
 Contract: docs/THEORY.md §2 and §9.2.
 """
@@ -57,8 +58,16 @@ def reconstruct(
     ``image_shape`` inconsistent with the patch grid (channels mismatch or
     ``L`` does not match the geometry); ``patches.ndim != 4``.
 
-    Dtype and device of ``patches`` are preserved. Integer dtypes are
-    rejected (``F.fold`` is not implemented for them). Half-precision inputs
+    Integer patches (``uint8``, ``int8``, ``int16``, ``int32``, ``int64``) are
+    exact in every legal geometry, with no count-map rule: the covering values
+    of an unmodified pixel are all ``v``, their integer sum is ``k * v``, and
+    ``k * v`` divided by ``k`` is ``v``. Patches that disagree get the exact
+    mean rounded half to even, the rounding ``resize`` already applies to
+    integers, and no intermediate overflows, ``int64`` included. ``bool`` and
+    complex patches are rejected: a mean of booleans is a vote, which ADR 0004
+    leaves to a function of its own.
+
+    Dtype and device of ``patches`` are preserved. Half-precision inputs
     (``float16``, ``bfloat16``) accumulate internally in ``float32`` on
     overlapping grids, ``float16`` because its sum would overflow inside the
     fold and ``bfloat16`` for precision, and are cast back on return.
@@ -74,11 +83,12 @@ def reconstruct(
 
     n_patches, c, ph, pw = patches.shape
 
-    if not patches.is_floating_point():
+    if patches.dtype == torch.bool or patches.is_complex():
         raise ValueError(
-            f"reconstruct requires floating-point patches, got dtype={patches.dtype}. "
-            "F.fold is not implemented for integer dtypes; convert with "
-            "patches.float() first."
+            f"reconstruct takes floating-point or integer patches, got "
+            f"dtype={patches.dtype}. A mean of booleans is a vote rather than an "
+            "average, and complex patches have no rounding rule here; convert "
+            "with patches.float() first."
         )
 
     h, w, num_h, num_w = check_fold_geometry(
@@ -102,6 +112,9 @@ def reconstruct(
             .clone(memory_format=torch.contiguous_format)
             .view(c, h, w)
         )
+
+    if not patches.is_floating_point():
+        return _integer_mean(patches, c, h, w, ph, pw, sh, sw, num_h, num_w)
 
     # Half-precision accumulates in float32, for one reason in float16 and a
     # different one in bfloat16. float16 genuinely overflows: F.fold sums every
@@ -163,6 +176,60 @@ def reconstruct(
     # The numerator is a fresh tensor this function owns, so it is divided
     # in place rather than allocating a second (C, H, W) buffer.
     return numerator.div_(count).to(patches.dtype)
+
+
+def _integer_mean(
+    patches: torch.Tensor,
+    c: int,
+    h: int,
+    w: int,
+    ph: int,
+    pw: int,
+    sh: int,
+    sw: int,
+    num_h: int,
+    num_w: int,
+) -> torch.Tensor:
+    """Per-pixel mean of integer patches, rounded half to even, never overflowing.
+
+    Up to ``int32`` the covering values are summed in ``int64``, where any
+    number of 32-bit values a legal geometry can stack cannot overflow. An
+    ``int64`` sum could, so ``int64`` patches are divided first: each value is
+    split by its own pixel's count ``k`` into a quotient and a remainder, the
+    quotients sum to at most the largest input, the remainders to less than
+    ``k * k``, and the mean is rebuilt from the two. Either way the result is
+    ``floor(S / k)`` plus the half-to-even step, computed exactly in integers.
+    Out-of-place ``index_add`` keeps it usable under ``torch.vmap``.
+    """
+    device = patches.device
+    count = (
+        _axis_counts(h, sh, num_h, torch.int64, device).unsqueeze(1)
+        * _axis_counts(w, sw, num_w, torch.int64, device).unsqueeze(0)
+    ).view(1, h * w)
+    # The pixel each patch entry lands on, shared by every channel; the patch
+    # order is row-major over the grid, as extract produces it.
+    top = (torch.arange(num_h, device=device) * sh).view(num_h, 1, 1, 1)
+    left = (torch.arange(num_w, device=device) * sw).view(1, num_w, 1, 1)
+    rows = top + torch.arange(ph, device=device).view(1, 1, ph, 1)
+    cols = left + torch.arange(pw, device=device).view(1, 1, 1, pw)
+    index = (rows * w + cols).reshape(-1)
+    values = patches.permute(1, 0, 2, 3).reshape(c, -1).to(torch.int64)
+    zeros = torch.zeros(c, h * w, dtype=torch.int64, device=device)
+
+    if patches.dtype == torch.int64:
+        k = count.view(-1)[index].view(1, -1)
+        quotient = torch.div(values, k, rounding_mode="floor")
+        base = zeros.index_add(1, index, quotient)
+        rest = zeros.index_add(1, index, values - quotient * k)
+    else:
+        base = zeros
+        rest = zeros.index_add(1, index, values)
+
+    carry = torch.div(rest, count, rounding_mode="floor")
+    remainder = rest - carry * count                          # 0 <= remainder < k
+    mean = base + carry                                       # floor(S / k)
+    up = (2 * remainder > count) | ((2 * remainder == count) & (mean % 2 == 1))
+    return (mean + up.to(torch.int64)).view(c, h, w).to(patches.dtype)
 
 
 def _axis_counts(

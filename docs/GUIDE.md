@@ -328,38 +328,44 @@ There are three ways out, depending on what you need. Decide once for the whole 
 
 ## 3. Dtypes and files
 
-### Float tensors only
+### Integer images
 
-`extract` routes an integer tensor to `F.unfold`, which has no integer kernel, so an 8-bit image fails with torch's own message rather than with one of ours. Convert on the way in, which costs you one division.
+`extract` copies, so an 8-bit image goes in as it is and its patches are the image's own bytes. `reconstruct` takes them back in every legal geometry, and for integers there is no count-map rule: `k` copies of `v` sum to `k·v` exactly, and `k·v` divided by `k` is `v`. The example uses patch 3 at stride 1, whose counts of 3, 6 and 9 make the float round trip inexact ([section 4](#4-when-the-round-trip-is-bit-for-bit)).
 
 ```python
 import torch
-from patchcraft import extract, reconstruct
+from patchcraft import extract, reconstruct, stitch
 
-eight_bit = (torch.rand(1, 64, 64) * 255).to(torch.uint8)   # what read_image or PIL gives you
+torch.manual_seed(0)
+eight_bit = torch.randint(0, 256, (1, 64, 64), dtype=torch.uint8)   # what read_image or PIL gives you
+patches = extract(eight_bit, patch_size=3, stride=1)
+back = reconstruct(patches, eight_bit.shape, stride=1)
+print(tuple(patches.shape), patches.dtype, "| round trip exact:", torch.equal(back, eight_bit))
+
+as_float = eight_bit.float() / 255
+back_float = reconstruct(extract(as_float, patch_size=3, stride=1), as_float.shape, stride=1)
+print("the same geometry in float32, exact:", torch.equal(back_float, as_float))
+
+# Two 1x2 patches that disagree on the middle pixel of a 1x3 strip.
+two = torch.tensor([[[[10, 11]]], [[[12, 20]]]], dtype=torch.uint8)
+print("11 and 12 on the middle pixel:", reconstruct(two, (1, 1, 3), stride=1)[0, 0].tolist())
+
 try:
-    extract(eight_bit, patch_size=16, stride=16)
-except Exception as error:
-    print("extract:", type(error).__name__ + ":", error)
-
-patches = extract(eight_bit.float() / 255, patch_size=16, stride=16)
-print(tuple(patches.shape), patches.dtype)
-
-try:
-    reconstruct(patches.to(torch.uint8), (1, 64, 64), stride=16)
-except Exception as error:
-    print("reconstruct:", type(error).__name__ + ":", error)
+    stitch(patches, eight_bit.shape, stride=1, weight="hann")
+except ValueError as error:
+    print("stitch:", str(error).split(". ")[0])
 ```
 
 ```
-extract: NotImplementedError: "im2col_out_cpu" not implemented for 'Byte'
-(16, 1, 16, 16) torch.float32
-reconstruct: ValueError: reconstruct requires floating-point patches, got dtype=torch.uint8. F.fold is not implemented for integer dtypes; convert with patches.float() first.
+(3844, 1, 3, 3) torch.uint8 | round trip exact: True
+the same geometry in float32, exact: False
+11 and 12 on the middle pixel: [10, 12, 20]
+stitch: stitch requires floating-point patches, got dtype=torch.uint8
 ```
 
-The two messages are not equally good, and the asymmetry is a rough edge rather than a design. `reconstruct` and `stitch` carry a dtype guard that raises a framed `ValueError` naming the conversion, while `extract` still lets torch's raw `NotImplementedError` through.
+Patches that disagree, which is what a model returns, come back as the exact mean rounded half to even, the rounding `resize` already applies to integers: 11 and 12 give 12, and so would 12 and 13. Nothing overflows on the way, `int64` included, because up to `int32` the sum lives in `int64`, and `int64` values are divided by their pixel's count before they are added.
 
-The accepted dtypes are `float16`, `float32`, `float64` and `bfloat16`, and they are contract text in [THEORY.md](THEORY.md) §9.1 and §9.2.
+`stitch` stays float-only, since its windows are float weights and a weighted mean of integers would have to round somewhere you should choose. `reconstruct` refuses `bool`, because a mean of booleans is a vote. The accepted dtypes are contract text in [THEORY.md](THEORY.md) §9.1 and §9.2, measured on CPU.
 
 ### End to end from a file
 
@@ -959,7 +965,7 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 **Before 1.0, and with no external consumer yet.** A real project consuming the published API is the gate [ROADMAP.md](ROADMAP.md) sets for calling the shape settled. Until then a new `0.y` may still change what comes out; pin `~=0.5.0` to take fixes only.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 1818 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Those eight run the newest torch, and one more job runs the whole suite on both paths at the declared floor: Python 3.12, torch 2.6, numpy 1.26 and pillow 10.1, with the kernel built by Rust 1.82. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 1971 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Those eight run the newest torch, and one more job runs the whole suite on both paths at the declared floor: Python 3.12, torch 2.6, numpy 1.26 and pillow 10.1, with the kernel built by Rust 1.82. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Where the evidence is thinner, this is what it means for you.
 

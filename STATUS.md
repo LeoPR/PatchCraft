@@ -11,7 +11,7 @@ sdist, five `cp312-abi3` platform wheels carrying the Rust accelerator, and one
 universal `py3-none-any` wheel. There is no extra to enable and no second
 package.
 
-**1818 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
+**1971 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
 deselected, plus two full-sweep gates behind `PATCHCRAFT_SWEEP_FULL=1`
 that enumerate all 126,736 legal geometries. CI is green on
 {Ubuntu, Windows} x {3.12, 3.13, 3.14} on the pure path, plus a two-OS job that
@@ -24,7 +24,14 @@ pillow 10.1, Rust 1.82) that runs it on both paths.
 
 ## What is in flight
 
-**Nothing unreleased.** 0.5.6 is a fix release: `torch.vmap` over `extract`,
+**Integer images are on `main` and not on PyPI.** `extract` takes every dtype,
+and `reconstruct` takes the five integer dtypes and returns them exactly in
+every legal geometry, with disagreeing patches rounded half to even and no
+intermediate overflowing. They are ADR 0004's steps 1 and 2, shipped together.
+The full suite and the 126,736-geometry sweep, which now includes an integer
+round trip, pass on both paths. **Releasing it waits on the owner.**
+
+**0.5.6 is the release on PyPI.** It is a fix release: `torch.vmap` over `extract`,
 `reconstruct` and `stitch`, which the documentation offers as a way to batch,
 failed on most calls since 0.5.0 and works again, pinned by
 `tests/test_vmap.py`; and `tilings` returns `[]` for an image smaller than the
@@ -57,7 +64,9 @@ vocabulary its first draft proposed is deferred until a transform needs it.
 
 **ADR 0004 is `Proposed`, and asks nothing.** It records the precision and
 effort parameters as a design that is not built; the status reflects that none
-of it is implemented, not that a decision is pending. The one question it
+of the parameters is implemented, not that a decision is pending. Its steps 1
+and 2, integers through `extract` and `reconstruct` without a knob, are on
+`main` since 2026-10-10. The one question it
 appeared to hold, whether to add the knobs before the 1.0 freeze or after,
 rested on the premise that adding one afterwards is expensive. It is not: each
 is a keyword-only argument with a default, so adding one is additive and is a

@@ -159,11 +159,11 @@ class TestHalfPrecisionAccumulation:
         assert torch.isfinite(out).all()
         assert torch.allclose(out, img)
 
-    def test_int_dtype_rejected_with_clear_error(self) -> None:
-        """Integer dtypes fail inside F.fold with a raw NotImplementedError;
-        raise a clear ValueError instead (§9.1/§9.2: integers unsupported)."""
-        patches = torch.zeros(4, 1, 4, 4, dtype=torch.uint8)
-        with pytest.raises(ValueError, match="floating-point"):
+    def test_bool_dtype_rejected_with_clear_error(self) -> None:
+        """Integers are exact since 0.5.6 (tests/test_integer.py); bool is not
+        an integer here, because its mean is a vote (THEORY §9.2, ADR 0004)."""
+        patches = torch.zeros(4, 1, 4, 4, dtype=torch.bool)
+        with pytest.raises(ValueError, match="floating-point or integer"):
             reconstruct(patches, image_shape=(1, 8, 8), stride=4)
 
 

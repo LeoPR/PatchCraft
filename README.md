@@ -83,7 +83,7 @@ The two functions answer two different questions, so choosing between them is th
 
 | You want | Call | Because |
 |---|---|---|
-| The patches back as an image, untouched | `reconstruct` | Exact inverse of `extract` when every overlap count is a power of two, which is always true at `stride == patch_size` |
+| The patches back as an image, untouched | `reconstruct` | Exact inverse of `extract`: always for an integer image, and for a float image when every overlap count is a power of two, which is always true at `stride == patch_size` |
 | A model's output back as an image | `stitch` | Overlapping patches disagree, and the window hides the grid |
 
 ## Why not unfold and fold directly
@@ -140,7 +140,7 @@ PatchCraft does not help when you want a batched op over N images, a dataset or 
 
 ## When the round trip is bit for bit
 
-The round trip is exact when every value in the count map is a power of two, which in a legal geometry means every count is 1, 2 or 4: adding two or four copies of a value never rounds, and neither does dividing by 2 or 4. Outside that rule the per-pixel error is bounded by (k+1)·eps·|v|, with k the pixel's coverage count. A wider float buys a smaller miss and never exactness, so float64 is not a safe harbour. The axis that decides the answer is the geometry and not the dtype, and [the guide](docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit) has the sweep that measures it.
+The round trip of a float image is exact when every value in the count map is a power of two, which in a legal geometry means every count is 1, 2 or 4: adding two or four copies of a value never rounds, and neither does dividing by 2 or 4. Outside that rule the per-pixel error is bounded by (k+1)·eps·|v|, with k the pixel's coverage count. A wider float buys a smaller miss and never exactness, so float64 is not a safe harbour: among floats the axis that decides the answer is the geometry, and [the guide](docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit) has the sweep that measures it. An integer image comes back exact in every legal geometry, because integer sums do not round.
 
 ## Status
 

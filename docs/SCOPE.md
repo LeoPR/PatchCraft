@@ -57,13 +57,12 @@ inside the primitive.
 
 ### 2.1 Inside `extract`: torch already does it
 
-`extract(image, ...)` reduces to a single `torch.nn.functional.unfold`
-call. There is no Python loop over patches. The work happens in:
+`extract(image, ...)` reduces to one strided window view of the image and
+one copy. There is no Python loop over patches. The view costs nothing, and
+the copy is a single tensor operation over the whole `(C, H, W)` image:
 
-- **CPU**: `im2col` is a vectorized C++ implementation; uses SIMD where
-  applicable. Operates on the whole `(C, H, W)` tensor at once.
-- **CUDA**: a single `im2col` kernel launch. Patches are produced in
-  parallel across thousands of CUDA threads.
+- **CPU**: one vectorized copy kernel, which torch runs on its own thread pool.
+- **CUDA**: one copy kernel launch, parallel across the device.
 
 You get the parallelism for free; PatchCraft does not need to and does
 not try to.

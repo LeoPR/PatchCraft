@@ -33,17 +33,21 @@ class TestAccepts:
         out = extract(img, patch_size=4, stride=4)
         assert out.dtype == dtype
 
-    def test_dtype_uint8_unsupported_on_cpu(self) -> None:
-        """torch.nn.functional.unfold's im2col_cpu has no Byte impl (torch 2.x).
+    @pytest.mark.parametrize(
+        "dtype", [torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64]
+    )
+    def test_integer_dtypes_are_copied_exactly(self, dtype: torch.dtype) -> None:
+        """extract is a gather, so integers come out as the image's own values.
 
-        Documented limitation: caller must convert uint8 → float before extract.
-        Listed in THEORY.md §9.1. The exception is torch's own and its class
-        moved: torch 2.6 raises RuntimeError, newer releases its subclass
-        NotImplementedError, so the base class is what holds across the range.
-        """
-        img = torch.zeros(1, 8, 8, dtype=torch.uint8)
-        with pytest.raises(RuntimeError, match="im2col"):
-            extract(img, patch_size=4, stride=4)
+        Until 0.5.6 integers went to F.unfold, which has no integer kernel on
+        CPU (THEORY §9.1); the strided view that replaced it has one for every
+        dtype. Patch k is checked against a slice of the image."""
+        img = torch.arange(64, dtype=torch.int64).reshape(1, 8, 8).to(dtype)
+        patches = extract(img, patch_size=4, stride=2)
+        assert patches.dtype == dtype
+        for k in range(patches.shape[0]):
+            top, left = (k // 3) * 2, (k % 3) * 2
+            assert torch.equal(patches[k], img[:, top : top + 4, left : left + 4])
 
     def test_device_preserved_cpu(self) -> None:
         img = _ramp(1, 8, 8)

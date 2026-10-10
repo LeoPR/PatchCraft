@@ -69,7 +69,7 @@ blended = stitch(edited, image.shape, stride=16, weight="hann")
 assert blended.shape == image.shape                  # seams smoothed, geometry preserved
 ```
 
-PatchCraft accepts float tensors only. An 8-bit image has to become `image.float() / 255` before it reaches `extract`, because `extract` routes an integer tensor to `F.unfold`, and torch has no integer kernel there: it raises its own error, `"im2col_out_cpu" not implemented for 'Byte'`.
+An 8-bit image goes in as it is. `extract` copies, so its patches hold the image's own bytes, and `reconstruct` returns them exactly in every legal geometry, since `k` copies of `v` sum to `k·v` and divide back to `v`; patches that disagree come back as their exact mean rounded half to even. `stitch` stays float-only, because its windows are float weights.
 
 ## reconstruct or stitch
 
@@ -120,9 +120,9 @@ It helps when you tile one image for an inference pass too large to run in a sin
 
 ## When the round trip is bit for bit
 
-The round trip is exact when every value in the count map is a power of two. Reconstruction adds up the patches covering each pixel and divides by how many there were, and in a legal geometry a map of powers of two holds only the counts 1, 2 and 4, where both steps are exact: adding two or four copies of a value never rounds, and neither does dividing by 2 or 4.
+The round trip of a float image is exact when every value in the count map is a power of two. Reconstruction adds up the patches covering each pixel and divides by how many there were, and in a legal geometry a map of powers of two holds only the counts 1, 2 and 4, where both steps are exact: adding two or four copies of a value never rounds, and neither does dividing by 2 or 4.
 
-That makes the geometry the deciding axis rather than the dtype, so `float64` is not a safe harbour: outside the rule the per-pixel error is bounded by `(k+1)·eps·|v|`, with `k` the pixel's coverage count. A wider float buys a smaller miss and never exactness.
+That makes the geometry the deciding axis rather than the dtype, so `float64` is not a safe harbour: outside the rule the per-pixel error is bounded by `(k+1)·eps·|v|`, with `k` the pixel's coverage count. A wider float buys a smaller miss and never exactness. An integer image comes back exact in every legal geometry, because integer sums do not round.
 
 The everyday shorthand is that `stride == patch_size` and `stride == patch_size / 2` always satisfy the rule. Both are sufficient conditions rather than necessary ones, so a geometry outside them can still be exact, and the [guide](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md#4-when-the-round-trip-is-bit-for-bit) carries the sweep that measures it.
 
