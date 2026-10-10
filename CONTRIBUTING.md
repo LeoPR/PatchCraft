@@ -153,7 +153,7 @@ PatchCraft/
 │   ├── ISSUE_TEMPLATE/             four forms and a chooser; the required fields are what makes a report reproducible
 │   ├── PULL_REQUEST_TEMPLATE.md    asks whether a returned value moved, which decides the version bump
 │   └── workflows/
-│   ├── test.yml                    matrix CI on PRs/main, plus the accelerated job
+│   ├── test.yml                    matrix CI on PRs/main, plus the accelerated and floor jobs
 │   └── release.yml                 publishes to PyPI on vX.Y.Z tag push (Trusted Publishing)
 ├── src/patchcraft/                 library core, one-image-at-a-time primitives
 │   ├── __init__.py                 re-exports the full public API and the generated version

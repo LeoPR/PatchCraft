@@ -14,17 +14,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the scripts that reproduce them, and checked references. It is not
   documentation of the library and does not ship: `MANIFEST.in` prunes it and
   `tools/check_dist.py` fails a release that carries it.
-- **USAGE walks a 4×4 image through every call.** Its sections now show
-  the pixels, not only the shapes: the patches `extract` returns and their
-  order, where each patch lands in `reconstruct`, the per-pixel mean when
-  patches disagree, the step `uniform` leaves and the ramp `hann` and
-  `gaussian` make, an LR patch beside its HR patch in `pair`, a resize down
-  and back up, and the one patch `per_patch_mse` singles out. Every example
-  runs as a doctest. GUIDE §1 shows the uncovered band on a 5×5 count map, and
-  GUIDE §4 shows the count map beside the pixels that come back different.
-- GUIDE §4 still gave the old reason for the exactness rule, that division by
-  a power of two is exact; it now gives the corrected one, as the other pages
-  do since the entry below.
+- **CI tests the declared floor, not only the newest versions.** A new job
+  builds the extension with Rust 1.82 and runs the whole suite on both code
+  paths at Python 3.12, torch 2.6.0, numpy 1.26.0 and pillow 10.1.0, the
+  oldest versions `pyproject.toml` and `Cargo.toml` accept that install on
+  3.12; until now the floor was a claim no job exercised. The lock moves to
+  the newest runtime releases (torch 2.14.1, torchvision 0.29.1, numpy
+  2.5.4), so the other jobs test the top of the range; the development tools
+  stay pinned. The first run at the floor found one claim that held only at
+  the top: `extract` on an integer tensor raises torch's own error, which is a
+  `RuntimeError` at torch 2.6 and its subclass `NotImplementedError` in newer
+  releases, while the test, THEORY §9.1 and the PyPI page named the subclass.
+  They now name what holds across the range.
 - ADR 0005 is recorded in the ROADMAP as the 1.1 candidate, not scheduled.
 - ADR 0005 (`Proposed`) records how a grid that does not cover the image
   would be padded, borrowed rather than designed: kornia's auto-padding on the
@@ -73,6 +74,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **CI actions moved off Node 20**, which GitHub has deprecated and was
+  forcing onto Node 24: `actions/checkout` v5, `astral-sh/setup-uv` v7,
+  `actions/upload-artifact` v6, `actions/download-artifact` v7 and
+  `softprops/action-gh-release` v3, each the first major on Node 24 rather
+  than the newest. Every input the workflows pass exists in those versions.
+- **USAGE walks a 4×4 image through every call.** Its sections now show
+  the pixels, not only the shapes: the patches `extract` returns and their
+  order, where each patch lands in `reconstruct`, the per-pixel mean when
+  patches disagree, the step `uniform` leaves and the ramp `hann` and
+  `gaussian` make, an LR patch beside its HR patch in `pair`, a resize down
+  and back up, and the one patch `per_patch_mse` singles out. Every example
+  runs as a doctest. GUIDE §1 shows the uncovered band on a 5×5 count map, and
+  GUIDE §4 shows the count map beside the pixels that come back different.
+- GUIDE §4 still gave the old reason for the exactness rule, that division by
+  a power of two is exact; it now gives the corrected one, as the other pages
+  do since the entry below.
 - **The stated reason for the exactness rule is corrected.** The pages said the
   round trip is exact because dividing a float by a power of two never rounds.
   That leaves out the sum: k equal values added one at a time and divided by k

@@ -14,7 +14,8 @@ __all__ = ["Patchify", "extract"]
 # Dtypes that F.unfold (im2col) supports on CPU in torch 2.x. The dilation == 1
 # fast path is restricted to these to keep the accept/reject contract unchanged:
 # Tensor.unfold views accept any dtype, but integer dtypes must still raise
-# NotImplementedError from im2col, so they fall through to F.unfold as before.
+# from im2col (NotImplementedError, or RuntimeError on torch 2.6), so they fall
+# through to F.unfold as before.
 _FAST_PATH_DTYPES = frozenset(
     {
         torch.bool,

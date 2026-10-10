@@ -69,7 +69,7 @@ blended = stitch(edited, image.shape, stride=16, weight="hann")
 assert blended.shape == image.shape                  # seams smoothed, geometry preserved
 ```
 
-PatchCraft accepts float tensors only. An 8-bit image has to become `image.float() / 255` before it reaches `extract`, because `extract` routes an integer tensor to `F.unfold`, and torch has no integer kernel there: it raises `NotImplementedError: "im2col_out_cpu" not implemented for 'Byte'`.
+PatchCraft accepts float tensors only. An 8-bit image has to become `image.float() / 255` before it reaches `extract`, because `extract` routes an integer tensor to `F.unfold`, and torch has no integer kernel there: it raises its own error, `"im2col_out_cpu" not implemented for 'Byte'`.
 
 ## reconstruct or stitch
 

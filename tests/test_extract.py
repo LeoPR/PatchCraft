@@ -37,10 +37,12 @@ class TestAccepts:
         """torch.nn.functional.unfold's im2col_cpu has no Byte impl (torch 2.x).
 
         Documented limitation: caller must convert uint8 → float before extract.
-        Listed in THEORY.md §10.1.
+        Listed in THEORY.md §9.1. The exception is torch's own and its class
+        moved: torch 2.6 raises RuntimeError, newer releases its subclass
+        NotImplementedError, so the base class is what holds across the range.
         """
         img = torch.zeros(1, 8, 8, dtype=torch.uint8)
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(RuntimeError, match="im2col"):
             extract(img, patch_size=4, stride=4)
 
     def test_device_preserved_cpu(self) -> None:

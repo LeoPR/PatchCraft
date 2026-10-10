@@ -37,12 +37,12 @@ jobs:
       # are covered on every push to main by test.yml.
       PATCHCRAFT_PURE_PYTHON: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # setuptools-scm derives the version from the tag. A shallow
           # checkout hides it and the fallback is a silent 0.1.dev1.
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv python install
@@ -78,18 +78,18 @@ jobs:
     env:
       PATCHCRAFT_PURE_PYTHON: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # setuptools-scm derives the version from the tag. A shallow
           # checkout hides it and the fallback is a silent 0.1.dev1.
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
       - run: uv build
       - name: Inspect dist metadata
         run: |
           uv run --with twine twine check dist/*
           uv run python tools/check_dist.py dist --expect-version "${GITHUB_REF_NAME#v}" --require-universal
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: dist-pure
           path: dist/
@@ -112,7 +112,7 @@ jobs:
           - { os: macos-latest, name: macosx_arm64, archs: arm64 }
           - { os: macos-15-intel, name: macosx_x86_64, archs: x86_64 }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # setuptools-scm derives the version from the tag. A shallow
           # checkout hides it and the fallback is a silent 0.1.dev1.
@@ -138,7 +138,7 @@ jobs:
         shell: bash
         run: python tools/check_dist.py wheelhouse --expect-version "${GITHUB_REF_NAME#v}"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: native-${{ matrix.name }}
           path: wheelhouse/
@@ -153,8 +153,8 @@ jobs:
     permissions:
       id-token: write  # required for OIDC token exchange with PyPI
     steps:
-      - uses: actions/checkout@v4  # for tools/check_dist.py only
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v5  # for tools/check_dist.py only
+      - uses: actions/download-artifact@v7
         with:
           pattern: "{dist-pure,native-*}"
           path: dist
@@ -184,8 +184,8 @@ jobs:
     permissions:
       contents: write  # required to create a Release
     steps:
-      - uses: actions/checkout@v4  # for tools/check_dist.py only
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v5  # for tools/check_dist.py only
+      - uses: actions/download-artifact@v7
         with:
           pattern: "{dist-pure,native-*}"
           path: dist
@@ -194,7 +194,7 @@ jobs:
         id: ver
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
       - name: Create Release + attach assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: "PatchCraft ${{ github.ref_name }}"
           body: |

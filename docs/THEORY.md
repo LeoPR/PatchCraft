@@ -262,7 +262,7 @@ Esta seção consolida, por API, as condições que v0.1 deve **aceitar**, **rej
 **Aceita:**
 - `image` é `Tensor` 3D `(C, H, W)` com `C ≥ 1` arbitrário; dtype suportado por `torch.nn.functional.unfold` (todos os float: `float16/float32/float64/bfloat16`); CPU ou CUDA (preservados na saída).
 
-  Em CPU, **nenhum** dtype inteiro funciona: `im2col_out_cpu` não é implementado para `Byte`, `Int` nem `Long` (verificado em torch 2.13.0+cpu). Uma versão anterior desta seção dizia que só `uint8` era o problema; está errado. O caller converte pra float antes. `extract` não intercepta isso, então o erro que sobe é um `NotImplementedError` cru do torch, não um `ValueError` do PatchCraft.
+  Em CPU, **nenhum** dtype inteiro funciona: `im2col_out_cpu` não é implementado para `Byte`, `Int` nem `Long` (verificado em torch 2.13.0+cpu). Uma versão anterior desta seção dizia que só `uint8` era o problema; está errado. O caller converte pra float antes. `extract` não intercepta isso, então o erro que sobe é o do próprio torch, não um `ValueError` do PatchCraft: `NotImplementedError` nas versões recentes e `RuntimeError`, a classe-base dele, no torch 2.6.
 - `patch_size`, `stride`, `dilation` como `int` (quadrado) ou `(int, int)` com valores positivos.
 - Patch maior que imagem → retorna `Tensor[0, C, ph, pw]` (não levanta).
 - `stride > patch_size` (grid esparso com lacunas, válido para features que não fazem round-trip; ver §9.2 para a contrapartida em `reconstruct`).

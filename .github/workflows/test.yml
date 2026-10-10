@@ -30,13 +30,13 @@ jobs:
       # would silently stop covering the fallback that most platforms get.
       PATCHCRAFT_PURE_PYTHON: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # setuptools-scm needs the tags to derive a version.
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
@@ -73,13 +73,13 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # setuptools-scm needs the tags to derive a version.
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
@@ -104,3 +104,45 @@ jobs:
 
       - name: Pytest (accelerated mode)
         run: uv run pytest -m "not gpu"
+
+  test-floor:
+    # The declared floor, exercised. pyproject.toml accepts Python 3.12,
+    # torch 2.6, numpy 1.26 and pillow 10, and Cargo.toml accepts Rust 1.82;
+    # the jobs above test the locked, newest versions, so without this one the
+    # floor would only be a claim. Pillow 10.1 is the first 10.x with Python
+    # 3.12 wheels. The versions are pinned here, outside uv.lock, on purpose.
+    name: ubuntu-latest / py3.12 / floor (torch 2.6, numpy 1.26, pillow 10.1, Rust 1.82)
+    runs-on: ubuntu-latest
+    env:
+      PATCHCRAFT_REQUIRE_EXTENSION: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # setuptools-scm needs the tags to derive a version.
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install Rust at the declared minimum
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.82.0"
+
+      - name: Floor environment
+        run: |
+          uv venv --python 3.12
+          uv pip install --index-url https://download.pytorch.org/whl/cpu "torch==2.6.0" "torchvision==0.21.0"
+          uv pip install "numpy==1.26.0" "pillow==10.1.0" "pytest>=8" "zstandard>=0.22"
+          uv pip install --no-deps -e .
+
+      - name: Accelerator is built with the minimum Rust
+        run: .venv/bin/python -c "import patchcraft; assert patchcraft.accel_available()"
+
+      - name: Pytest at the floor, accelerated
+        run: .venv/bin/python -m pytest -m "not gpu"
+
+      - name: Pytest at the floor, pure torch
+        env:
+          PATCHCRAFT_ACCEL: "0"
+        run: .venv/bin/python -m pytest -m "not gpu"
