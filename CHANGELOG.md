@@ -21,8 +21,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   on more than 0.1 percent of its pixels outside the labels, if a caption no
   longer states a measured number, or if an image and the GUIDE stop linking
   to each other. Falsified: a 400-pixel change and a 1/255 shift across one
-  panel fail it, and one pixel off by 1/255 does not. It passes on both code
-  paths, at torch 2.6 with Pillow 10.1 and at torch 2.14 with Pillow 12.3.
+  panel fail it, and one pixel off by 1/255 does not. The test image is the
+  outreach one computed in float64 and put on the 8-bit grid, so that a
+  last-bit difference between CPUs, which a vectorized float32 `cos` may
+  produce, reaches no pixel. It passes on both code paths, at torch 2.6 with
+  Pillow 10.1 and at torch 2.14 with Pillow 12.3.
   The images add 263 KB to the sdist, which carries them because the suite
   it ships runs the check.
 

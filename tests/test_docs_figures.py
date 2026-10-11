@@ -11,6 +11,7 @@ change that moves a figure fails the suite, the way a stale line in
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -27,6 +28,13 @@ def test_guide_figures_match_a_fresh_render():
         errors="replace",
         cwd=TOOL.parent.parent,
     )
+    if result.returncode and os.environ.get("GITHUB_ACTIONS") == "true":
+        # Printed lines of this form become annotations on the run, which name
+        # the figure without opening the log.
+        lines = [line for line in result.stdout.splitlines() if line.startswith("PROBLEM")]
+        lines += result.stderr.strip().splitlines()[-1:]
+        for line in lines:
+            print(f"::error file=tools/make_guide_figures.py::{line}")
     assert result.returncode == 0, (
         "the GUIDE figures or their captions no longer match a fresh render:\n"
         f"{result.stdout[-4000:]}\n{result.stderr[-2000:]}"

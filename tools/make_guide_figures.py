@@ -224,7 +224,7 @@ def fig_patch_order(img: torch.Tensor) -> Figure:
 
 def fig_count_map(img: torch.Tensor) -> Figure:
     shape = tuple(img.shape)
-    _, nw = num_patches(shape, patch_size=32, stride=16)
+    nh, nw = num_patches(shape, patch_size=32, stride=16)
     counts = count_map(shape, 32, 16)
     assert sorted({int(v) for v in counts.unique()}) == [1, 2, 4]
     stack = extract(img, patch_size=32, stride=16)
@@ -249,13 +249,15 @@ def fig_count_map(img: torch.Tensor) -> Figure:
     corner = (slice(None), slice(0, 64), slice(0, 64))
     fig.panel(img[corner], (M + PANEL + GAP, TOP), 4, "the image, top-left corner")
     fig.panel(back[corner], (M + 2 * (PANEL + GAP), TOP), 4, "patches[0] set to white, reconstruct")
+    fig.claim(f"{nh}\u00d7{nw} grid")                 # the GUIDE's multiplication sign
     fig.claim("half")
     fig.claim("a quarter")
     return fig
 
 
 def fig_votes(img: torch.Tensor) -> Figure:
-    grey = img.mean(0, keepdim=True)
+    # float64, where the mean of a patch is exact and so independent of the summation order.
+    grey = img.double().mean(0, keepdim=True)
     per_patch = {}
     for s in (32, 16):
         p = extract(grey, patch_size=32, stride=s)
@@ -437,9 +439,27 @@ def fig_antialias() -> Figure:
     return fig
 
 
+def guide_image() -> torch.Tensor:
+    """The outreach test image on the 8-bit grid, as an image read from a file would be.
+
+    The outreach version is float32 built with a vectorized cos, whose last bit
+    may differ between CPUs. Here it is computed in float64 and rounded to
+    multiples of 1/255, so that no such difference reaches a pixel, and every
+    8-bit conversion below is exact.
+    """
+    previous = torch.get_default_dtype()
+    torch.set_default_dtype(torch.float64)            # test_image divides integers
+    try:
+        img = outreach.test_image().double()
+    finally:
+        torch.set_default_dtype(previous)
+    return ((img * 255).round() / 255).float()
+
+
 def build_all() -> list[Figure]:
     torch.set_num_threads(1)                           # reductions independent of the core count
-    img = outreach.test_image()
+    img = guide_image()
+    assert torch.equal(img, (img * 255).round() / 255)
     builders = [fig_silent, fig_patch_order, fig_count_map, fig_votes, fig_where_it_misses,
                 fig_windows, fig_halo, fig_pair]
     figures = []

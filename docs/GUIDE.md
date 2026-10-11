@@ -28,7 +28,7 @@ Because two defects wait there, both silent, and you meet them within the first 
 
 ![Three panels: a 128 by 128 test image with gradients, rings, a yellow bar and stripes; the same image after unfold and the intuitive reshape, which comes back as grey stripes; and a fold by hand at patch 32 and stride 20, with a black band along the right and bottom edges.](figures/1-silent.png)
 
-Both defects on a 128×128 test image. In the middle, the patches of the intuitive reshape put back where `extract`'s patches go: every value is still there, and 99.6 percent of the positions now hold a different one. On the right, a fold by hand at patch 32 and stride 20 leaves 3840 pixels black, 23.4 percent of the image. Neither raises an error.
+Both defects on a 128×128 test image. In the middle, the patches of the intuitive reshape put back where `extract`'s patches go: every value is still there, and 99.2 percent of the positions now hold a different one. On the right, a fold by hand at patch 32 and stride 20 leaves 3840 pixels black, 23.4 percent of the image. Neither raises an error.
 
 ### The reshape after `unfold` scrambles the pixels
 
@@ -304,7 +304,7 @@ Which values appear in this map is what decides whether the round trip comes bac
 
 ![Three panels: the count map of patch 32 at stride 16 on the test image, light at the corners, darker on the edges and darkest inside, with the four patches that meet at the top-left corner outlined; the top-left corner of the test image; and the same corner after patch 0 is set to white and the stack is reconstructed, where a white square is followed by paler squares.](figures/2-count-map.png)
 
-The same map for patch 32 at stride 16 on the test image, with the four patches that overlap at its corner outlined. On the right, patch 0, outlined in red, was set to white before `reconstruct`. The corner only patch 0 covers turns white, the two squares it shares with one other patch move half of the way to white, and the square it shares with three others moves a quarter of the way, because each pixel comes back as the mean of what its patches say.
+The same pattern for patch 32 at stride 16 on the test image, a 7×7 grid, with the four patches that overlap near its top-left corner outlined. On the right, patch 0, outlined in red, was set to white before `reconstruct`. The corner only patch 0 covers turns white, the two squares it shares with one other patch move half of the way to white, and the square it shares with three others moves a quarter of the way, because each pixel comes back as the mean of what its patches say.
 
 ### What `reconstruct` returns when the patches disagree
 
@@ -342,7 +342,7 @@ There are three ways out, depending on what you need. Decide once for the whole 
 
 ![Three black and white panels from the test image: a threshold per 32-pixel patch at stride 32, which stays black and white; the same at stride 16, which shows grey squares wherever the patches disagree; and one threshold for the whole image before cutting, black and white again.](figures/2-votes.png)
 
-The same experiment on the test image in grey, with 32-pixel patches, each thresholded against its own mean. At stride 32 every pixel gets one decision. At stride 16, 39.6 percent of the pixels come back at 0.25, 0.5 or 0.75, because their patches disagreed. Thresholding once before cutting, on the right, is the first way out.
+The same experiment on the test image in grey, with 32-pixel patches, each thresholded against its own mean. At stride 32 every pixel gets one decision. At stride 16, 39.5 percent of the pixels come back at 0.25, 0.5 or 0.75, because their patches disagreed. Thresholding once before cutting, on the right, is the first way out.
 
 ## 3. Dtypes and files
 
@@ -516,7 +516,7 @@ Every pixel that changed sits on a 3, a 6 or a 9, and no pixel on a 1, 2 or 4 ch
 
 ![Two panels: the count map of patch 32 at stride 12 on the test image, a plaid of blue where the count is 1, 2 or 4 and amber where it is 3, 6 or 9; and, in red over a faded copy of the map, the pixels that came back different, every one of them on amber.](figures/4-where-it-misses.png)
 
-The same reading at a size you can see: the float32 test image at patch 32 and stride 12, whose map holds 1, 2, 3, 4, 6 and 9. Every red pixel sits on amber, and 71 percent of the amber pixels changed. The largest miss is 1.1921e-07, a PSNR of 151.5 dB and 32,897 times smaller than one step of an 8-bit image, and the image saved as 8 bits is identical to the original.
+The same reading at a size you can see: the float32 test image at patch 32 and stride 12, whose map holds 1, 2, 3, 4, 6 and 9. Every red pixel sits on amber, and 54 percent of the amber pixels changed. The largest miss is 1.1921e-07, a PSNR of 152.2 dB and 32,897 times smaller than one step of an 8-bit image, and the image saved as 8 bits is identical to the original.
 
 So the round trip in `float32` and `float64` is `torch.equal` exact **when every value in the count map is a power of two**. Two geometries guarantee that without any checking at all: `stride == patch_size` on both axes, where the map is all ones, and `stride == patch_size / 2`, where the map holds only 1, 2 and 4.
 
@@ -775,7 +775,7 @@ halo of 2: bit-identical to the whole-image blur: True
 
 ![Three panels: the test image with one 32-pixel tile outlined in black and its 2-pixel halo in white; in red over a faded copy, the pixels where tiles blurred without a halo differ from the blur of the whole image, a band along every tile boundary; and the same comparison with a halo, where no pixel is red.](figures/5-halo.png)
 
-The same 5×5 blur on the 128×128 test image with 32-pixel tiles, compared after rounding to 8 bits. Without a halo, 15.9 percent of the pixels differ from the blur of the whole image, by up to 102/255, and all of them lie within 2 pixels of a tile boundary. With a halo, none differs.
+The same 5×5 blur on the 128×128 test image with 32-pixel tiles, compared after rounding to 8 bits. Without a halo, 15.4 percent of the pixels differ from the blur of the whole image, by up to 102/255, and all of them lie within 2 pixels of a tile boundary. With a halo, none differs.
 
 Without a halo, each tile meets an edge where the image goes on, and the blur there is computed from reflected pixels instead of the real neighbours, so it is wrong within `r` of every tile boundary. With a halo, each tile carries `r` extra pixels on every side, the convolution runs without padding and returns exactly the 16×16 centre, and `reconstruct`, at `stride == patch_size`, only puts the centres side by side. This is the overlap-save method of block convolution, and it is why nothing needed blending.
 
