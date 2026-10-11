@@ -131,6 +131,8 @@ PatchCraft/
 ├── tools/check_dist.py             gate: extension present, versions agree, tag respected
 ├── tools/benchmark.py              accelerated vs pure, and proves they agree first
 ├── tools/compare_exactness_rules.py  the power-of-two rule against k_max <= 4, measured
+├── tools/compare_border_strategies.py  truncate, pad or move the last window, measured
+├── tools/make_guide_figures.py     every GUIDE image and the numbers under it; --check runs in the suite
 ├── tools/make_outreach_figures.py  every outreach figure and generated page, computed
 ├── MANIFEST.in                     what the sdist carries
 ├── README.md                       the call page, canonical, English
@@ -157,8 +159,8 @@ PatchCraft/
 │   └── release.yml                 publishes to PyPI on vX.Y.Z tag push (Trusted Publishing)
 ├── src/patchcraft/                 library core, one-image-at-a-time primitives
 │   ├── __init__.py                 re-exports the full public API and the generated version
-│   ├── extract.py                  patches via strided view or F.unfold; Patchify (ADR 0002)
-│   ├── reconstruct.py              inverse via F.fold + count map, closed-form fast path
+│   ├── extract.py                  patches via a strided window view and one copy; Patchify (ADR 0002)
+│   ├── reconstruct.py              inverse via the fold and a closed-form count map; exact integer mean
 │   ├── stitch.py                   weighted reassembly for modified patches
 │   ├── geometry.py                 pre-flight: num_patches, tilings, scale_factor, paired_tilings
 │   ├── metrics.py                  patch_metrics, per_patch_mse, per_patch_psnr
@@ -181,13 +183,17 @@ PatchCraft/
 │   ├── test_pair.py
 │   ├── test_resize.py
 │   ├── test_cache.py
+│   ├── test_integer.py             integer images through extract and reconstruct, the exact mean
+│   ├── test_vmap.py                torch.vmap over the primitives, pinned to a plain loop
 │   ├── test_exactness.py           falsifies the count-map predicate over the legal space
+│   ├── test_operator.py            extract as a matrix U: the fold is U^T, reconstruct and stitch are least squares
 │   ├── test_reference.py           naive loop-based reference for the fast paths
 │   ├── test_public_api.py          freezes the 20 names, their signatures and carrier fields
 │   ├── test_accel.py               native path, skipped unless the extension was built
 │   ├── test_datasets_helper.py     label_subset
 │   ├── test_import.py
 │   ├── test_docs_usage.py          runs docs/USAGE.md as a doctest
+│   ├── test_docs_figures.py        runs tools/make_guide_figures.py --check
 │   ├── test_citation.py            CITATION.cff agrees with the package
 │   ├── conftest.py                 shared fixtures
 │   ├── _rng.py                     audited round-trip helpers (data generation, bit equality)
@@ -198,6 +204,7 @@ PatchCraft/
 │   └── .gitignore                  ignores everything else (tracked)
 ├── docs/
 │   ├── GUIDE.md                    the manual, every README claim measured with its output
+│   ├── figures/                    the GUIDE's images, written by tools/make_guide_figures.py
 │   ├── PERFORMANCE.md              what the accelerator is worth, and how to re-measure
 │   ├── USAGE.md                    REPL walkthrough of every public symbol; run as a doctest
 │   ├── SCOPE.md                    responsibilities matrix + parallelization analysis

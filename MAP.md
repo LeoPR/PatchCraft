@@ -50,6 +50,7 @@ PatchCraft/
 │
 ├── docs/
 │   ├── GUIDE.md .............. THE MANUAL. every README claim, measured, with its output
+│   ├── figures/ .............. the GUIDE's images, drawn from the library; the suite checks them
 │   ├── THEORY.md ............. the math, and §9 is the arbiter of the per-function contract
 │   ├── SCOPE.md .............. the line between this library and your pipeline
 │   ├── PERFORMANCE.md ........ what the accelerator is worth; machine, versions, date, command
@@ -67,6 +68,7 @@ PatchCraft/
 │   ├── check_dist.py ......... release gate: extension present, versions agree, tag respected
 │   ├── compare_exactness_rules.py  the power-of-two rule against k_max <= 4, measured
 │   ├── compare_border_strategies.py  truncate, pad or move the last window, measured
+│   ├── make_guide_figures.py   every GUIDE image and the numbers under it; --check runs in the suite
 │   └── make_outreach_figures.py    every outreach figure and generated page, computed
 │
 ├── outreach/ ................. material for presenting the project; not shipped

@@ -6,6 +6,36 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Nine images in the GUIDE**, each drawn by `tools/make_guide_figures.py`
+  from tensors the library returned: the two silent defects of a hand-rolled
+  `unfold` and `fold`, the patch order, the count map and what `reconstruct`
+  does where patches disagree, a per-patch threshold averaged into grey, the
+  pixels a float round trip misses at counts of 3, 6 and 9, the three windows
+  of `stitch`, a blur with and without a halo, the stride applied twice to
+  `PatchMeta`, and `resize(..., antialias=True)` on a zone plate. The
+  paragraph under each image states numbers, and the script asserts every one
+  before it draws. `tests/test_docs_figures.py` runs its `--check`, which
+  renders again and fails if a committed image differs from the fresh render
+  on more than 0.1 percent of its pixels outside the labels, if a caption no
+  longer states a measured number, or if an image and the GUIDE stop linking
+  to each other. Falsified: a 400-pixel change and a 1/255 shift across one
+  panel fail it, and one pixel off by 1/255 does not. It passes on both code
+  paths, at torch 2.6 with Pillow 10.1 and at torch 2.14 with Pillow 12.3.
+  The images add 263 KB to the sdist, which carries them because the suite
+  it ships runs the check.
+
+### Changed
+
+- GUIDE §1 gave the reason `stitch` under the uniform window agrees with
+  `reconstruct` as an exact multiply by ones, and the sign of a zero as the
+  only bit that differs. Since 0.6.0 an overlapping grid goes to
+  `reconstruct` itself, and on a non-overlapping one a NaN may also change
+  its bits; the paragraph now says both. CONTRIBUTING's layout lists the
+  tests and tools it was missing, and no longer says `extract` uses
+  `F.unfold`.
+
 ## [0.6.0] - 2026-10-11
 
 A new `0.y` because `resize` gains a parameter, `antialias`, whose default

@@ -6,7 +6,9 @@ This is the manual. [The README](../README.md) is the call page, and it answers 
 
 You do not have to read it from the top. Each section stands on its own, so jump into the one that matches the problem in front of you, and follow the links out to [THEORY.md](THEORY.md) when you want the contract rather than the demonstration.
 
-**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run on CPU against the release named in [CHANGELOG.md](../CHANGELOG.md) as the most recent one, with Python 3.13 and torch 2.x. Figures quoted in prose are read off those blocks, or are arithmetic on them. Two families of number name their own source instead: the test-suite counts in [section 8](#8-where-this-applies-today), and the file and line references, which point at the repository head.
+**Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run on CPU against the release named in [CHANGELOG.md](../CHANGELOG.md) as the most recent one, with Python 3.13 and torch 2.x. Numbers quoted in prose are read off those blocks, or are arithmetic on them. Three families of number name their own source instead: the test-suite counts in [section 8](#8-where-this-applies-today), the file and line references, which point at the repository head, and the numbers under each image.
+
+Every image is drawn by [tools/make_guide_figures.py](../tools/make_guide_figures.py) from tensors the library returned, against the same release. The numbers in the paragraph under an image are measured by that script and asserted before it draws anything. `python tools/make_guide_figures.py --check` fails if one of those numbers has changed, or if a committed image no longer matches a fresh run beyond the few pixels that rounding may flip between machines.
 
 ## Contents
 
@@ -23,6 +25,10 @@ You do not have to read it from the top. Each section stands on its own, so jump
 ## 1. Why not `unfold` and `fold` directly
 
 Because two defects wait there, both silent, and you meet them within the first hour of writing the code yourself. A third behaviour follows them, because `extract` shares it with torch and you need it before choosing either route.
+
+![Three panels: a 128 by 128 test image with gradients, rings, a yellow bar and stripes; the same image after unfold and the intuitive reshape, which comes back as grey stripes; and a fold by hand at patch 32 and stride 20, with a black band along the right and bottom edges.](figures/1-silent.png)
+
+Both defects on a 128×128 test image. In the middle, the patches of the intuitive reshape put back where `extract`'s patches go: every value is still there, and 99.6 percent of the positions now hold a different one. On the right, a fold by hand at patch 32 and stride 20 leaves 3840 pixels black, 23.4 percent of the image. Neither raises an error.
 
 ### The reshape after `unfold` scrambles the pixels
 
@@ -207,7 +213,7 @@ Seventeen non-blank lines against three, for a result that agrees to about 1.2e-
 
 **That number is not 0.0, and the reason is worth a sentence.** The two versions compute the same quantity by different routes. `stitch` builds its denominator from two 1-D window folds, because a separable kernel allows it, while the hand-rolled version folds a replicated 2-D kernel. Same value, different summation order, so the float result differs in the last few bits. Nothing here is a correctness gap.
 
-The exception is `weight="uniform"`, where `stitch` still agrees with `reconstruct` under `torch.equal`, because the ones-kernel multiply is exact. The one bit that can differ is the sign of a zero on a non-overlapping grid: there `reconstruct` only rearranges and keeps a `-0.0`, while `stitch` computes `0.0 + x`, which returns `+0.0`. Both compare equal as numbers.
+The exception is `weight="uniform"`, where `stitch` agrees with `reconstruct` under `torch.equal`, because on an overlapping grid it hands the call to `reconstruct`. On a non-overlapping grid `reconstruct` only rearranges, while `stitch` computes `0.0 + x`, which turns a `-0.0` into `+0.0` and may change the bits of a NaN. The two zeros compare equal, and the NaN stays a NaN.
 
 The by-hand version above is also the correct one, since it already has the coverage check, the right permutation and the strictly positive window. Getting to that version is the work.
 
@@ -218,6 +224,10 @@ PatchCraft computes nothing that torch cannot, and on the platforms without a na
 ## 2. The patch stack and the count map
 
 `extract` turns one `(C, H, W)` image into one `(L, C, ph, pw)` stack. The order is row-major, there is no padding, and there is no batch axis.
+
+![The test image divided by a 4 by 4 grid whose squares are numbered 0 to 15 in reading order, and the sixteen patches extract returns, laid out in two rows of eight in the same order.](figures/2-patch-order.png)
+
+`extract(image, 32, stride=32)` on the test image returns `(16, 3, 32, 32)`. Patch `k` is the square numbered `k` on the left, counted along the top row first and then down, and the small example below shows the same order in numbers.
 
 ```
    image (1, 8, 8)              patches (4, 1, 4, 4)
@@ -292,6 +302,10 @@ Corners are covered once, edges twice and the interior four times. When `stride 
 
 Which values appear in this map is what decides whether the round trip comes back bit for bit, and specifically whether every one of them is a power of two. That is the subject of [section 4](#4-when-the-round-trip-is-bit-for-bit). The math behind the fold and the division is in [THEORY.md](THEORY.md) §2.
 
+![Three panels: the count map of patch 32 at stride 16 on the test image, light at the corners, darker on the edges and darkest inside, with the four patches that meet at the top-left corner outlined; the top-left corner of the test image; and the same corner after patch 0 is set to white and the stack is reconstructed, where a white square is followed by paler squares.](figures/2-count-map.png)
+
+The same map for patch 32 at stride 16 on the test image, with the four patches that overlap at its corner outlined. On the right, patch 0, outlined in red, was set to white before `reconstruct`. The corner only patch 0 covers turns white, the two squares it shares with one other patch move half of the way to white, and the square it shares with three others moves a quarter of the way, because each pixel comes back as the mean of what its patches say.
+
 ### What `reconstruct` returns when the patches disagree
 
 `reconstruct` returns, at every pixel, the mean of what the covering patches say about it. Patches straight from `extract` all say the same thing, and the mean is the pixel. Patches that disagree get the least-squares answer, which [THEORY.md](THEORY.md) §2.6 derives, and that answer is still a mean, so it lands between the values it averages.
@@ -325,6 +339,10 @@ one threshold for the whole image, before or after cutting: True
 That matters when each patch makes its own discrete decision. Above, every patch binarizes against its own mean. Without overlap each pixel gets one decision and the result stays in {0, 1}; at stride 2 a pixel covered by four patches can get two votes each way and comes back 0.5. A per-patch palette, a per-patch Otsu threshold or any other per-patch quantizer behaves the same.
 
 There are three ways out, depending on what you need. Decide once for the whole image, before cutting, since a pointwise operation passes through `extract` unchanged, which is the last line above. Cut without overlap, so that nothing is averaged. Or keep the overlap and decide again after `reconstruct`, for instance by thresholding the mean at 0.5, which is a majority vote with the ties left to you.
+
+![Three black and white panels from the test image: a threshold per 32-pixel patch at stride 32, which stays black and white; the same at stride 16, which shows grey squares wherever the patches disagree; and one threshold for the whole image before cutting, black and white again.](figures/2-votes.png)
+
+The same experiment on the test image in grey, with 32-pixel patches, each thresholded against its own mean. At stride 32 every pixel gets one decision. At stride 16, 39.6 percent of the pixels come back at 0.25, 0.5 or 0.75, because their patches disagreed. Thresholding once before cutting, on the right, is the first way out.
 
 ## 3. Dtypes and files
 
@@ -496,6 +514,10 @@ tensor([[0, 0, 0, 0, 0, 0],
 
 Every pixel that changed sits on a 3, a 6 or a 9, and no pixel on a 1, 2 or 4 changed. Not every 3, 6 or 9 changed either, which is the shape of the contract: inside the rule the round trip is guaranteed, and outside it, it is merely not promised.
 
+![Two panels: the count map of patch 32 at stride 12 on the test image, a plaid of blue where the count is 1, 2 or 4 and amber where it is 3, 6 or 9; and, in red over a faded copy of the map, the pixels that came back different, every one of them on amber.](figures/4-where-it-misses.png)
+
+The same reading at a size you can see: the float32 test image at patch 32 and stride 12, whose map holds 1, 2, 3, 4, 6 and 9. Every red pixel sits on amber, and 71 percent of the amber pixels changed. The largest miss is 1.1921e-07, a PSNR of 151.5 dB and 32,897 times smaller than one step of an 8-bit image, and the image saved as 8 bits is identical to the original.
+
 So the round trip in `float32` and `float64` is `torch.equal` exact **when every value in the count map is a power of two**. Two geometries guarantee that without any checking at all: `stride == patch_size` on both axes, where the map is all ones, and `stride == patch_size / 2`, where the map holds only 1, 2 and 4.
 
 ### The maximum of the map is not the rule
@@ -548,6 +570,10 @@ Treat this section as the measured truth, and the ADR as the formal statement of
 ## 5. Seams: `reconstruct` against `stitch`, measured
 
 `reconstruct` is for patches that came out of `extract` untouched, where every patch covering a pixel agrees about that pixel. `stitch` is for patches a model has changed, where they no longer agree, and uniform averaging leaves the whole disagreement sitting on the grid lines, which is exactly what the eye reads as tiling.
+
+![Three columns, uniform, hann and gaussian. On top, the share that each of seven overlapping patches takes in every pixel of one row: flat steps for uniform, smooth crossing bells for hann and gaussian. Below, the test image stitched from patches that each carry their own error: blocky with uniform, smooth with hann, faintly blocky with gaussian.](figures/5-windows.png)
+
+Seven 32-pixel patches at stride 16 across a 128-pixel row. On top, the share each patch takes in each pixel: where two patches overlap, uniform gives each 0.5 and switches all at once at a grid line, while hann and gaussian hand over gradually. Below, the test image cut the same way on both axes, with each of its 49 patches shifted by its own constant of up to ±0.1 and then stitched: uniform shows the grid, hann hides it, and gaussian sits between them.
 
 The demonstration below uses a perfectly smooth ramp, so every step in the output is an artifact of the stitching and of nothing else.
 
@@ -746,6 +772,10 @@ print(f"halo of {r}: bit-identical to the whole-image blur:", torch.equal(halo, 
 no halo: max |difference| from the whole-image blur: 0.2448
 halo of 2: bit-identical to the whole-image blur: True
 ```
+
+![Three panels: the test image with one 32-pixel tile outlined in black and its 2-pixel halo in white; in red over a faded copy, the pixels where tiles blurred without a halo differ from the blur of the whole image, a band along every tile boundary; and the same comparison with a halo, where no pixel is red.](figures/5-halo.png)
+
+The same 5×5 blur on the 128×128 test image with 32-pixel tiles, compared after rounding to 8 bits. Without a halo, 15.9 percent of the pixels differ from the blur of the whole image, by up to 102/255, and all of them lie within 2 pixels of a tile boundary. With a halo, none differs.
 
 Without a halo, each tile meets an edge where the image goes on, and the blur there is computed from reflected pixels instead of the real neighbours, so it is wrong within `r` of every tile boundary. With a halo, each tile carries `r` extra pixels on every side, the convolution runs without padding and returns exactly the 16×16 centre, and `reconstruct`, at `stride == patch_size`, only puts the centres side by side. This is the overlap-save method of block convolution, and it is why nothing needed blending.
 
@@ -961,11 +991,23 @@ with tempfile.TemporaryDirectory() as directory:
 
 The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_factor`, are walked through in [USAGE.md](USAGE.md) §7, §10 and §11. One warning about them belongs here too: in `PatchMeta`, `row` and `col` already have the stride applied, so multiplying them by the stride again lands you on the wrong patch.
 
+![Three panels: a 64 by 64 LR image with one patch outlined in white and, in red, the patch reached by applying the stride twice; the 128 by 128 HR image with the matching region outlined in white at twice the size; and the white patch at both scales.](figures/7-pair.png)
+
+`pair(lr, hr, lr_patch_size=16, scale_factor=2, stride=4)` on the test image and its half-size copy. In its `PatchMeta`, patch 28 has `row` 8 and `col` 8, already in LR pixels, so the white box at row 8 and column 8 is that patch, and the HR box is the same region at twice the size. Multiplying by the stride again lands on row 32 and column 32, the red box, which is patch 112.
+
+### Reducing with `resize`
+
+The torch backend's `bilinear` and `bicubic` modes interpolate between the nearest source pixels and filter nothing, so detail finer than the new pixel grid folds back into a false pattern. `antialias=True` filters first, as the PIL backend always does.
+
+![Three grey panels: a 256 by 256 zone plate, whose rings get finer towards the edges; the same reduced to 64 by 64 by the torch backend, where false rings appear; and the same with antialias=True, where the rings too fine for 64 pixels fade to grey.](figures/7-antialias.png)
+
+A zone plate, whose rings get finer from the centre outwards, reduced from 256 to 64 pixels by the torch backend's default, bilinear. The plain call draws rings that are not in the source. With `antialias=True` the rings too fine for 64 pixels fade to grey, and the result lands within 1/255 of the PIL backend in bilinear, where the plain call is more than 90/255 away.
+
 ## 8. Where this applies today
 
 **Before 1.0, and with no external consumer yet.** A real project consuming the published API is the gate [ROADMAP.md](ROADMAP.md) sets for calling the shape settled. Until then a new `0.y` may still change what comes out, so pin the `0.y` you tested against with `~=0.y.0` to take its fixes only.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 2024 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Those eight run the newest torch, and one more job runs the whole suite on both paths at the declared floor: Python 3.12, torch 2.6, numpy 1.26 and pillow 10.1, with the kernel built by Rust 1.82. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 2025 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Those eight run the newest torch, and one more job runs the whole suite on both paths at the declared floor: Python 3.12, torch 2.6, numpy 1.26 and pillow 10.1, with the kernel built by Rust 1.82. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Where the evidence is thinner, this is what it means for you.
 
@@ -975,7 +1017,7 @@ Where the evidence is thinner, this is what it means for you.
 
 **Without `zstandard`, `Cache` stores payloads uncompressed.** A plain `pip install patchcraft` takes that branch, which a unit test covers by removing the import; install `patchcraft[cache]` if payload size matters.
 
-**The examples on this page were run by hand**, against the release the provenance note at the top names, and no test executes them. The ones in [USAGE.md](USAGE.md) do run in the suite, so a stale line there fails CI.
+**The code examples on this page were run by hand**, against the release the provenance note at the top names, and no test executes them. The ones in [USAGE.md](USAGE.md) do run in the suite, so a stale line there fails CI, and so do the images on this page with the numbers under them, through `tests/test_docs_figures.py`.
 
 **Output values can move between releases, for two different reasons.** A new `0.y` may change behaviour the documentation endorsed. A new `0.y.z` may change values only to make the code match a promise the documentation already made. [CHANGELOG.md](../CHANGELOG.md) records each change with the measurement behind it.
 

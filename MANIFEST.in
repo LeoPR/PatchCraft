@@ -30,7 +30,8 @@ include .pre-commit-config.yaml
 recursive-include src *.py
 include src/patchcraft/py.typed
 recursive-include tests *.py
-recursive-include docs *.md
+# The PNGs are the GUIDE's images, and tests/test_docs_figures.py needs them.
+recursive-include docs *.md *.png
 recursive-include accel *.rs *.toml *.lock *.md
 prune accel/target
 recursive-include tools *.py
