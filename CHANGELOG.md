@@ -56,6 +56,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   left out, and says that CI runs on pushes to `main` and on pull requests
   against it rather than on every push. Its ruff command and GUIDE §9's now
   check `tools`, as CI does.
+- **`astral-sh/setup-uv` moves from `@v7` to `@v10.2.0`, an exact tag.**
+  Since v8 setup-uv publishes no major tags, so `@v7` was frozen at v7.6.0,
+  and its releases are immutable. The gain is the check v10.1.0 added: the
+  uv binary is verified against a known sha256, which v7.6.0 skips for every
+  uv newer than 0.10.10, so for months CI installed uv unchecked, including
+  the copy that runs `uv build` for the files on PyPI. `version:
+  latest-known` installs the newest uv in the action's own checksum table,
+  0.12.17 at v10.2.0, so uv moves only when the pin does; until now CI took
+  each uv on the day it came out, and 0.5.6, 0.5.7 and 0.6.0 were built with
+  a uv two to three days old. `prune-cache: true` keeps the cache as v7 saved
+  it, because v9 stopped pruning by default and an unpruned Linux key would
+  hold about 3 GB of torch and CUDA wheels against GitHub's 10 GB per
+  repository. From v10, `build-pure` no longer caches on a tag push. v10.3.0
+  is two days old and is skipped. The other actions keep their pins: no
+  release since them fixes anything this repository uses.
 
 ## [0.6.0] - 2026-10-11
 

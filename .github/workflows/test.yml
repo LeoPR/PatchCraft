@@ -45,9 +45,20 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        # An exact tag: since v8, setup-uv publishes no major tags, and its
+        # releases are immutable. From v10.1.0 it checks the uv binary against
+        # a known sha256, which v7 skipped for every uv newer than 0.10.10.
+        # version: latest-known installs the newest uv in this release's own
+        # checksum table (0.12.17 at v10.2.0), so uv moves only when this pin
+        # does, and never on the day it comes out. prune-cache: true keeps the
+        # cache as v7 saved it: v9 stopped pruning by default, and unpruned a
+        # Linux key would hold about 3 GB of torch and CUDA wheels, against
+        # GitHub's 10 GB per repository.
+        uses: astral-sh/setup-uv@v10.2.0
         with:
+          version: latest-known
           enable-cache: true
+          prune-cache: true
 
       - name: Set up Python ${{ matrix.python }}
         run: uv python install
@@ -88,9 +99,12 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        # The same pin and settings as the test job, for the same reasons.
+        uses: astral-sh/setup-uv@v10.2.0
         with:
+          version: latest-known
           enable-cache: true
+          prune-cache: true
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -135,7 +149,12 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        # The same pin as the test job. enable-cache keeps its default, auto,
+        # which caches on push and pull_request, so the cache is pruned here too.
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: latest-known
+          prune-cache: true
 
       - name: Install Rust at the declared minimum
         uses: dtolnay/rust-toolchain@master
