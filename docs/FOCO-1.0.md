@@ -106,7 +106,7 @@ O §8 do THEORY (channels-last, PIL, batched) sai de "pergunta aberta" e vira "a
 **G2, as duas páginas e o contrato ratificado. Sai como 1.0.0.** Os dois editam o THEORY §9 e ambos escrevem o escopo "medido em CPU", então colidem no mesmo arquivo. Escopo: `USAGE.md` regenerado contra 0.2.x com `WeightKind` e as quatro mudanças de comportamento da 0.2.1; doctests ligados no `addopts` e nos dois workflows, com `NORMALIZE_WHITESPACE` e `ELLIPSIS` declarados no contrato; `README.pypi.md` corrigido e fiado no `pyproject.toml` com comentário inline dando a razão, ou descartado; §9.2 corrigido; §8 convertido em decisões adiadas; linhas de regime só onde há regime; ADR 0003 para Accepted; seção de política de compatibilidade em prosa.
 *Verificação:* `pytest --doctest-glob='*.md' docs/` verde nos dois sistemas operacionais do CI; `twine check --strict`; um job que instala a wheel construída em ambiente limpo e importa o pacote; um script que lista cada bullet "Aceita"/"Rejeita" do §9 sem id de teste correspondente, e sai vazio.
 
-**G3, higiene. Sem versão própria.** SECURITY, CITATION, templates, pre-commit, dependabot, badges, link refs, AGENTS.md. **Fechado em 0.5.3**, salvo o dependabot, que é o único item ausente.
+**G3, higiene. Sem versão própria.** SECURITY, CITATION, templates, pre-commit, dependabot, badges, link refs, AGENTS.md. **Fechado em 0.5.3**; o dependabot, o item que faltava, entrou em 2026-10-11, para as GitHub Actions.
 *Verificação:* o community profile do GitHub fecha todos os itens.
 
 ---

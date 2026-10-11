@@ -71,6 +71,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   repository. From v10, `build-pure` no longer caches on a tag push. v10.3.0
   is two days old and is skipped. The other actions keep their pins: no
   release since them fixes anything this repository uses.
+- **Every GitHub Action is pinned to an exact version, and Dependabot
+  proposes the updates.** `actions/checkout@v5.1.0`,
+  `actions/upload-artifact@v6.0.0`, `actions/download-artifact@v7.0.0` and
+  `softprops/action-gh-release@v3.0.3` are the commits the floating majors
+  resolved to, so nothing CI runs changed. `pypa/gh-action-pypi-publish` is
+  pinned to the commit of `release/v1` rather than to the tag `v1.14.2`: the
+  action runs the upload in the image tagged with its ref, and the commit's
+  image is the build that has published every release through Trusted
+  Publishing, while the tag names a separate build of the same commit. The
+  cost is that Dependabot raises no alerts for an action pinned to a commit.
+  `dtolnay/rust-toolchain` stays on its branch refs, its documented usage.
+  `.github/dependabot.yml` checks on the first of each month, skips any
+  release younger than 14 days, and keeps the actions CI exercises apart from
+  those only a release runs. A new major arrives on its own, and the three
+  declined today (checkout 6 and 7, upload-artifact 7, download-artifact 8)
+  are recorded as ignored.
 
 ## [0.6.0] - 2026-10-11
 

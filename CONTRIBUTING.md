@@ -50,6 +50,10 @@ mypy --strict src
 pytest -m "not gpu"
 ```
 
+Every action in the workflows is pinned to an exact version, the PyPI upload to a commit, and [`.github/dependabot.yml`](.github/dependabot.yml) proposes updates on the first of each month, never for a release younger than 14 days. Its pull requests come in two groups: `tested-by-ci`, the actions that the pull request's own CI runs, and `release-only`, the actions that only `release.yml` runs, on a tag push. `dtolnay/rust-toolchain` stays on its branch refs, which choose the toolchain, and Dependabot does not track it.
+
+A green CI on a `release-only` pull request says nothing about those actions, so their first real run is the next release. A `setup-uv` bump also moves uv, and CI does not run the release's `uv build`, so run `uv build` and `twine check` locally before merging one. A new major arrives as a pull request of its own: adopt it for a real gain, or close it with `@dependabot ignore this major version`, which records the decision. After merging, fix any comment that names the old version, since Dependabot rewrites only the `uses:` line.
+
 ---
 
 ## The two paths
@@ -154,9 +158,10 @@ PatchCraft/
 ├── .github/
 │   ├── ISSUE_TEMPLATE/             four forms and a chooser; the required fields are what makes a report reproducible
 │   ├── PULL_REQUEST_TEMPLATE.md    asks whether a returned value moved, which decides the version bump
+│   ├── dependabot.yml              monthly update proposals for the pinned actions, none under 14 days old
 │   └── workflows/
-│   ├── test.yml                    matrix CI on PRs/main, plus the accelerated and floor jobs
-│   └── release.yml                 publishes to PyPI on vX.Y.Z tag push (Trusted Publishing)
+│       ├── test.yml                matrix CI on PRs/main, plus the accelerated and floor jobs
+│       └── release.yml             publishes to PyPI on vX.Y.Z tag push (Trusted Publishing)
 ├── src/patchcraft/                 library core, one-image-at-a-time primitives
 │   ├── __init__.py                 re-exports the full public API and the generated version
 │   ├── extract.py                  patches via a strided window view and one copy; Patchify (ADR 0002)

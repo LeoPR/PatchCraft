@@ -50,8 +50,9 @@ run on `ubuntu-26.04` by name, for as long as the item below holds.
 
 **On `main` since 0.6.0, unreleased:** nine images in the GUIDE, drawn by
 `tools/make_guide_figures.py` and checked by `tests/test_docs_figures.py`, and
-the CI arrangement for the Ubuntu move below. Nothing that ships in a wheel has
-changed; the next sdist carries the images.
+the CI arrangement for the Ubuntu move below, and the GitHub Actions pinned to
+exact versions, with Dependabot proposing the updates. Nothing that ships in a
+wheel has changed; the next sdist carries the images.
 
 **The Ubuntu move is in flight until 2026-11-19.** GitHub moves
 `ubuntu-latest` from Ubuntu 24.04 to 26.04 between 2026-10-19 and 2026-11-19,
