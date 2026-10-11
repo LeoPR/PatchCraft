@@ -39,9 +39,10 @@ a keyword-only argument with a default is additive, so adding one after 1.0 cost
 release and nothing else. With the premise checked and gone, YAGNI, the absence of any
 external consumer, and Strata §9's default verdict all point the same way.
 
-**So this ADR asks nothing.** It records a design that is not built, the names precedent
+**So this ADR asks nothing.** It records a design that is mostly not built, the names precedent
 determines, the constraint that would make a preset safe, and the order. It stays `Proposed`
-because none of its parameters is implemented, not because a decision is pending.
+because two of its three parameters, `accum_dtype` and `rounding_mode`, and the preset are not
+implemented, not because a decision is pending.
 
 **What is implemented is the integer path without a knob, and `antialias`:** steps 1 and 2
 below shipped together on 2026-10-10, ahead of the 1.0 the table assigned them to, because the

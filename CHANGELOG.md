@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-11
+
+A new `0.y` because `resize` gains a parameter, `antialias`, whose default
+changes no call. With it comes a faster `stitch` under the uniform window,
+bit-identical to the code it replaces. No returned value of an existing call
+changes. The full suite passes on both code paths at the declared floor and
+at the newest releases, and the 126,736-geometry sweep passes on both paths.
+
 ### Changed
 
 - **`stitch` with the uniform window hands an overlapping grid to
@@ -15,26 +23,34 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   folds. Compared against the previous code through integer views: 996
   geometries of the sampled space, four float dtypes, signed zeros,
   infinities, NaN payloads and subnormals, outputs and gradients, both code
-  paths, 0 differences. 1.45 times faster on the pure path at 3x512x512 and
-  3x1024x1024, about 1.1 times with the accelerator, and 1.04 at 3x2048x2048
-  where the fold dominates. The test that compared the two with `allclose`
-  now compares bits, counts of 3 included.
+  paths, 0 differences. Against the previous code, interleaved and taking the
+  median of 9 to 41 runs: 1.45 and 1.75 times faster on the pure path at
+  3x512x512 and 3x1024x1024 and 1.06 at 3x2048x2048, where the fold dominates,
+  and 1.31, 1.17 and 1.10 times with the accelerator. A non-overlapping grid
+  takes the same path as before. The test that compared the two with
+  `allclose` now compares bits, counts of 3 included.
 
 ### Added
 
 - **`resize(..., antialias=None)`**, keyword-only, with the name, values and
   meaning of torchvision v2's `resize` and the default ADR 0004 recorded. With
   `True` the torch backend filters before a bilinear or bicubic downsample, as
-  PIL always does: reduced by 4, it lands within 1/255 of the PIL backend,
-  where the unfiltered path differs by up to 149/255, and on noise it passes a
-  third of the standard deviation. The output equals torchvision's
-  `resize(antialias=True)` bit for bit. `None` and `False` leave the call to
-  `F.interpolate` exactly as it was, so no existing call changes; the flag is
-  ignored where it means nothing, the other torch modes and the PIL backend,
-  as torchvision ignores it. It also changes bicubic upsampling, by up to
-  0.093 on data in [0, 1], and the docs say it is for reducing. Resizing to
-  the same size returns the input bit for bit, with or without it, and
-  removing the flag from the call fails 6 of the new tests.
+  PIL always does. On the tests' noise image reduced by 4 it lands within
+  1/255 of the PIL backend, where the unfiltered path is more than 20/255
+  away, and it passes a third of the noise's standard deviation. For float
+  tensors the output equals torchvision v2's `resize(antialias=True)` bit for
+  bit; half precision is filtered in `float32` and cast back, as torchvision
+  does, because torch has no antialiased half-precision kernel. Integer
+  tensors are rounded and clamped as on every other path, where torchvision
+  rounds `uint8` in its own fixed-point kernel, so the two can differ there.
+  `None` and `False` leave the call to `F.interpolate` exactly as it was, so
+  no existing call changes, and the flag is ignored where it means nothing,
+  the other torch modes and the PIL backend, as torchvision ignores it. The
+  filtered path uses PIL's bicubic kernel (`a = -0.5`) where the plain one
+  uses torch's (`a = -0.75`), so it changes bicubic enlargement too, and the
+  docs say it is for reducing. With the flag, resizing to the same size
+  returns the input bit for bit. Removing the flag from either call site, or
+  the half-precision promotion, fails the new tests.
 
 ## [0.5.7] - 2026-10-10
 
@@ -1237,7 +1253,8 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) covers installation, the car-vs-track metaphor,
   validation lab.
 
-[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.5.7...HEAD
+[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.6.0
 [0.5.7]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.7
 [0.5.6]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.6
 [0.5.5]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.5

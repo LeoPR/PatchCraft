@@ -6,12 +6,12 @@
 
 ## Where the project is
 
-**0.5.7 is on PyPI**, published through Trusted Publishing on a tag push: one
+**0.6.0 is on PyPI**, published through Trusted Publishing on a tag push: one
 sdist, five `cp312-abi3` platform wheels carrying the Rust accelerator, and one
 universal `py3-none-any` wheel. There is no extra to enable and no second
 package.
 
-**2011 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
+**2024 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
 deselected, plus two full-sweep gates behind `PATCHCRAFT_SWEEP_FULL=1`
 that enumerate all 126,736 legal geometries. CI is green on
 {Ubuntu, Windows} x {3.12, 3.13, 3.14} on the pure path, plus a two-OS job that
@@ -24,11 +24,12 @@ pillow 10.1, Rust 1.82) that runs it on both paths.
 
 ## What is in flight
 
-**Two changes are on `main` and not on PyPI.** `resize(..., antialias=None)`,
-keyword-only with the default that changes no call, and `stitch` with the
-uniform window handing an overlapping grid to `reconstruct`, bit-identical and
-up to 1.45 times faster on the pure path. The new parameter makes it a new
-`0.y` by the README's rule: **releasing them as 0.6.0 waits on the owner.**
+**Nothing unreleased.** 0.6.0 added `resize(..., antialias=None)`,
+keyword-only with the default that changes no call, and made `stitch` with
+the uniform window hand an overlapping grid to `reconstruct`, bit-identical and
+1.45 to 1.75 times faster on the pure path at 512 and 1024. The new parameter
+is why it is a new `0.y`, by the README's rule and the first row of
+CONTRIBUTING's table.
 
 0.5.7 brought integer images: `extract` takes every
 dtype, and `reconstruct` takes the five integer dtypes and returns them exactly
@@ -69,10 +70,11 @@ power-of-two ones, and a `float64` accumulator on all 76. The three-letter
 vocabulary its first draft proposed is deferred until a transform needs it.
 
 **ADR 0004 is `Proposed`, and asks nothing.** It records the precision and
-effort parameters as a design that is not built; the status reflects that none
-of the parameters is implemented, not that a decision is pending. Its steps 1
-and 2, integers through `extract` and `reconstruct` without a knob, are on
-`main` since 2026-10-10. The one question it
+effort parameters as a design that is mostly not built; the status reflects
+that `accum_dtype`, `rounding_mode` and the preset are not implemented, not
+that a decision is pending. What it records that did ship: its steps 1 and 2,
+integers through `extract` and `reconstruct` without a knob, in 0.5.7, and its
+third parameter, `resize(..., antialias=None)`, in 0.6.0. The one question it
 appeared to hold, whether to add the knobs before the 1.0 freeze or after,
 rested on the premise that adding one afterwards is expensive. It is not: each
 is a keyword-only argument with a default, so adding one is additive and is a

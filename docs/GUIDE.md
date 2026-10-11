@@ -668,7 +668,7 @@ The reason is visible in the uniform column, which does not move at all. Uniform
 ### The three windows, and what each costs
 
 - **`"uniform"`** is the default. Every covering patch contributes equally, which is exactly `reconstruct`'s arithmetic, and it puts the whole disagreement on the grid lines.
-- **`"hann"`** is the strong seam suppressor. On an overlapping grid the three windows cost the same, since the fold dominates, and only uniform skips the fold where `stride == patch_size`. It is the interior of a longer symmetric Hann window, `hann_window(n + 2, periodic=False)[1:-1]`, so it is strictly positive on every sample and never zeroes a pixel. A plain symmetric window is exactly zero at both endpoints and would zero every pixel covered only by patch edges; [THEORY.md](THEORY.md) §2.5 measures it.
+- **`"hann"`** is the strong seam suppressor. On an overlapping grid hann and gaussian cost the same, since the fold dominates, while uniform costs what `reconstruct` costs, because it is `reconstruct`'s arithmetic; where `stride == patch_size` uniform skips the fold altogether. It is the interior of a longer symmetric Hann window, `hann_window(n + 2, periodic=False)[1:-1]`, so it is strictly positive on every sample and never zeroes a pixel. A plain symmetric window is exactly zero at both endpoints and would zero every pixel covered only by patch edges; [THEORY.md](THEORY.md) §2.5 measures it.
 - **`"gaussian"`** keeps far more weight at the patch edge than hann does, so it suppresses seams less at the larger patch sizes in the sweep, and it wins at the smallest one. THEORY §2.5 states the tradeoff as weaker seam suppression than Hann in exchange for a flatter window.
 
 **Hann costs fidelity, and the cost is already in the numbers above.** Measured against the model's own patches, uniform keeps 29.60 dB mean and hann keeps 27.15 dB. Hann is trading exactness for smoothness on purpose, so if what you want back is the model's output rather than a pleasant image, uniform is the honest choice.
@@ -914,7 +914,7 @@ The table below is the one place that records what each call allocates, which is
 | `extract` | `image`, `patch_size`, `stride`, `dilation` | `(L, C, ph, pw)` | the whole patch stack, `L * C * ph * pw` values |
 | `Patchify` | the same geometry, at construction | a callable returning `(L, C, ph, pw)` | nothing beyond the geometry, no cache and no buffer |
 | `reconstruct` | `patches`, `image_shape`, `stride`, `dilation` | `(C, H, W)` | one image plus one count map |
-| `stitch` | the same, plus keyword-only `weight=`, default `"uniform"` | `(C, H, W)` | one image, one weight map, one `(ph, pw)` kernel, and on the pure-torch path a full weighted copy of the patch stack, which is the largest of the four and which the accelerated path skips |
+| `stitch` | the same, plus keyword-only `weight=`, default `"uniform"` | `(C, H, W)` | under `"uniform"`, what `reconstruct` allocates; under `"hann"` and `"gaussian"`, one image, one weight map, one `(ph, pw)` kernel, and on the pure-torch path a full weighted copy of the patch stack, which is the largest of these and which the accelerated path skips |
 | `WeightKind` | nothing, it is a `Literal` type alias | `"uniform"`, `"hann"` or `"gaussian"` today; the set is **open**, so a new member may arrive in a `0.y` / minor release and an exhaustive `match` on it should carry a fallback | nothing |
 | `pair` | `lr_image`, `hr_image`, `lr_patch_size`, `scale_factor`, `stride` | `PatchPair` | both patch stacks plus `L` metadata records |
 | `PatchPair`, `PatchMeta` | frozen dataclasses | patches and grid coordinates | metadata stays on CPU, always |
@@ -963,9 +963,9 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 ## 8. Where this applies today
 
-**Before 1.0, and with no external consumer yet.** A real project consuming the published API is the gate [ROADMAP.md](ROADMAP.md) sets for calling the shape settled. Until then a new `0.y` may still change what comes out; pin `~=0.5.0` to take fixes only.
+**Before 1.0, and with no external consumer yet.** A real project consuming the published API is the gate [ROADMAP.md](ROADMAP.md) sets for calling the shape settled. Until then a new `0.y` may still change what comes out, so pin the `0.y` you tested against with `~=0.y.0` to take its fixes only.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 2011 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Those eight run the newest torch, and one more job runs the whole suite on both paths at the declared floor: Python 3.12, torch 2.6, numpy 1.26 and pillow 10.1, with the kernel built by Rust 1.82. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 2024 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Those eight run the newest torch, and one more job runs the whole suite on both paths at the declared floor: Python 3.12, torch 2.6, numpy 1.26 and pillow 10.1, with the kernel built by Rust 1.82. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Where the evidence is thinner, this is what it means for you.
 
@@ -1018,7 +1018,7 @@ Installing from the sdist compiles the accelerator when a Rust toolchain is pres
   author  = {Marques de Souza, Leonardo},
   title   = {PatchCraft: image patch extraction, reconstruction, pairing
              and seam-aware stitching},
-  version = {0.5.7},   % check CHANGELOG.md for the release you used
+  version = {0.6.0},   % check CHANGELOG.md for the release you used
   year    = {2026},
   url     = {https://github.com/LeoPR/PatchCraft}
 }

@@ -7,6 +7,7 @@ import torch
 from PIL import Image
 
 from patchcraft import resize
+from tests._rng import bit_equal
 
 
 def _rgb_pil(h: int, w: int) -> Image.Image:
@@ -262,14 +263,63 @@ class TestAntialias:
         assert torch.equal(default, plain)
         assert torch.equal(resize(x, (64, 64), backend="torch", antialias=False), default)
 
+    @pytest.mark.parametrize(
+        "dtype", [torch.float32, torch.float64, torch.float16, torch.bfloat16]
+    )
     @pytest.mark.parametrize("mode", ["bilinear", "bicubic"])
-    def test_true_equals_torchvision_resize(self, mode: str) -> None:
+    def test_true_equals_torchvision_resize_for_float_tensors(
+        self, mode: str, dtype: torch.dtype
+    ) -> None:
+        """Float tensors only: for integers torchvision rounds differently (uint8
+        has a native fixed-point kernel), and resize rounds and clamps."""
         tv = pytest.importorskip("torchvision.transforms.v2.functional")
-        x = self._noise()
+        x = self._noise().to(dtype)
         ours = resize(x, (64, 64), backend="torch", resample=mode, antialias=True)
         interpolation = getattr(tv.InterpolationMode, mode.upper())
         theirs = tv.resize(x, [64, 64], interpolation=interpolation, antialias=True)
-        assert torch.equal(ours, theirs)
+        assert ours.dtype == dtype
+        assert bit_equal(ours, theirs)
+
+    @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
+    @pytest.mark.parametrize("mode", ["bilinear", "bicubic"])
+    def test_half_precision_is_filtered_in_float32(self, mode: str, dtype: torch.dtype) -> None:
+        """torch has no antialiased half-precision kernel and raised on it."""
+        x = self._noise().to(dtype)
+        got = resize(x, (64, 64), backend="torch", resample=mode, antialias=True)
+        via = resize(x.float(), (64, 64), backend="torch", resample=mode, antialias=True)
+        assert bit_equal(got, via.to(dtype))
+        assert bit_equal(resize(x, (256, 256), backend="torch", antialias=True), x)
+
+    def test_a_pil_image_on_the_torch_backend_takes_the_flag(self) -> None:
+        from patchcraft.resize import _pil_to_tensor_f32, _tensor_to_pil_u8
+
+        stripes = Image.fromarray((np.indices((64, 64)).sum(0) % 2 * 255).astype(np.uint8))
+        filtered = resize(stripes, (16, 16), backend="torch", antialias=True)
+        plain = resize(stripes, (16, 16), backend="torch")
+        assert not np.array_equal(np.asarray(filtered), np.asarray(plain))
+        via = _tensor_to_pil_u8(
+            resize(_pil_to_tensor_f32(stripes), (16, 16), backend="torch", antialias=True)
+        )
+        assert np.array_equal(np.asarray(filtered), np.asarray(via))
+
+    @pytest.mark.parametrize(("flag", "a"), [(False, -0.75), (True, -0.5)])
+    def test_the_filtered_bicubic_is_pils_kernel(self, flag: bool, a: float) -> None:
+        """Enlarging an impulse traces the kernel: torch's Keys a = -0.75
+        without the flag, PIL's a = -0.5 with it, which is why the flag also
+        changes bicubic enlargement."""
+
+        def keys(t: float) -> float:
+            t = abs(t)
+            if t <= 1:
+                return (a + 2) * t**3 - (a + 3) * t**2 + 1
+            return a * t**3 - 5 * a * t**2 + 8 * a * t - 4 * a if t < 2 else 0.0
+
+        impulse = torch.zeros(1, 1, 16, dtype=torch.float64)
+        impulse[..., 8] = 1.0
+        up = resize(impulse, (1, 64), backend="torch", resample="bicubic", antialias=flag)[0, 0]
+        offsets = [(j + 0.5) / 4 - 0.5 - 8 for j in range(64)]
+        kernel = torch.tensor([keys(t) for t in offsets], dtype=torch.float64)
+        torch.testing.assert_close(up, kernel, rtol=0, atol=1e-12)
 
     @pytest.mark.parametrize("mode", ["bilinear", "bicubic"])
     def test_true_agrees_with_pil_when_downsampling(self, mode: str) -> None:

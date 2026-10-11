@@ -9,9 +9,10 @@ visible if patches are averaged uniformly. Weighting by a window kernel
 (Hann, Gaussian) emphasizes patch centers and reduces those seams.
 
 With ``weight="uniform"``, ``stitch`` returns what ``reconstruct`` returns:
-on an overlapping grid it is the same computation, bit for bit, and on a
-non-overlapping one the only difference is that ``stitch`` turns a ``-0.0``
-into ``+0.0``, as the fold it stands in for would.
+on an overlapping grid it is the same computation, bit for bit. On a
+non-overlapping one ``reconstruct`` only copies, while ``stitch`` returns what
+the fold it stands in for would: ``+0.0`` for a ``-0.0``, and a NaN that stays
+a NaN but may change its bits.
 
 Contract: docs/THEORY.md §2.5 and §9.9.
 """
@@ -156,7 +157,10 @@ def stitch(
     built from two 1-D window folds (the kernel is separable, so the 2-D
     denominator is their outer product). ``numerator / denominator`` gives
     the output; geometry validation guarantees no uncovered pixels and all
-    three windows are strictly positive.
+    three windows are strictly positive. Under ``"uniform"`` every weight is
+    1, so an overlapping grid goes to :func:`patchcraft.reconstruct`, which is
+    the same arithmetic without the multiply and the window folds, and a
+    non-overlapping grid is only rearranged.
 
     Rejects (per §9.9): ``dilation != 1``; ``stride > patch_size`` in any
     axis; grids that do not cover the image exactly (same coverage guard as
@@ -223,9 +227,8 @@ def stitch(
         # separable denominator is the count map: exactly the arithmetic
         # reconstruct performs, without the multiply by ones and the two
         # window folds. Bit-identical to the general path below, values,
-        # signed zeros, NaN payloads and gradients included; measured 1.45x
-        # faster on the pure path at 3x512x512 and about 1.1x with the
-        # accelerator.
+        # signed zeros, NaN payloads and gradients included; the speedup is
+        # measured in the 0.6.0 entry of CHANGELOG.md.
         return reconstruct(patches, image_shape, stride)
 
     wh = _window_1d(weight, ph, accum_dtype, patches.device)

@@ -158,6 +158,11 @@ def _resize_torch(
         # call exactly as it was, so the default output is unchanged.
         if antialias:
             kwargs["antialias"] = True
+            # torch implements the antialiased kernels for float32 and float64
+            # only, and raises on half precision; filter it in float32 and cast
+            # back, as torchvision's resize does.
+            if x.dtype in (torch.float16, torch.bfloat16):
+                x = x.float()
     out = F.interpolate(x, **kwargs)
     if not original_dtype.is_floating_point:
         # Integer dtypes: bicubic/bilinear overshoot the input range, and a
@@ -191,11 +196,15 @@ def resize(
     ``antialias=True`` makes the ``"torch"`` backend low-pass filter before
     it downsamples, for ``bilinear`` and ``bicubic``, which is what PIL always
     does; without it each output pixel interpolates only its nearest inputs
-    and the rest are skipped, so fine detail aliases. The flag means nothing
-    for the other torch modes and for the ``"pil"`` backend, and is ignored
-    there, as in torchvision's resize, whose name and meaning it borrows.
-    ``None``, the default, and ``False`` keep the torch backend unfiltered,
-    exactly as before the flag existed (ADR 0004).
+    and the rest are skipped, so fine detail aliases. The filtered path is
+    torch's antialiased kernel, which also uses PIL's bicubic (``a = -0.5``)
+    where the plain path uses torch's (``a = -0.75``), so it changes bicubic
+    enlargement too; it is meant for reducing. Half precision is filtered in
+    ``float32`` and cast back. The flag means nothing for the other torch
+    modes and for the ``"pil"`` backend, and is ignored there, as in
+    torchvision's resize, whose name and meaning it borrows. ``None``, the
+    default, and ``False`` keep the torch backend unfiltered, exactly as
+    before the flag existed (ADR 0004).
 
     Dtype notes. Integer tensors on the ``"torch"`` backend are interpolated
     in float and cast back with round + clamp to the dtype range, because
@@ -213,11 +222,14 @@ def resize(
     Rejects (per §9.4): non-2-tuple or non-positive ``target_size``;
     ``backend`` not in ``{"pil", "torch"}``; CUDA tensor with
     ``backend="pil"``; unsupported ``resample`` for the chosen backend;
-    PIL tensor conversion of an unsupported channel count.
+    PIL tensor conversion of an unsupported channel count; ``antialias`` that
+    is neither a ``bool`` nor ``None``.
     """
     target_size = _validate_target_size(target_size)
     if antialias is not None and not isinstance(antialias, bool):
-        raise ValueError(f"antialias must be bool or None, got {antialias!r}")
+        raise ValueError(
+            f"antialias must be bool or None, got {type(antialias).__name__} {antialias!r}"
+        )
     if backend not in {"pil", "torch"}:
         raise ValueError(f"backend must be 'pil' or 'torch', got {backend!r}")
 

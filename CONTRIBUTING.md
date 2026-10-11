@@ -275,6 +275,11 @@ moved, or whether the implementation stopped violating it**:
 | Documentation, tests, CI, packaging or tooling only | `0.y.Z` | Still a release if it is published, still no break |
 | Nothing published | nothing | Accumulate under `[Unreleased]` |
 
+A new keyword-only parameter with a default breaks no call, but it moves a
+signature, so it takes the first row and not the third: 0.6.0 is the example,
+where `resize` gained `antialias`. The third row is for new behaviour behind
+an unchanged signature, such as 0.5.7 accepting integer images.
+
 The project's own history sorts cleanly under that rule, and does not sort
 under any rule keyed on whether values changed:
 
