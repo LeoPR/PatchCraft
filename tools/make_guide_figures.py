@@ -381,7 +381,10 @@ def fig_halo(img: torch.Tensor) -> Figure:
 
 def fig_pair(img: torch.Tensor) -> Figure:
     hr = img
-    lr = resize(hr, (64, 64), backend="torch", antialias=True)
+    # The PIL backend, because it resamples 8-bit images in integer arithmetic. Halving
+    # an image on the 8-bit grid in float puts many results exactly on a rounding tie,
+    # and Linux and Windows builds of torch broke those ties differently.
+    lr = resize(hr, (64, 64), backend="pil", resample="bilinear")
     assert scale_factor(tuple(lr.shape), tuple(hr.shape)) == 2
     lp, st, k = 16, 4, 28
     assert any(s.lr.patch_size == (lp, lp) and s.lr.stride == (st, st)

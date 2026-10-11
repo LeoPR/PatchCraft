@@ -24,8 +24,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   panel fail it, and one pixel off by 1/255 does not. The test image is the
   outreach one computed in float64 and put on the 8-bit grid, so that a
   last-bit difference between CPUs, which a vectorized float32 `cos` may
-  produce, reaches no pixel. It passes on both code paths, at torch 2.6 with
-  Pillow 10.1 and at torch 2.14 with Pillow 12.3.
+  produce, reaches no pixel. The pair figure halves that image with the PIL
+  backend, in integers: halved in float by torch, 2166 of its 12288 values
+  sit within 1e-4 of a rounding tie, and the Linux and Windows builds broke
+  enough of those ties differently to fail the check on every Linux cell. It
+  passes on both code paths, at torch 2.6 with Pillow 10.1 and at torch 2.14
+  with Pillow 12.3.
   The images add 263 KB to the sdist, which carries them because the suite
   it ships runs the check.
 
