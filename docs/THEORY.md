@@ -133,7 +133,7 @@ For *unmodified* patches, every `patch_k(i_k, j_k)` equals `img(x, y)` (definiti
 
 **Window kernels.**
 
-- **`uniform`**: `w ≡ 1`. Numerator becomes the same as `reconstruct`'s fold; denominator becomes the count map. Mathematically equivalent to `reconstruct`. Provided so the API is one function with a parameter instead of two functions with a hidden choice.
+- **`uniform`**: `w ≡ 1`. Numerator becomes the same as `reconstruct`'s fold; denominator becomes the count map. On an overlapping grid `stitch` hands the call to `reconstruct`, so the two agree bit for bit; on a non-overlapping one the only difference is that `stitch` returns `+0.0` for a `-0.0`, as the fold would. Provided so the API is one function with a parameter instead of two functions with a hidden choice.
 - **`hann`**: separable Hann (`outer(hann(ph), hann(pw))`). Center weight is 1, edge weight is small. Strong seam suppression.
 
   The 1-D window is the **interior of a longer symmetric Hann window**: `hann_window(n + 2, periodic=False)[1:-1]`, which is strictly positive on every sample, instead of the plain symmetric window `0.5·(1 − cos(2πi/(n−1)))`, which is exactly zero at both endpoints. The zero-endpoint variant was the single largest defect found by the 0.2.0 audit (measured 2026-08-03, fixed in 0.2.1): every pixel whose only covering patches placed it on a patch edge had numerator and denominator both ≈ 0, and the `clamp(min=1e-6)` divisor sent it to zero. Measured on the defective version: at `12×12, ph=pw=4, stride=4`, **108 of 144 pixels** came back zero; at `13×13, ph=pw=4, stride=3`, **105 of 169**, including black bands in the image interior; `patch_size=2` degenerated to an all-zero window and returned an all-black image with no error.
@@ -461,7 +461,7 @@ The blending counterpart to `reconstruct`. Same fold geometry, same rejections; 
 - `patches` is a 4-D `(L, C, ph, pw)` floating-point tensor (`float16`, `bfloat16`, `float32`, `float64`).
 - `image_shape == (C, H, W)` consistent with the patch grid implied by `patches.shape[0]`, `stride`, and `(ph, pw)`.
 - `stride` as `int` or `(int, int)` with `1 ≤ stride ≤ patch_size` on every axis.
-- `weight` ∈ `{"uniform", "hann", "gaussian"}`. `"uniform"` is mathematically equivalent to `reconstruct`.
+- `weight` ∈ `{"uniform", "hann", "gaussian"}`. `"uniform"` returns what `reconstruct` returns, bit for bit on an overlapping grid and up to the sign of a zero on a non-overlapping one (§2.5).
 - `dtype` and `device` preserved on output.
 
 **Sinaliza (não exceção):**

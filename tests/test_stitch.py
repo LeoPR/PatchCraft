@@ -47,19 +47,39 @@ class TestUniformEqualsReconstruct:
         out = stitch(patches, image_shape=img.shape, stride=4, weight="uniform")
         assert bit_equal(out, img)
 
-    def test_overlap_matches_reconstruct(self) -> None:
-        """Equivalence is down to floating-point ordering by contract, so
-        this stays `allclose`, but on real noise rather than an integer ramp."""
-        img = rand_image(1, 16, 16, torch.float64, seed=503)
-        patches = extract(img, patch_size=4, stride=2)
-        out_stitch = stitch(patches, image_shape=img.shape, stride=2)
-        out_recon = reconstruct(patches, image_shape=img.shape, stride=2)
-        assert torch.allclose(out_stitch, out_recon, rtol=1e-12, atol=1e-12)
+    @pytest.mark.parametrize("accel", ["1", "0"], ids=["accel", "pure"])
+    @pytest.mark.parametrize(
+        "dtype", [torch.float32, torch.float64, torch.float16, torch.bfloat16]
+    )
+    @pytest.mark.parametrize(
+        ("h", "w", "p", "s"), [(16, 16, 4, 2), (12, 10, (4, 3), (2, 1)), (9, 7, 3, (1, 2))]
+    )
+    def test_overlap_is_reconstruct_bit_for_bit(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        accel: str,
+        dtype: torch.dtype,
+        h: int,
+        w: int,
+        p: int | tuple[int, int],
+        s: int | tuple[int, int],
+    ) -> None:
+        """On an overlapping grid the uniform window delegates to reconstruct,
+        so the two agree bit for bit, counts of 3 included, on patches that
+        disagree and on signed zeros, infinities and NaN payloads."""
+        monkeypatch.setenv("PATCHCRAFT_ACCEL", accel)
+        n, _, ph, pw = extract(torch.zeros(1, h, w), p, s).shape
+        g = torch.Generator().manual_seed(503)
+        patches = (torch.rand(n, 2, ph, pw, generator=g) * 2 - 1).to(dtype)
+        flat = patches.view(-1)
+        flat[:5] = torch.tensor([0.0, -0.0, float("inf"), float("-inf"), float("nan")])
+        out_stitch = stitch(patches, image_shape=(2, h, w), stride=s)
+        out_recon = reconstruct(patches, image_shape=(2, h, w), stride=s)
+        assert bit_equal(out_stitch, out_recon)
 
     def test_overlap_recovers_image(self) -> None:
         """counts are 1, 2, 4 (powers of two): uniform stitch is bit-exact
-        here, because the ones-kernel multiply is exact and the cumsum denominator
-        reproduces the integer count map exactly."""
+        here, since it is reconstruct's arithmetic on an overlapping grid."""
         img = rand_image(1, 16, 16, torch.float64, seed=504)
         patches = extract(img, patch_size=4, stride=2)
         out = stitch(patches, image_shape=img.shape, stride=2)

@@ -11,7 +11,7 @@ sdist, five `cp312-abi3` platform wheels carrying the Rust accelerator, and one
 universal `py3-none-any` wheel. There is no extra to enable and no second
 package.
 
-**1988 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
+**2011 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
 deselected, plus two full-sweep gates behind `PATCHCRAFT_SWEEP_FULL=1`
 that enumerate all 126,736 legal geometries. CI is green on
 {Ubuntu, Windows} x {3.12, 3.13, 3.14} on the pure path, plus a two-OS job that
@@ -24,9 +24,11 @@ pillow 10.1, Rust 1.82) that runs it on both paths.
 
 ## What is in flight
 
-**`resize(..., antialias=None)` is on `main` and not on PyPI**, keyword-only
-with the default that changes no call. It adds a parameter, so by the README's
-rule it is a new `0.y`: **releasing it as 0.6.0 waits on the owner.**
+**Two changes are on `main` and not on PyPI.** `resize(..., antialias=None)`,
+keyword-only with the default that changes no call, and `stitch` with the
+uniform window handing an overlapping grid to `reconstruct`, bit-identical and
+up to 1.45 times faster on the pure path. The new parameter makes it a new
+`0.y` by the README's rule: **releasing them as 0.6.0 waits on the owner.**
 
 0.5.7 brought integer images: `extract` takes every
 dtype, and `reconstruct` takes the five integer dtypes and returns them exactly

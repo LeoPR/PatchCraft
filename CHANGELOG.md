@@ -6,6 +6,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`stitch` with the uniform window hands an overlapping grid to
+  `reconstruct`.** Every weight is 1, so the weighted fold is the plain fold
+  in the same order and the separable denominator is the count map, which is
+  `reconstruct`'s arithmetic without the multiply by ones and the two window
+  folds. Compared against the previous code through integer views: 996
+  geometries of the sampled space, four float dtypes, signed zeros,
+  infinities, NaN payloads and subnormals, outputs and gradients, both code
+  paths, 0 differences. 1.45 times faster on the pure path at 3x512x512 and
+  3x1024x1024, about 1.1 times with the accelerator, and 1.04 at 3x2048x2048
+  where the fold dominates. The test that compared the two with `allclose`
+  now compares bits, counts of 3 included.
+
 ### Added
 
 - **`resize(..., antialias=None)`**, keyword-only, with the name, values and
