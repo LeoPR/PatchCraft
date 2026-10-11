@@ -43,6 +43,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its bits; the paragraph now says both. CONTRIBUTING's layout lists the
   tests and tools it was missing, and no longer says `extract` uses
   `F.unfold`.
+- **CI ahead of the Ubuntu 26.04 move.** GitHub moves `ubuntu-latest` from
+  Ubuntu 24.04 to 26.04 between 2026-10-19 and 2026-11-19, and a job on that
+  label can land on either image while it moves. `release.yml` now runs its
+  Linux x86_64 jobs on `ubuntu-24.04` by name, so a release is never the
+  first run on the new image, the manylinux build in Docker least of all.
+  `test.yml` also runs a pure cell on Python 3.14, the accelerated job and
+  the floor job on `ubuntu-26.04` by name, so the suite, figures included, is
+  seen there before the label moves. Both are temporary: the 26.04 entries go
+  once the move is over, and moving the release is a change of its own.
+  CONTRIBUTING's description of CI now names the floor job, which it had
+  left out, and says that CI runs on pushes to `main` and on pull requests
+  against it rather than on every push. Its ruff command and GUIDE §9's now
+  check `tools`, as CI does.
 
 ## [0.6.0] - 2026-10-11
 

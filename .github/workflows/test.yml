@@ -11,6 +11,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ubuntu-latest moves from Ubuntu 24.04 to 26.04 between 2026-10-19 and
+  # 2026-11-19 (actions/runner-images#14748), and while it moves a job on that
+  # label can land on either image. The ubuntu-26.04 entries below run the
+  # suite on the new image by name, on both paths and at the floor, so a
+  # difference shows here before the label moves. Once the move is over they
+  # repeat ubuntu-latest, and they go. release.yml stays on ubuntu-24.04;
+  # moving it is a separate change (see the comment at its top).
   test:
     name: ${{ matrix.os }} / py${{ matrix.python }}
     runs-on: ${{ matrix.os }}
@@ -19,6 +26,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python: ["3.12", "3.13", "3.14"]
+        include:
+          - { os: ubuntu-26.04, python: "3.14" }
     env:
       # Force uv to use the matrix Python in every uv* invocation
       # (otherwise `uv run` re-resolves to its default, which is the
@@ -71,7 +80,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, ubuntu-26.04]
     steps:
       - uses: actions/checkout@v5
         with:
@@ -111,10 +120,14 @@ jobs:
     # the jobs above test the locked, newest versions, so without this one the
     # floor would only be a claim. Pillow 10.1 is the first 10.x with Python
     # 3.12 wheels. The versions are pinned here, outside uv.lock, on purpose.
-    name: ubuntu-latest / py3.12 / floor (torch 2.6, numpy 1.26, pillow 10.1, Rust 1.82)
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} / py3.12 / floor (torch 2.6, numpy 1.26, pillow 10.1, Rust 1.82)
+    runs-on: ${{ matrix.os }}
     env:
       PATCHCRAFT_REQUIRE_EXTENSION: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-26.04]
     steps:
       - uses: actions/checkout@v5
         with:

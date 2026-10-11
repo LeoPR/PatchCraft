@@ -1,4 +1,4 @@
-# STATUS: 2026-10-10
+# STATUS: 2026-10-11
 
 > The snapshot. Where things are *right now*, and who each open item waits on.
 > Where things **are** is [MAP.md](MAP.md); the rules are [AGENTS.md](AGENTS.md);
@@ -11,25 +11,11 @@ sdist, five `cp312-abi3` platform wheels carrying the Rust accelerator, and one
 universal `py3-none-any` wheel. There is no extra to enable and no second
 package.
 
-**2025 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
-deselected, plus two full-sweep gates behind `PATCHCRAFT_SWEEP_FULL=1`
-that enumerate all 126,736 legal geometries. CI is green on
-{Ubuntu, Windows} x {3.12, 3.13, 3.14} on the pure path, plus a two-OS job that
-builds the Rust kernel and runs the whole suite through it, all at the newest
-torch, and a job at the declared floor (Python 3.12, torch 2.6, numpy 1.26,
-pillow 10.1, Rust 1.82) that runs it on both paths.
-
-**The surface is 20 names**, pinned by `tests/test_public_api.py` with
-`inspect.signature`.
-
-## What is in flight
-
-**Nothing unreleased.** 0.6.0 added `resize(..., antialias=None)`,
-keyword-only with the default that changes no call, and made `stitch` with
-the uniform window hand an overlapping grid to `reconstruct`, bit-identical and
-1.45 to 1.75 times faster on the pure path at 512 and 1024. The new parameter
-is why it is a new `0.y`, by the README's rule and the first row of
-CONTRIBUTING's table.
+0.6.0 added `resize(..., antialias=None)`, keyword-only with the default that
+changes no call, and made `stitch` with the uniform window hand an overlapping
+grid to `reconstruct`, bit-identical and 1.45 to 1.75 times faster on the pure
+path at 512 and 1024. The new parameter is why it is a new `0.y`, by the
+README's rule and the first row of CONTRIBUTING's table.
 
 0.5.7 brought integer images: `extract` takes every
 dtype, and `reconstruct` takes the five integer dtypes and returns them exactly
@@ -47,6 +33,35 @@ for the exactness rule, THEORY §2.6 on the operator, the USAGE walk through a
 4×4 image, and a CI job at the declared floor, whose first run found a claim
 that held only at the top. The full 126,736-geometry sweep passes on both
 paths.
+
+**2025 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
+deselected, plus two full-sweep gates behind `PATCHCRAFT_SWEEP_FULL=1`
+that enumerate all 126,736 legal geometries. CI is green on
+{Ubuntu, Windows} x {3.12, 3.13, 3.14} on the pure path, plus a two-OS job that
+builds the Rust kernel and runs the whole suite through it, all at the newest
+torch, and a job at the declared floor (Python 3.12, torch 2.6, numpy 1.26,
+pillow 10.1, Rust 1.82) that runs it on both paths. Three of those jobs also
+run on `ubuntu-26.04` by name, for as long as the item below holds.
+
+**The surface is 20 names**, pinned by `tests/test_public_api.py` with
+`inspect.signature`.
+
+## What is in flight
+
+**On `main` since 0.6.0, unreleased:** nine images in the GUIDE, drawn by
+`tools/make_guide_figures.py` and checked by `tests/test_docs_figures.py`, and
+the CI arrangement for the Ubuntu move below. Nothing that ships in a wheel has
+changed; the next sdist carries the images.
+
+**The Ubuntu move is in flight until 2026-11-19.** GitHub moves
+`ubuntu-latest` from Ubuntu 24.04 to 26.04 between 2026-10-19 and 2026-11-19,
+and a job on that label can land on either image while it moves. `test.yml`
+runs a pure cell, the accelerated job and the floor job on `ubuntu-26.04` by
+name meanwhile, and `release.yml` builds on `ubuntu-24.04`. Once the move is
+over, the 26.04 entries repeat `ubuntu-latest` and go. Moving `release.yml`
+is a change of its own, which first shows the manylinux build, the part that
+runs in Docker on the host, green on `ubuntu-26.04` without publishing.
+**Waits on the date.**
 
 **ADR 0005 is `Proposed`**: padding a grid that does not cover the image, with
 the design taken from kornia's auto-padding and MONAI's `padding_mode`, one
