@@ -8,7 +8,7 @@ You do not have to read it from the top. Each section stands on its own, so jump
 
 **Provenance.** Every fenced output block on this page is verbatim printed output of the code shown directly above it, run on CPU against the release named in [CHANGELOG.md](../CHANGELOG.md) as the most recent one, with Python 3.13 and torch 2.x. Numbers quoted in prose are read off those blocks, or are arithmetic on them. Three families of number name their own source instead: the test-suite counts in [section 8](#8-where-this-applies-today), the file and line references, which point at the repository head, and the numbers under each image.
 
-Every image is drawn by [tools/make_guide_figures.py](../tools/make_guide_figures.py) from tensors the library returned, against the same release. The numbers in the paragraph under an image are measured by that script and asserted before it draws anything. `python tools/make_guide_figures.py --check` fails if one of those numbers has changed, or if a committed image no longer matches a fresh run beyond the few pixels that rounding may flip between machines.
+Every image is drawn by [tools/make_guide_figures.py](../tools/make_guide_figures.py) from computed tensors, which are the library's own output wherever an image shows what a call returns, against the same release. The numbers in the paragraph under an image are measured by that script and asserted before it draws anything. `python tools/make_guide_figures.py --check` fails if one of those numbers has changed, or if a committed image no longer matches a fresh run beyond the few pixels that rounding may flip between machines.
 
 ## Contents
 

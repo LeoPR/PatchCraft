@@ -9,7 +9,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - **Nine images in the GUIDE**, each drawn by `tools/make_guide_figures.py`
-  from tensors the library returned: the two silent defects of a hand-rolled
+  from computed tensors, the library's own output wherever an image shows
+  what a call returns: the two silent defects of a hand-rolled
   `unfold` and `fold`, the patch order, the count map and what `reconstruct`
   does where patches disagree, a per-patch threshold averaged into grey, the
   pixels a float round trip misses at counts of 3, 6 and 9, the three windows

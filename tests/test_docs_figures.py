@@ -1,7 +1,8 @@
 """The images in `docs/GUIDE.md` are drawn from the library, and this keeps them so.
 
-`tools/make_guide_figures.py` draws every image from tensors the library
-returned, and asserts each number its caption states before it draws. Its
+`tools/make_guide_figures.py` draws every image from computed tensors, the
+library's own output wherever an image shows what a call returns, and
+asserts each number its caption states before it draws. Its
 `--check` mode renders them again in memory and fails if a committed PNG has
 drifted, if a caption no longer states a number the script measured, or if an
 image and the GUIDE no longer link to each other. Running it here means a

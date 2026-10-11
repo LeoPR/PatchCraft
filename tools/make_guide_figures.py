@@ -13,10 +13,12 @@ in:
   7-pair                one LR/HR pair, and the stride applied twice
   7-antialias           a zone plate reduced with and without the filter
 
-Every panel is a tensor the library returned. Every result the GUIDE states
-next to a figure is a claim here: it is asserted against the measurement
-before anything is drawn, printed, and checked to appear in the paragraph
-that follows the figure in the GUIDE.
+Every panel is a computed tensor, and the library's own output wherever the
+panel shows what a call returns; only the count maps, the test image and the
+zone plate are built with torch directly. Every result the GUIDE states next
+to a figure is a claim here: it is asserted against the measurement before
+anything is drawn, printed, and checked to appear in the paragraph that
+follows the figure in the GUIDE.
 
     python tools/make_guide_figures.py           # write docs/figures/*.png
     python tools/make_guide_figures.py --check   # write nothing; exit 1 if a
@@ -29,10 +31,11 @@ the GUIDE, or if a PNG in docs/figures is linked from nowhere. Labels use
 Pillow's bundled font (Pillow 10.1 or newer), so Windows and Linux draw the
 same glyphs, but text rasterization may still differ between FreeType builds,
 which is why the comparison leaves the label boxes out. The 0.1 percent is
-for the last bit of a float32 `cos` or sum, which may differ between CPUs and
-flip a pixel that sits on an 8-bit rounding boundary; a changed figure moves
-far more pixels than that. tests/test_docs_figures.py runs --check, so the
-suite fails when a figure drifts.
+for a float result within one last bit of an 8-bit rounding tie, which builds
+of torch for different platforms may round differently. Where such ties were
+measured, the figures avoid them (see guide_image and fig_pair), and a
+changed figure moves far more pixels than that. tests/test_docs_figures.py
+runs --check, so the suite fails when a figure drifts.
 """
 
 from __future__ import annotations
