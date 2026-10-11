@@ -11,7 +11,7 @@ sdist, five `cp312-abi3` platform wheels carrying the Rust accelerator, and one
 universal `py3-none-any` wheel. There is no extra to enable and no second
 package.
 
-**1971 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
+**1988 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
 deselected, plus two full-sweep gates behind `PATCHCRAFT_SWEEP_FULL=1`
 that enumerate all 126,736 legal geometries. CI is green on
 {Ubuntu, Windows} x {3.12, 3.13, 3.14} on the pure path, plus a two-OS job that
@@ -24,7 +24,11 @@ pillow 10.1, Rust 1.82) that runs it on both paths.
 
 ## What is in flight
 
-**Nothing unreleased.** 0.5.7 brings integer images: `extract` takes every
+**`resize(..., antialias=None)` is on `main` and not on PyPI**, keyword-only
+with the default that changes no call. It adds a parameter, so by the README's
+rule it is a new `0.y`: **releasing it as 0.6.0 waits on the owner.**
+
+0.5.7 brought integer images: `extract` takes every
 dtype, and `reconstruct` takes the five integer dtypes and returns them exactly
 in every legal geometry, with disagreeing patches rounded half to even and no
 intermediate overflowing. They are ADR 0004's steps 1 and 2, shipped together.

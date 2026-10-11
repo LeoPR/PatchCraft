@@ -924,7 +924,7 @@ The table below is the one place that records what each call allocates, which is
 | `paired_tilings` | LR and HR shapes | `list[PairedTilingSpec]` | one spec per legal pair, no pixels |
 | `patch_metrics` | two same-shape tensors | `{mae, mse, max_abs, psnr_db}` | accumulates in float64, returns Python floats |
 | `per_patch_mse`, `per_patch_psnr` | two `(L, C, h, w)` stacks | `(L,)` in float64 | one value per patch |
-| `resize` | one tensor or `PIL.Image`, `target_size`, `backend` | the type it received | one resized image |
+| `resize` | one tensor or `PIL.Image`, `target_size`, `backend`, `antialias` | the type it received | one resized image |
 | `Cache` | `root`, `namespace`, `version` | a content-addressed store | files on disk, zstd payloads when installed |
 | `accel_available` | nothing | `bool`, true when this install has the native extension | nothing beyond a cached import probe on first call |
 
@@ -965,7 +965,7 @@ The LR and HR pairing symbols, which are `pair`, `paired_tilings` and `scale_fac
 
 **Before 1.0, and with no external consumer yet.** A real project consuming the published API is the gate [ROADMAP.md](ROADMAP.md) sets for calling the shape settled. Until then a new `0.y` may still change what comes out; pin `~=0.5.0` to take fixes only.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 1971 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Those eight run the newest torch, and one more job runs the whole suite on both paths at the declared floor: Python 3.12, torch 2.6, numpy 1.26 and pillow 10.1, with the kernel built by Rust 1.82. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 1988 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Those eight run the newest torch, and one more job runs the whole suite on both paths at the declared floor: Python 3.12, torch 2.6, numpy 1.26 and pillow 10.1, with the kernel built by Rust 1.82. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Where the evidence is thinner, this is what it means for you.
 

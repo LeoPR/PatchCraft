@@ -106,6 +106,7 @@ class TestSignatures:
             ("target_size", POK, False, None),
             ("backend", POK, True, "pil"),
             ("resample", POK, True, None),
+            ("antialias", KO, True, None),
         ]
         assert _returns(patchcraft.resize) == "torch.Tensor | PILImage"
 

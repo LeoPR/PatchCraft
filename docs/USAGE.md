@@ -449,8 +449,23 @@ tensor([[ 2.5000,  2.5000,  4.5000,  4.5000],
 
 The round trip does not return `tiny`: a resize discards what it averages,
 which is why ADR 0003 counts it among the inexact operations. The averaging
-holds at a factor of 2; at larger factors the torch backend samples rather
-than averages, because it does not antialias, while the PIL backend does.
+holds at a factor of 2. At larger factors the torch backend samples rather
+than averages unless you pass `antialias=True`, which filters first, as the
+PIL backend always does. A strip with two bright pixels, reduced by 4:
+
+```python
+>>> spikes = torch.tensor([[[0., 0., 0., 8., 0., 0., 0., 8.]]])
+>>> resize(spikes, target_size=(1, 2), backend="torch")[0]
+tensor([[0., 0.]])
+>>> resize(spikes, target_size=(1, 2), backend="torch", antialias=True)[0]
+tensor([[1.4286, 2.2857]])
+
+```
+
+Unfiltered, each output interpolates the two inputs nearest to it, and both
+pairs are zeros, so the bright pixels vanish. Filtered, every input under an
+output counts, so they are averaged in. The default stays unfiltered, so an
+existing call returns what it always did.
 
 PIL in → PIL out. Tensor in → Tensor out. Cross-backend
 (tensor + `backend="pil"`, or PIL + `backend="torch"`) is supported

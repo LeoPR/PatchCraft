@@ -6,6 +6,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`resize(..., antialias=None)`**, keyword-only, with the name, values and
+  meaning of torchvision v2's `resize` and the default ADR 0004 recorded. With
+  `True` the torch backend filters before a bilinear or bicubic downsample, as
+  PIL always does: reduced by 4, it lands within 1/255 of the PIL backend,
+  where the unfiltered path differs by up to 149/255, and on noise it passes a
+  third of the standard deviation. The output equals torchvision's
+  `resize(antialias=True)` bit for bit. `None` and `False` leave the call to
+  `F.interpolate` exactly as it was, so no existing call changes; the flag is
+  ignored where it means nothing, the other torch modes and the PIL backend,
+  as torchvision ignores it. It also changes bicubic upsampling, by up to
+  0.093 on data in [0, 1], and the docs say it is for reducing. Resizing to
+  the same size returns the input bit for bit, with or without it, and
+  removing the flag from the call fails 6 of the new tests.
+
 ## [0.5.7] - 2026-10-10
 
 Integer images, end to end. `extract` takes every dtype at every dilation,

@@ -127,6 +127,7 @@ def _resize_torch(
     tensor: torch.Tensor,
     target_size: tuple[int, int],
     resample: str | None,
+    antialias: bool | None = None,
 ) -> torch.Tensor:
     if resample is None:
         mode = "bilinear"
@@ -151,6 +152,12 @@ def _resize_torch(
     kwargs: dict[str, Any] = {"size": target_size, "mode": mode}
     if mode in {"bilinear", "bicubic"}:
         kwargs["align_corners"] = False
+        # Only True reaches F.interpolate, and only for the two modes it
+        # implements antialiasing for; elsewhere the flag means nothing and is
+        # ignored, as torchvision's resize ignores it. None and False leave the
+        # call exactly as it was, so the default output is unchanged.
+        if antialias:
+            kwargs["antialias"] = True
     out = F.interpolate(x, **kwargs)
     if not original_dtype.is_floating_point:
         # Integer dtypes: bicubic/bilinear overshoot the input range, and a
@@ -166,6 +173,8 @@ def resize(
     target_size: tuple[int, int],
     backend: Literal["pil", "torch"] = "pil",
     resample: str | None = None,
+    *,
+    antialias: bool | None = None,
 ) -> torch.Tensor | PILImage:
     """Resize a single image, preserving input type.
 
@@ -178,6 +187,15 @@ def resize(
     ``resample=None`` picks each backend's default: LANCZOS for ``"pil"``,
     bilinear for ``"torch"``. The accepted resample strings differ between
     backends; an unsupported choice raises ``ValueError``.
+
+    ``antialias=True`` makes the ``"torch"`` backend low-pass filter before
+    it downsamples, for ``bilinear`` and ``bicubic``, which is what PIL always
+    does; without it each output pixel interpolates only its nearest inputs
+    and the rest are skipped, so fine detail aliases. The flag means nothing
+    for the other torch modes and for the ``"pil"`` backend, and is ignored
+    there, as in torchvision's resize, whose name and meaning it borrows.
+    ``None``, the default, and ``False`` keep the torch backend unfiltered,
+    exactly as before the flag existed (ADR 0004).
 
     Dtype notes. Integer tensors on the ``"torch"`` backend are interpolated
     in float and cast back with round + clamp to the dtype range, because
@@ -198,6 +216,8 @@ def resize(
     PIL tensor conversion of an unsupported channel count.
     """
     target_size = _validate_target_size(target_size)
+    if antialias is not None and not isinstance(antialias, bool):
+        raise ValueError(f"antialias must be bool or None, got {antialias!r}")
     if backend not in {"pil", "torch"}:
         raise ValueError(f"backend must be 'pil' or 'torch', got {backend!r}")
 
@@ -225,7 +245,7 @@ def resize(
                 info = torch.iinfo(original_dtype)
                 tensor_out = (tensor_out * 255).round().clamp(info.min, info.max)
             return tensor_out.to(original_dtype)
-        return _resize_torch(image, target_size, resample)
+        return _resize_torch(image, target_size, resample, antialias)
 
     # PIL branch.
     try:
@@ -240,5 +260,5 @@ def resize(
         return _resize_pil(image, target_size, resample)
     # PIL + backend == "torch"
     tensor = _pil_to_tensor_f32(image)
-    resized = _resize_torch(tensor, target_size, resample)
+    resized = _resize_torch(tensor, target_size, resample, antialias)
     return _tensor_to_pil_u8(resized)

@@ -43,9 +43,10 @@ external consumer, and Strata §9's default verdict all point the same way.
 determines, the constraint that would make a preset safe, and the order. It stays `Proposed`
 because none of its parameters is implemented, not because a decision is pending.
 
-**What is implemented is the integer path without a knob:** steps 1 and 2 below shipped
-together on 2026-10-10, ahead of the 1.0 the table assigned them to, because the owner moved
-them forward. None of the parameters exists.
+**What is implemented is the integer path without a knob, and `antialias`:** steps 1 and 2
+below shipped together on 2026-10-10, ahead of the 1.0 the table assigned them to, because the
+owner moved them forward, and `antialias` followed the same day, with the name, values and
+default of section 1. `accum_dtype` and `rounding_mode` do not exist.
 
 ## 1. The names, determined by precedent
 
@@ -178,8 +179,9 @@ into a `precise` tier would sell the absence of a bug as a quality level. **Step
 2026-09-03**, and the three were the `stitch` denominator floor, the `reconstruct`
 single-patch aliasing and the `resize` inbound clamp on a dtype that cannot hold the bound.
 The remaining items named in the audit, the `bfloat16` justification in THEORY 9.2 and the
-resize antialias gap, are still open and are not defects of the same kind: the first is a
-documentation correction and the second is a user-facing choice that needs its own release. Document, at zero
+resize antialias gap, were not defects of the same kind: the first was a documentation
+correction, closed in 0.5.6, and the second a user-facing choice, which `antialias=None` as the
+default made additive when it landed on 2026-10-10. Document, at zero
 cost, the rounding policy already in force. Freeze 1.0 at 20 names with no new parameters.
 Then 1.1 brings steps 1 and 2 together and unrestricted. Then stop and wait for a user:
 only if one appears do the knobs follow, and the preset last of all.

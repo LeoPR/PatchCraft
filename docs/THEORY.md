@@ -228,7 +228,7 @@ LR and HR must agree on dtype and device; mismatch is rejected (caller normalize
 - **PIL**: canonical dataset generation (reproducibility is paramount, result stays on CPU anyway).
 - **torch**: in-training augmentation where the tensor is already on GPU and the extra filter divergence does not matter.
 
-**Design decision.** One function: `patchcraft.resize(image, target_size, backend="pil", resample=None)`. `target_size` is a `(H, W)` tuple, with no size-spec DSL. `image` may be `PIL.Image` or `Tensor[C, H, W]`. Output type matches input (PIL in → PIL out, Tensor in → Tensor out), regardless of backend. `resample` defaults: `LANCZOS` for PIL, `bilinear` for torch (chosen because bicubic divergence is nastiest to debug; bilinear's difference from PIL's BILINEAR is small). Cross-backend conversions (PIL ↔ Tensor) go through a normalized float32 `[0, 1]` intermediate. No auto-selection: callers pick the backend explicitly and own the consequences.
+**Design decision.** One function: `patchcraft.resize(image, target_size, backend="pil", resample=None, *, antialias=None)`. `target_size` is a `(H, W)` tuple, with no size-spec DSL. `image` may be `PIL.Image` or `Tensor[C, H, W]`. Output type matches input (PIL in → PIL out, Tensor in → Tensor out), regardless of backend. `resample` defaults: `LANCZOS` for PIL, `bilinear` for torch (chosen because bicubic divergence is nastiest to debug; bilinear's difference from PIL's BILINEAR is small). Cross-backend conversions (PIL ↔ Tensor) go through a normalized float32 `[0, 1]` intermediate. No auto-selection: callers pick the backend explicitly and own the consequences.
 
 ## 6. Quantization (optional)
 
@@ -331,7 +331,7 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 - `dilation` customizado (fixo em 1, porque o round-trip exige).
 - Coerção implícita LR→HR de dtype/device (caller normaliza antes).
 
-### 9.4 `resize(image, target_size, backend="pil", resample=None)`
+### 9.4 `resize(image, target_size, backend="pil", resample=None, *, antialias=None)`
 
 **Aceita:**
 - `image` é `PIL.Image` em qualquer mode suportado pelo PIL.
@@ -339,6 +339,7 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 - `image` é `Tensor` em CUDA **apenas se** `backend == "torch"`.
 - `target_size = (H, W)` tupla de 2 ints positivos.
 - `resample=None` → default por backend (LANCZOS pra PIL, bilinear pra torch).
+- `antialias`: `None` (default), `False` ou `True`, com o nome e o sentido do `resize` do torchvision v2 (ADR 0004). Com `True`, o backend torch filtra antes de reduzir em `bilinear` e `bicubic`, como o PIL sempre faz: reduzindo 4×, o resultado fica a menos de 1/255 do backend PIL, contra até 149/255 sem o filtro. `None` e `False` deixam a chamada ao `F.interpolate` exatamente como era, então a saída padrão não muda. Nos outros modos do torch e no backend PIL o flag não tem sentido e é ignorado, como no torchvision. Ele também muda a ampliação bicúbica (até 0,093 em dado [0, 1]), porque o caminho filtrado do torch é outra implementação; serve para reduzir.
 - Tensor inteiro com `backend == "torch"`: interpolação em float, cast de volta com **round + clamp** ao range do dtype (bicubic ultrapassa o range de entrada legitimamente, e um cast cru wrapava: `-9.0 → 247` em uint8; corrigido em 0.2.1). Vale para **todos os cinco modos** aceitos, não só para os dois que ultrapassam: o `F.interpolate` não implementa nenhum deles para inteiro, e até 0.5.3 a promoção era condicionada a `bilinear`/`bicubic`, então 13 das 25 combinações modo × dtype levantavam um erro cru do torch (`"adaptive_avg_pool2d" not implemented for 'Int'`) contra o que esta cláusula promete. A promoção é para o **float mais estreito que representa a faixa inteira do dtype exatamente**: `float32` para `uint8`, `int8` e `int16`, cujas faixas cabem nos 24 bits de mantissa, e `float64` para `int32`, que não cabe (`2**24 + 1` voltava `2**24`, em silêncio, desde sempre no caminho bilinear). `int64` é a exceção que nenhum float cobre: acima de `2**53` o valor não é exatamente representável em lugar nenhum e não sobrevive à volta.
 - Tensor float com `backend == "pil"`: o hop uint8 pelo PIL **clampa a `[0, 1]`**; valores fora desse intervalo não sobrevivem nesse backend (comportamento documentado, não exceção).
 - Tensor inteiro com `backend == "pil"`: o mesmo hop uint8 **clampa a `[0, 255]`** na ida e satura ao range do dtype na volta. Os dois backends recusam-se a dar a volta (`wrap`), que é a classe de defeito da 0.2.0, mas saturam em ranges diferentes de propósito: o torch preserva 300 e −9 num int32, o PIL não. Até 0.5.1 a ida fazia `clamp(0, 255)` no dtype de entrada, e num `int8` o próprio limite era irrepresentável, então o torch levantava `RuntimeError` cru antes de limitar coisa alguma.
@@ -348,6 +349,7 @@ Retorna `PatchPair(lr_patches, hr_patches, metas)` (frozen dataclass com `__slot
 - `target_size` não é 2-tupla ou contém valor ≤ 0.
 - `backend` não em `{"pil", "torch"}`.
 - `resample` não suportado pelo backend escolhido (mensagem amigável, não trace interno).
+- `antialias` que não seja `bool` nem `None`.
 
 **Fora de escopo v0.1:**
 - Auto-seleção de backend.

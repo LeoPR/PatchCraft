@@ -243,6 +243,85 @@ class TestBackendDivergence:
         assert out_torch.shape == out_pil.shape == (1, 8, 8)
 
 
+class TestAntialias:
+    """``antialias`` (ADR 0004): torchvision v2's flag, acting on the torch backend.
+
+    The default leaves the call as it always was; ``True`` filters before a
+    bilinear or bicubic downsample, which is what PIL always does."""
+
+    @staticmethod
+    def _noise() -> torch.Tensor:
+        return torch.rand(3, 256, 256, generator=torch.Generator().manual_seed(0))
+
+    def test_default_and_false_leave_the_call_unchanged(self) -> None:
+        x = self._noise()
+        default = resize(x, (64, 64), backend="torch")
+        plain = torch.nn.functional.interpolate(
+            x.unsqueeze(0), size=(64, 64), mode="bilinear", align_corners=False
+        )[0]
+        assert torch.equal(default, plain)
+        assert torch.equal(resize(x, (64, 64), backend="torch", antialias=False), default)
+
+    @pytest.mark.parametrize("mode", ["bilinear", "bicubic"])
+    def test_true_equals_torchvision_resize(self, mode: str) -> None:
+        tv = pytest.importorskip("torchvision.transforms.v2.functional")
+        x = self._noise()
+        ours = resize(x, (64, 64), backend="torch", resample=mode, antialias=True)
+        interpolation = getattr(tv.InterpolationMode, mode.upper())
+        theirs = tv.resize(x, [64, 64], interpolation=interpolation, antialias=True)
+        assert torch.equal(ours, theirs)
+
+    @pytest.mark.parametrize("mode", ["bilinear", "bicubic"])
+    def test_true_agrees_with_pil_when_downsampling(self, mode: str) -> None:
+        """Within the PIL backend's own uint8 rounding; the plain path does not come close."""
+        x = (self._noise()[:, :64, :64] * 255).round() / 255
+        pil = resize(x, (16, 16), backend="pil", resample=mode)
+        filtered = resize(x, (16, 16), backend="torch", resample=mode, antialias=True)
+        plain = resize(x, (16, 16), backend="torch", resample=mode)
+        assert (filtered - pil).abs().max() <= 1.0 / 255 + 1e-6
+        assert (plain - pil).abs().max() > 20.0 / 255
+
+    def test_noise_is_averaged_rather_than_sampled(self) -> None:
+        x = self._noise()
+        plain = resize(x, (64, 64), backend="torch")
+        filtered = resize(x, (64, 64), backend="torch", antialias=True)
+        assert filtered.std() < 0.4 * plain.std()
+
+    @pytest.mark.parametrize("mode", ["bilinear", "bicubic"])
+    def test_resizing_to_the_same_size_returns_the_input(self, mode: str) -> None:
+        """The round trip a resize has: to the size it already is, bit for bit."""
+        x = self._noise()
+        same = resize(x, (256, 256), backend="torch", resample=mode, antialias=True)
+        assert torch.equal(same, x)
+
+    @pytest.mark.parametrize("mode", ["nearest", "area", "nearest-exact"])
+    def test_ignored_by_the_modes_without_antialiasing(self, mode: str) -> None:
+        x = self._noise()
+        with_flag = resize(x, (64, 64), backend="torch", resample=mode, antialias=True)
+        assert torch.equal(with_flag, resize(x, (64, 64), backend="torch", resample=mode))
+
+    @pytest.mark.parametrize("flag", [True, False])
+    def test_ignored_by_the_pil_backend(self, flag: bool) -> None:
+        x = self._noise()
+        with_flag = resize(x, (64, 64), backend="pil", antialias=flag)
+        assert torch.equal(with_flag, resize(x, (64, 64), backend="pil"))
+
+    def test_integer_tensors_round_and_clamp_the_filtered_result(self) -> None:
+        u8 = (self._noise() * 255).round().to(torch.uint8)
+        got = resize(u8, (64, 64), backend="torch", antialias=True)
+        ref = torch.nn.functional.interpolate(
+            u8.unsqueeze(0).float(), size=(64, 64), mode="bilinear",
+            align_corners=False, antialias=True,
+        )[0].round().clamp(0, 255).to(torch.uint8)
+        assert got.dtype == torch.uint8
+        assert torch.equal(got, ref)
+
+    @pytest.mark.parametrize("bad", [1, 0, "yes"])
+    def test_rejects_anything_but_bool_or_none(self, bad: object) -> None:
+        with pytest.raises(ValueError, match="antialias must be bool or None"):
+            resize(self._noise(), (64, 64), backend="torch", antialias=bad)  # type: ignore[arg-type]
+
+
 # ------------------------------------------------------------------ Rejeita ---
 
 class TestRejects:
