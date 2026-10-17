@@ -1,6 +1,13 @@
 name: release
 
-# Triggered when a version tag is pushed (vX.Y.Z[.aN, .bN, .rcN]).
+# A version tag (vX.Y.Z[.aN, .bN, .rcN]) runs everything and publishes. Any
+# other trigger is a dry run: the same tests, builds and artifact gates, and
+# nothing published, because publish-pypi and github-release run only on a
+# tag. A dry run starts by hand (Run workflow), and by itself on a push to main
+# or a pull request that changes a packaging file listed below, which is what
+# a Dependabot pull request for a release-only action does. Without a tag,
+# setuptools-scm gives a development version with a local segment; the dry
+# run's gates accept it (check_dist --allow-local), a release's never do.
 #
 # One PyPI project, two shapes of wheel for the same version:
 #   * a native `cp312-abi3-<platform>` wheel per supported platform, carrying
@@ -24,7 +31,8 @@ name: release
 # host. test.yml runs the suite on ubuntu-26.04 meanwhile, but nothing there
 # runs cibuildwheel or Docker, so its green is not enough: moving these jobs
 # is a change of its own, which first shows the manylinux_x86_64 build green
-# on ubuntu-26.04 without publishing.
+# on ubuntu-26.04 without publishing: a dry run with linux_runner set to
+# ubuntu-26.04 does that.
 #
 # Every action is pinned to an exact version, the PyPI upload to a commit (see
 # that step), and .github/dependabot.yml proposes the updates.
@@ -36,14 +44,41 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
       - "v[0-9]+.[0-9]+.[0-9]+.[ab][0-9]+"
       - "v[0-9]+.[0-9]+.[0-9]+.rc[0-9]+"
+    # The paths below filter branch pushes only; a tag push always runs.
+    branches: [main]
+    paths:
+      - .github/workflows/release.yml
+      - pyproject.toml
+      - setup.py
+      - MANIFEST.in
+      - tools/check_dist.py
+      - accel/Cargo.toml
+      - accel/Cargo.lock
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/release.yml
+      - pyproject.toml
+      - setup.py
+      - MANIFEST.in
+      - tools/check_dist.py
+      - accel/Cargo.toml
+      - accel/Cargo.lock
+  workflow_dispatch:
+    inputs:
+      linux_runner:
+        description: Runner for the Linux x86_64 jobs; ubuntu-26.04 tries that image first
+        type: choice
+        options: [ubuntu-24.04, ubuntu-26.04]
+        default: ubuntu-24.04
 
 permissions:
   contents: read
 
 jobs:
   validate:
-    name: re-run tests at tag ref
-    runs-on: ubuntu-24.04
+    name: re-run tests at the ref
+    runs-on: ${{ inputs.linux_runner || 'ubuntu-24.04' }}
     env:
       UV_PYTHON: "3.13"
       # The pure path, so this job stays fast and deterministic. Both paths
@@ -64,6 +99,7 @@ jobs:
       - run: uv python install
       - run: uv sync --locked --extra cache --extra dev
       - name: The tag is the version, so check git agrees with it
+        if: github.ref_type == 'tag'
         # Compared through PEP 440 normalisation, because a tag reads
         # `v0.5.2.rc1` while everything downstream says `0.5.2rc1`.
         run: |
@@ -89,7 +125,7 @@ jobs:
 
   build-pure:
     name: sdist + universal wheel
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.linux_runner || 'ubuntu-24.04' }}
     needs: validate
     env:
       PATCHCRAFT_PURE_PYTHON: "1"
@@ -108,7 +144,10 @@ jobs:
       - name: Inspect dist metadata
         run: |
           uv run --with twine twine check dist/*
-          uv run python tools/check_dist.py dist --expect-version "${GITHUB_REF_NAME#v}" --require-universal
+          # On a tag the artifacts must carry its version; on a dry run they
+          # carry setuptools-scm's development version, local segment included.
+          if [ "$GITHUB_REF_TYPE" = tag ]; then set -- --expect-version "${GITHUB_REF_NAME#v}"; else set -- --allow-local; fi
+          uv run python tools/check_dist.py dist "$@" --require-universal
       - uses: actions/upload-artifact@v6.0.0
         with:
           name: dist-pure
@@ -127,7 +166,7 @@ jobs:
           # does not fail, it queues forever, and it queued for 20 minutes
           # while every other cell finished in under one.
           - { os: windows-latest, name: win_amd64, archs: AMD64 }
-          - { os: ubuntu-24.04, name: manylinux_x86_64, archs: x86_64 }
+          - { os: "${{ inputs.linux_runner || 'ubuntu-24.04' }}", name: manylinux_x86_64, archs: x86_64 }
           - { os: ubuntu-24.04-arm, name: manylinux_aarch64, archs: aarch64 }
           - { os: macos-latest, name: macosx_arm64, archs: arm64 }
           - { os: macos-15-intel, name: macosx_x86_64, archs: x86_64 }
@@ -151,20 +190,41 @@ jobs:
         env:
           CIBW_ARCHS: ${{ matrix.archs }}
 
-      - name: Every platform wheel must carry the extension, at the tag version
+      - name: Every platform wheel must carry the extension, at the version built
         # bash explicitly: this job also runs on Windows, where the default
         # shell is PowerShell and ${GITHUB_REF_NAME#v} is not expansion but a
-        # literal string.
+        # literal string. The version rule is build-pure's.
         shell: bash
-        run: python tools/check_dist.py wheelhouse --expect-version "${GITHUB_REF_NAME#v}"
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then set -- --expect-version "${GITHUB_REF_NAME#v}"; else set -- --allow-local; fi
+          python tools/check_dist.py wheelhouse "$@"
 
       - uses: actions/upload-artifact@v6.0.0
         with:
           name: native-${{ matrix.name }}
           path: wheelhouse/
 
+  dry-run-gate:
+    # On a run without a tag, what publish-pypi checks before it uploads: the
+    # full set, downloaded the way publish-pypi downloads it. Nothing more.
+    name: dry run, the full artifact set (nothing is published)
+    if: github.ref_type != 'tag'
+    runs-on: ${{ inputs.linux_runner || 'ubuntu-24.04' }}
+    needs: [build-pure, build-native]
+    steps:
+      - uses: actions/checkout@v5.1.0  # for tools/check_dist.py only
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          pattern: "{dist-pure,native-*}"
+          path: dist
+          merge-multiple: true
+      - name: The full artifact set, as publish-pypi checks it
+        run: python tools/check_dist.py dist --allow-local --require-universal
+
   publish-pypi:
     name: publish to PyPI (Trusted Publishing)
+    # Only a tag publishes; every other trigger is a dry run.
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     needs: [build-pure, build-native]
     environment:
@@ -204,6 +264,7 @@ jobs:
 
   github-release:
     name: create GitHub Release with assets
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     needs: publish-pypi
     permissions:

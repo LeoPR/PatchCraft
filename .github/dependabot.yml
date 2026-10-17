@@ -25,16 +25,17 @@ updates:
       - dependency-name: actions/download-artifact
         versions: [">= 8, < 9"]
     groups:
-      # test.yml runs these, so the pull request's own CI exercises them. A
-      # setup-uv bump also moves uv (version: latest-known), and CI does not
-      # run the release's uv build, so run that locally before merging.
+      # test.yml runs these, so the pull request's own CI exercises them, and
+      # release.yml uses them too, so it also gets the release dry run, whose
+      # uv build covers the uv a setup-uv bump brings (version: latest-known).
       tested-by-ci:
         patterns:
           - actions/checkout
           - astral-sh/setup-uv
         update-types: [minor, patch]
-      # Only release.yml runs these, on a tag push, so a green CI on the pull
-      # request says nothing about them.
+      # release.yml runs these. A pull request that changes it gets a dry run
+      # of release.yml, which builds every artifact and applies the gates; only
+      # the PyPI upload and the GitHub Release step wait for the next tag.
       release-only:
         patterns:
           - actions/upload-artifact

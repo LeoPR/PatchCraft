@@ -77,7 +77,7 @@ PatchCraft/
     ├── ISSUE_TEMPLATE/ ....... four forms, each asking for the geometry and PATCHCRAFT_ACCEL=0
     ├── PULL_REQUEST_TEMPLATE.md
     ├── dependabot.yml ........ monthly update proposals for the pinned actions, none under 14 days old
-    └── workflows/ ............ test.yml (both code paths) and release.yml (one project, six wheels)
+    └── workflows/ ............ test.yml (both code paths) and release.yml (one project, six wheels; a dry run without a tag)
 ```
 
 ## I want to... go here

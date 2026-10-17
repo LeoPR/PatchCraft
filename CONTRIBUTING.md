@@ -50,9 +50,9 @@ mypy --strict src
 pytest -m "not gpu"
 ```
 
-Every action in the workflows is pinned to an exact version, the PyPI upload to a commit, and [`.github/dependabot.yml`](.github/dependabot.yml) proposes updates on the first of each month, never for a release younger than 14 days. Its pull requests come in two groups: `tested-by-ci`, the actions that the pull request's own CI runs, and `release-only`, the actions that only `release.yml` runs, on a tag push. `dtolnay/rust-toolchain` stays on its branch refs, which choose the toolchain, and Dependabot does not track it.
+Every action in the workflows is pinned to an exact version, the PyPI upload to a commit, and [`.github/dependabot.yml`](.github/dependabot.yml) proposes updates on the first of each month, never for a release younger than 14 days. Its pull requests come in two groups: `tested-by-ci`, the actions that the pull request's own CI runs, and `release-only`, the actions that only `release.yml` runs. `dtolnay/rust-toolchain` stays on its branch refs, which choose the toolchain, and Dependabot does not track it.
 
-A green CI on a `release-only` pull request says nothing about those actions, so their first real run is the next release. A `setup-uv` bump also moves uv, and CI does not run the release's `uv build`, so run `uv build` and `twine check` locally before merging one. A new major arrives as a pull request of its own: adopt it for a real gain, or close it with `@dependabot ignore this major version`, which records the decision. After merging, fix any comment that names the old version, since Dependabot rewrites only the `uses:` line.
+Every one of them that changes `release.yml` also gets a dry run of it (see [Releasing](#releasing-maintainer-only)), which builds every artifact and applies the gates; only the PyPI upload and the GitHub Release step meet a new version first at the next tag. A `setup-uv` bump also moves uv, and the dry run builds the sdist and the universal wheel with it. A new major arrives as a pull request of its own: adopt it for a real gain, or close it with `@dependabot ignore this major version`, which records the decision. After merging, fix any comment that names the old version, since Dependabot rewrites only the `uses:` line.
 
 ---
 
@@ -161,7 +161,7 @@ PatchCraft/
 │   ├── dependabot.yml              monthly update proposals for the pinned actions, none under 14 days old
 │   └── workflows/
 │       ├── test.yml                matrix CI on PRs/main, plus the accelerated and floor jobs
-│       └── release.yml             publishes to PyPI on vX.Y.Z tag push (Trusted Publishing)
+│       └── release.yml             publishes to PyPI on vX.Y.Z tag push (Trusted Publishing); without a tag, a dry run
 ├── src/patchcraft/                 library core, one-image-at-a-time primitives
 │   ├── __init__.py                 re-exports the full public API and the generated version
 │   ├── extract.py                  patches via a strided window view and one copy; Patchify (ADR 0002)
@@ -387,6 +387,17 @@ one, if the artifacts disagree about the version, or if any of them is not the
 version the tag names. Publishing is a single project, so there is nothing to
 register on PyPI beyond the publisher that already exists.
 
+**A dry run is `release.yml` without a tag.** Start one from Actions, release,
+Run workflow, on any branch: it runs the tests, builds the sdist and all six
+wheels, and applies every gate, then stops, because `publish-pypi` and
+`github-release` run only on a tag. It also runs by itself on a push to `main`
+or a pull request that changes a packaging file: `release.yml`,
+`pyproject.toml`, `setup.py`, `MANIFEST.in`, `tools/check_dist.py` or the
+Cargo files. The artifacts carry setuptools-scm's development version, which
+the dry run's gates accept and a release's refuse. Its `linux_runner` choice
+puts the Linux x86_64 jobs on `ubuntu-26.04`, to try that image before the
+release moves to it.
+
 ### When a release run fails
 
 Look first at the version's files on PyPI, because what to do depends on
@@ -397,7 +408,7 @@ because PyPI creates a release only with its first file. When nothing has to
 change, use **Re-run failed jobs**, which GitHub allows for 30 days; a re-run
 uses the original commit and `release.yml`, so it cannot pick up a fix. When
 something does have to change, cancel the old run if it is still going, commit
-the fix, delete the tag (`git push origin --delete vX.Y.Z`, then
+the fix, check it with a dry run, delete the tag (`git push origin --delete vX.Y.Z`, then
 `git tag -d vX.Y.Z`), and tag and push the fixed commit as in step 5. v0.5.1
 went through this three times.
 

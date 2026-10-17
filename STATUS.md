@@ -51,8 +51,9 @@ run on `ubuntu-26.04` by name, for as long as the item below holds.
 **On `main` since 0.6.0, unreleased:** nine images in the GUIDE, drawn by
 `tools/make_guide_figures.py` and checked by `tests/test_docs_figures.py`, and
 the CI arrangement for the Ubuntu move below, and the GitHub Actions pinned to
-exact versions, with Dependabot proposing the updates. Nothing that ships in a
-wheel has changed; the next sdist carries the images.
+exact versions, with Dependabot proposing the updates, and a dry run of the
+release workflow that publishes nothing. Nothing that ships in a wheel has
+changed; the next sdist carries the images.
 
 **The Ubuntu move is in flight until 2026-11-19.** GitHub moves
 `ubuntu-latest` from Ubuntu 24.04 to 26.04 between 2026-10-19 and 2026-11-19,
@@ -61,7 +62,8 @@ runs a pure cell, the accelerated job and the floor job on `ubuntu-26.04` by
 name meanwhile, and `release.yml` builds on `ubuntu-24.04`. Once the move is
 over, the 26.04 entries repeat `ubuntu-latest` and go. Moving `release.yml`
 is a change of its own, which first shows the manylinux build, the part that
-runs in Docker on the host, green on `ubuntu-26.04` without publishing.
+runs in Docker on the host, green on `ubuntu-26.04` without publishing: a dry
+run with `linux_runner` set to `ubuntu-26.04` does that.
 **Waits on the date.**
 
 **ADR 0005 is `Proposed`**: padding a grid that does not cover the image, with

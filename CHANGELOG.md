@@ -33,6 +33,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   with Pillow 12.3.
   The images add 263 KB to the sdist, which carries them because the suite
   it ships runs the check.
+- **A dry run of the release workflow.** `release.yml` without a tag runs
+  the same tests, builds the sdist and all six wheels, and applies every
+  gate, then stops: `publish-pypi` and `github-release` now run only on a
+  tag. It starts by hand, with a choice of `ubuntu-26.04` for the Linux
+  x86_64 jobs, and by itself on a push to `main` or a pull request that
+  changes a packaging file, so a Dependabot pull request for cibuildwheel or
+  the artifact actions is built before it is merged. Without a tag the
+  artifacts carry setuptools-scm's development version, and
+  `tools/check_dist.py --allow-local` accepts its local segment while every
+  other check still applies; a release never passes the flag.
 
 ### Changed
 

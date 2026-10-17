@@ -26,6 +26,12 @@ Run it against a directory of artifacts::
 
     python tools/check_dist.py dist/
     python tools/check_dist.py dist/ --expect-version 0.5.1
+    python tools/check_dist.py dist/ --allow-local
+
+``--allow-local`` is for a dry run of the release workflow, which builds a
+commit with no tag on it: setuptools-scm then gives a development version with
+a local segment, legitimately, and every other check still applies, the
+artifacts agreeing on one version among them. A release never passes it.
 """
 
 from __future__ import annotations
@@ -89,7 +95,9 @@ def _artifact_version(path: Path) -> str | None:
     return m.group("v") if m else None
 
 
-def _check_versions(paths: list[Path], expected: str | None, problems: list[str]) -> None:
+def _check_versions(
+    paths: list[Path], expected: str | None, allow_local: bool, problems: list[str]
+) -> None:
     seen: dict[str, list[str]] = {}
     for p in paths:
         v = _artifact_version(p)
@@ -97,7 +105,7 @@ def _check_versions(paths: list[Path], expected: str | None, problems: list[str]
             problems.append(f"{p.name}: cannot read a version out of the filename")
             continue
         seen.setdefault(v, []).append(p.name)
-        if "+" in v:
+        if "+" in v and not allow_local:
             problems.append(
                 f"{p.name}: version {v!r} carries a local segment, which PyPI refuses. "
                 "setuptools-scm produces this from a dirty tree or a checkout with no "
@@ -169,6 +177,10 @@ def main(argv: list[str]) -> int:
         expected = args[i + 1]
         del args[i : i + 2]
 
+    allow_local = "--allow-local" in args
+    if allow_local:
+        args.remove("--allow-local")
+
     # Only the complete set is required to hold a universal wheel. The native
     # job checks one platform wheel at a time and legitimately has none.
     require_universal = "--require-universal" in args
@@ -187,7 +199,7 @@ def main(argv: list[str]) -> int:
         return 2
 
     problems: list[str] = []
-    _check_versions(wheels + sdists, expected, problems)
+    _check_versions(wheels + sdists, expected, allow_local, problems)
     for w in wheels:
         print(f"  {w.name}\n      {_check_wheel(w, problems)}")
     for sd in sdists:
