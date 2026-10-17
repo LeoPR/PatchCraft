@@ -87,6 +87,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   those only a release runs. A new major arrives on its own, and the three
   declined today (checkout 6 and 7, upload-artifact 7, download-artifact 8)
   are recorded as ignored.
+- **CONTRIBUTING says what to do when a release run fails**, and no longer
+  says that a failed pipeline never costs a number. Since July 2026 PyPI
+  refuses new files for a release more than 14 days after its first upload,
+  with HTTP 400 "Uploading new files to releases older than 14 days is not
+  allowed.", which `skip-existing` does not skip. The steps, read from
+  PyPI's upload code, twine 7.0.0 and GitHub's documentation, depend on
+  whether any file reached PyPI: move the tag to a fix only while none has,
+  re-run the failed jobs within the 14 days once some have, and re-run or
+  recreate only the GitHub Release once PyPI has all seven. An identical
+  file is still a no-op at any age, because PyPI checks for duplicates
+  before the date.
 
 ## [0.6.0] - 2026-10-11
 

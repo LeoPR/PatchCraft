@@ -260,9 +260,12 @@ habit: each internal work phase minted a minor, so three numbers existed
 before any of them reached PyPI.
 
 **A published version is frozen.** PyPI refuses a filename it has already
-seen, so a version that shipped can only be superseded, never edited. That is
-also why a failed pipeline never costs a number: `skip-existing` makes the
-upload a no-op and the same tag can be re-run.
+seen, so a version that shipped can only be superseded, never edited. A failed
+pipeline still costs no number if it is finished in time: until a file reaches
+PyPI the tag can move to a fix, and after that, re-running the failed jobs
+uploads the missing files while `skip-existing` passes over the ones already
+there, but PyPI takes new files only within 14 days of the version's first
+upload. [When a release run fails](#when-a-release-run-fails) has the steps.
 
 **While the project is pre-1.0, the middle digit is the compatibility
 boundary.** SemVer itself leaves `0.y.z` open, saying only that "anything MAY
@@ -383,3 +386,33 @@ release if a platform wheel lost its extension, if the universal wheel gained
 one, if the artifacts disagree about the version, or if any of them is not the
 version the tag names. Publishing is a single project, so there is nothing to
 register on PyPI beyond the publisher that already exists.
+
+### When a release run fails
+
+Look first at the version's files on PyPI, because what to do depends on
+whether any of them got there.
+
+**None reached PyPI.** The number is not spent and no PyPI clock is running,
+because PyPI creates a release only with its first file. When nothing has to
+change, use **Re-run failed jobs**, which GitHub allows for 30 days; a re-run
+uses the original commit and `release.yml`, so it cannot pick up a fix. When
+something does have to change, cancel the old run if it is still going, commit
+the fix, delete the tag (`git push origin --delete vX.Y.Z`, then
+`git tag -d vX.Y.Z`), and tag and push the fixed commit as in step 5. v0.5.1
+went through this three times.
+
+**Some files reached PyPI.** Do not move the tag. PyPI keeps those files, and
+`skip-existing` passes over a rebuilt file of the same name with only a
+warning, so the version would mix two builds while CI stays green. Use **Re-run
+failed jobs**, not Re-run all jobs, so the missing files go up from the same
+artifacts, and do it within 14 days (336 hours) of the version's first upload:
+the earliest `upload_time` on its PyPI page, which deleting a file does not
+reset. Since July 2026 PyPI answers a new file after that with HTTP 400,
+"Uploading new files to releases older than 14 days is not allowed.", which
+`skip-existing` does not skip. The version can then only be superseded by a
+new one, which is also the way out when the cause needs a code change.
+
+**Only `github-release` failed.** PyPI has all seven files, so its window no
+longer matters. Re-run that job within GitHub's 30 days; after that, or when
+the job itself needs a fix, create the GitHub Release by hand from the seven
+files on PyPI.
