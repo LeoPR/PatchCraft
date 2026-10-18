@@ -4,10 +4,12 @@ name: release
 # other trigger is a dry run: the same tests, builds and artifact gates, and
 # nothing published, because publish-pypi and github-release run only on a
 # tag. A dry run starts by hand (Run workflow), and by itself on a push to main
-# or a pull request that changes a packaging file listed below, which is what
-# a Dependabot pull request for a release-only action does. Without a tag,
-# setuptools-scm gives a development version with a local segment; the dry
-# run's gates accept it (check_dist --allow-local), a release's never do.
+# or a pull request that changes a packaging file or the Rust source listed
+# below, which is what a Dependabot pull request for a release-only action
+# does. The Rust source is there because a change to it changes every native
+# wheel, and only this workflow builds the macOS and aarch64 ones. Without a
+# tag, setuptools-scm gives a development version with a local segment; the
+# dry run's gates accept it (check_dist --allow-local), a release's never do.
 #
 # One PyPI project, two shapes of wheel for the same version:
 #   * a native `cp312-abi3-<platform>` wheel per supported platform, carrying
@@ -54,6 +56,7 @@ on:
       - tools/check_dist.py
       - accel/Cargo.toml
       - accel/Cargo.lock
+      - accel/src/**
   pull_request:
     branches: [main]
     paths:
@@ -64,6 +67,7 @@ on:
       - tools/check_dist.py
       - accel/Cargo.toml
       - accel/Cargo.lock
+      - accel/src/**
   workflow_dispatch:
     inputs:
       linux_runner:

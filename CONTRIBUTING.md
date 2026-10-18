@@ -396,10 +396,11 @@ register on PyPI beyond the publisher that already exists.
 Run workflow, on any branch: it runs the tests, builds the sdist and all six
 wheels, and applies every gate, then stops, because `publish-pypi` and
 `github-release` run only on a tag. It also runs by itself on a push to `main`
-or a pull request that changes a packaging file: `release.yml`,
-`pyproject.toml`, `setup.py`, `MANIFEST.in`, `tools/check_dist.py` or the
-Cargo files. The artifacts carry setuptools-scm's development version, which
-the dry run's gates accept and a release's refuse. Its `linux_runner` choice
+or a pull request that changes a packaging file or the Rust source:
+`release.yml`, `pyproject.toml`, `setup.py`, `MANIFEST.in`,
+`tools/check_dist.py`, the Cargo files or `accel/src/`. The artifacts carry
+setuptools-scm's development version, which the dry run's gates accept and a
+release's refuse. Its `linux_runner` choice
 puts the Linux x86_64 jobs on `ubuntu-26.04`, to try that image before the
 release moves to it.
 
