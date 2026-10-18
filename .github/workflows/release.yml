@@ -186,7 +186,7 @@ jobs:
 
       # Pinned exactly: cibuildwheel publishes v4.2.0 and v4.2 but no bare
       # `v4` alias, so `@v4` is a 404 that fails the job before any step runs.
-      - uses: pypa/cibuildwheel@v4.2.0
+      - uses: pypa/cibuildwheel@v4.2.1
         env:
           CIBW_ARCHS: ${{ matrix.archs }}
 
