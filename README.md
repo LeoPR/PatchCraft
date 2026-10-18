@@ -7,6 +7,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/patchcraft.svg)](https://pypi.org/project/patchcraft/)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/patchcraft.svg)](https://pypi.org/project/patchcraft/)
 [![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/LeoPR/PatchCraft/blob/main/LICENSE)
+[![DOI 10.5281/zenodo.23461081](https://zenodo.org/badge/DOI/10.5281/zenodo.23461081.svg)](https://doi.org/10.5281/zenodo.23461081)
 
 **Cut one image into patches, and put it back together.** A large image rarely goes into a network whole: it is cut into small tiles, the patches, each one is processed on its own, and the image is put back. PatchCraft owns the `unfold` and `fold` arithmetic, the geometry validation and the seam blending, so that your pipeline can own everything else.
 
@@ -166,4 +167,4 @@ On GPU the functions keep the device you hand them, and the Rust kernel is CPU-o
 
 ## License and citation
 
-MIT, in [LICENSE](LICENSE). To cite this work, GitHub's "Cite this repository" button reads [CITATION.cff](CITATION.cff); the same reference as BibTeX is in [the guide](docs/GUIDE.md#9-install-details-and-citation). There is no DOI yet.
+MIT, in [LICENSE](LICENSE). To cite this work, GitHub's "Cite this repository" button reads [CITATION.cff](CITATION.cff); the same reference as BibTeX is in [the guide](docs/GUIDE.md#9-install-details-and-citation). Every release from 0.6.1 on is archived on Zenodo, under the concept DOI [10.5281/zenodo.23461081](https://doi.org/10.5281/zenodo.23461081), which resolves to the latest version.

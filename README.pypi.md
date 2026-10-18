@@ -5,6 +5,7 @@ Cut one image into patches, put it back together, and decide what happens at the
 [![Latest version on PyPI](https://img.shields.io/pypi/v/patchcraft?color=3775A9&label=PyPI)](https://pypi.org/project/patchcraft/)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/patchcraft?color=3776AB)](https://pypi.org/project/patchcraft/)
 [![License MIT](https://img.shields.io/badge/License-MIT-750014)](https://github.com/LeoPR/PatchCraft/blob/main/LICENSE)
+[![DOI 10.5281/zenodo.23461081](https://zenodo.org/badge/DOI/10.5281/zenodo.23461081.svg)](https://doi.org/10.5281/zenodo.23461081)
 [![Scope: one image at a time](https://img.shields.io/badge/scope-one%20image%20at%20a%20time-555555)](https://github.com/LeoPR/PatchCraft/blob/main/docs/SCOPE.md)
 
 PatchCraft takes a single `(C, H, W)` float tensor, cuts it into a stack of patches, and puts the image back together. It owns the `unfold` and `fold` arithmetic, the geometry validation and the seam blending, so that your pipeline can own everything else.
@@ -143,4 +144,4 @@ Where it applies today: on GPU the functions accept CUDA tensors and keep the de
 
 ## License and citation
 
-MIT, in [LICENSE](https://github.com/LeoPR/PatchCraft/blob/main/LICENSE). To cite this work, the authoritative metadata is in [CITATION.cff](https://github.com/LeoPR/PatchCraft/blob/main/CITATION.cff), which is what GitHub's "Cite this repository" button reads; the same reference as BibTeX is in the [guide](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md#9-install-details-and-citation). There is no DOI yet.
+MIT, in [LICENSE](https://github.com/LeoPR/PatchCraft/blob/main/LICENSE). To cite this work, the authoritative metadata is in [CITATION.cff](https://github.com/LeoPR/PatchCraft/blob/main/CITATION.cff), which is what GitHub's "Cite this repository" button reads; the same reference as BibTeX is in the [guide](https://github.com/LeoPR/PatchCraft/blob/main/docs/GUIDE.md#9-install-details-and-citation). Every release from 0.6.1 on is archived on Zenodo, under the concept DOI [10.5281/zenodo.23461081](https://doi.org/10.5281/zenodo.23461081), which resolves to the latest version.

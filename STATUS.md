@@ -153,11 +153,8 @@ declared floor, so no job can install torch on that platform.
 
 ## Also outstanding, outside the 1.0 path
 
-**A DOI.** The Strata conformity review
+**Nothing.** The last item, a DOI, which the Strata conformity review
 ([docs/STUDIES/2026-09-03-strata-conformity.md](docs/STUDIES/2026-09-03-strata-conformity.md))
-found it to be the one item missing from the publishing pattern, and it is the
-kind that cannot be applied retroactively: Zenodo mints a DOI per release from
-the moment it is connected, and every release before that has none, permanently.
-The owner connected the repository on 2026-10-18, so 0.6.1 is the first release
-Zenodo archives. Its concept DOI goes into `CITATION.cff` once Zenodo mints it.
-**Waits on the 0.6.1 record.**
+found missing from the publishing pattern, closed with 0.6.1: Zenodo archives
+every release from it on, under the concept DOI [10.5281/zenodo.23461081](https://doi.org/10.5281/zenodo.23461081).
+Releases before 0.6.1 have none, permanently.

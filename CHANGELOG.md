@@ -4,6 +4,15 @@ All notable changes to PatchCraft will be documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **A DOI.** Zenodo archives every release from 0.6.1 on, and
+  `CITATION.cff`, the three READMEs and the BibTeX entry in GUIDE §9 now
+  carry the concept DOI, 10.5281/zenodo.23461081, which resolves to the latest version. The
+  0.6.1 record is 10.5281/zenodo.23461082.
+
 ## [0.6.1] - 2026-10-18
 
 A fix release. `stitch` with hann or gaussian builds its denominator without

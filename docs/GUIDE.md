@@ -1053,7 +1053,7 @@ Installing from the sdist compiles the accelerator when a Rust toolchain is pres
 
 **Contributing.** The commands CI runs are `pytest -m "not gpu"`, `ruff check src tests tools`, `mypy --strict src`, and `cargo test --manifest-path accel/Cargo.toml` for the Rust kernel. New behaviour arrives as a hypothesis measured in `lab/`, becomes a test in `tests/` when the measurement holds, and is recorded in an ADR when it changes a contract. [CONTRIBUTING.md](../CONTRIBUTING.md) carries the full layout, the validation conventions and the release procedure.
 
-**Citation.** [`CITATION.cff`](../CITATION.cff) carries the authoritative metadata, validated against Citation File Format 1.2.0, and it is what GitHub reads for the "Cite this repository" button. There is still no DOI. The same reference as BibTeX, if you would rather paste it:
+**Citation.** [`CITATION.cff`](../CITATION.cff) carries the authoritative metadata, validated against Citation File Format 1.2.0, and it is what GitHub reads for the "Cite this repository" button. Every release from 0.6.1 on is archived on Zenodo, under the concept DOI [10.5281/zenodo.23461081](https://doi.org/10.5281/zenodo.23461081), which resolves to the latest version; each version's record carries its own DOI as well. The same reference as BibTeX, if you would rather paste it:
 
 ```bibtex
 @software{souza_patchcraft_2026,
@@ -1062,6 +1062,7 @@ Installing from the sdist compiles the accelerator when a Rust toolchain is pres
              and seam-aware stitching},
   version = {0.6.1},   % check CHANGELOG.md for the release you used
   year    = {2026},
+  doi     = {10.5281/zenodo.23461081},
   url     = {https://github.com/LeoPR/PatchCraft}
 }
 ```

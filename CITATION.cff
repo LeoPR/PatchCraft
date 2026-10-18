@@ -9,6 +9,10 @@ authors:
 version: "0.6.1"
 date-released: "2026-10-18"
 repository-code: "https://github.com/LeoPR/PatchCraft"
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23461081
+    description: "The concept DOI, which resolves to the latest version archived on Zenodo."
 license: MIT
 abstract: >
   PatchCraft cuts one image into patches and puts it back. One call takes one
