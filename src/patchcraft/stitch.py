@@ -33,6 +33,12 @@ __all__ = ["WeightKind", "stitch"]
 WeightKind = Literal["uniform", "hann", "gaussian"]
 _WEIGHT_KINDS: tuple[WeightKind, ...] = ("uniform", "hann", "gaussian")
 
+# Devices on which the 1-D window sums accumulate in float64: each has it, and
+# a meta tensor has no data to sum. Any other device accumulates in the
+# window's own dtype, because float64 may be missing there (MPS has none).
+# The sums never leave the window's device, so no call waits on a copy.
+_FLOAT64_DEVICES = ("cpu", "cuda", "meta")
+
 
 def _hann_1d(n: int, dtype: torch.dtype, device: torch.device) -> torch.Tensor:
     """Hann window, strictly positive on every sample. ``n == 1`` → ``[1.0]``.
@@ -85,29 +91,66 @@ def _fold_window_1d(
     """``S[y] = sum of w1d[y - i*step]`` over ``i`` in ``[0, num)`` with
     ``0 <= y - i*step < len(w1d)``, the 1-D analog of folding the kernel.
 
-    Within each residue class modulo ``step`` the sum is a sliding window
-    over the strided kernel, computed with a cumsum: O(length + len(w1d))
-    instead of a 2-D F.fold of the replicated kernel.
+    Every output is a sum of its at most ``ceil(len(w1d) / step)`` terms with
+    nothing subtracted. On the CPU, CUDA and meta it is accumulated in float64
+    and rounded once to ``w1d``'s dtype: for a float32 window float64 holds
+    every partial sum exactly, so the result is the correctly rounded sum,
+    and a float64 window is rounded at each addition, as any float64 sum is.
+    On any other device it is accumulated in ``w1d``'s own dtype, rounded at
+    each addition too. The subtraction was the defect:
+    until 0.6.1 each output was the difference of two cumulative sums of its
+    stride residue, and on the last ``len(w1d) - step`` positions, where every
+    covering patch sees the pixel near its far edge, the two partial sums are
+    large and their difference is a few small edge weights. Measured in
+    float32 hann, all-ones patches came back 2.4e-03 above 1 at patch 256 and
+    stride 32, and the difference reached exactly zero first at patch 616 and
+    stride 1, so the floor in ``stitch`` divided covered pixels by the
+    smallest normal.
 
-    All residues at once: zero-pad the kernel to a multiple of ``step`` and
-    view it as ``(m, step)``, so column ``r`` is ``w1d[r::step]`` followed by
-    zeros. ``cumsum(0)`` scans each column in the same sequential order as a
-    1-D cumsum of that residue, and ``hi`` never exceeds the residue's real
-    length, so the padding is never read and every output is the same two
-    partial sums subtracted, bit for bit.
+    Cut the window into ``step``-long blocks; output row ``q`` (positions
+    ``q*step`` to ``q*step + step - 1``) sums the ``num`` consecutive blocks
+    ``t`` with ``0 <= q - t < num``, fewer where the run passes an end of the
+    window. The first ``num`` rows are prefix sums of the blocks, the same
+    cumulative sum the old code returned there on the CPU, bit for bit (on
+    CUDA a float32 window's rows now equal the CPU's, where the old ones
+    differed), and the last ``num`` rows are suffix sums. With at least as many patches as blocks,
+    the rows between hold the whole window. With fewer, they are runs that
+    touch neither end, and each is a suffix sum of one ``num``-long chunk of
+    the blocks plus a prefix sum of the next (van Herk and Gil-Werman's
+    sliding-window method), so every row costs one addition at most and the
+    work grows with the axis, not with the number of patches.
+
+    Everything runs on the window's device, so a CUDA call does not wait for
+    the device and a meta call returns a meta tensor.
     """
+    # Out of place throughout: a recorder such as torch.func.linearize replays
+    # the ops it saw, and writes into views of a fresh buffer did not survive
+    # the replay. Every tensor below derives from ``w``, so all of it stays on
+    # the window's device whatever the default device is.
     n = w1d.numel()
-    m = -(-n // step)
-    pad = m * step - n
-    padded = torch.cat([w1d, w1d.new_zeros(pad)]) if pad else w1d
-    cs = torch.cat([w1d.new_zeros(1, step), padded.view(m, step).cumsum(0)])
-    y = torch.arange(length, device=w1d.device)
-    k = y // step
-    r = y - k * step
-    n_sub = (n - r + step - 1) // step
-    hi = torch.minimum(k + 1, n_sub)
-    lo = torch.clamp(k + 1 - num, min=0)
-    return cs[hi, r] - cs[lo, r]
+    acc = torch.float64 if w1d.device.type in _FLOAT64_DEVICES else w1d.dtype
+    w = w1d.detach().to(acc)
+    blocks = -(-n // step)
+    b = F.pad(w, (0, blocks * step - n)).view(blocks, step)
+    prefix = b.cumsum(0)
+    suffix = b.flip(0).cumsum(0).flip(0)
+    if num >= blocks:
+        middle = prefix[-1:].expand(num - blocks, step)
+        rows = torch.cat([prefix, middle, suffix[1:]])
+    else:
+        # Rows num to blocks - 2 sum the runs that start at blocks 1 to
+        # blocks - 1 - num. In chunks of num blocks, a run starting at a is
+        # the suffix of a's chunk from a, plus the prefix of the next chunk
+        # that stops short of a + num, which is empty when a starts a chunk.
+        chunks = -(-blocks // num)
+        c = F.pad(b, (0, 0, 0, chunks * num - blocks)).view(chunks, num, step)
+        run_suffix = c.flip(1).cumsum(1).flip(1).reshape(-1, step)
+        run_prefix = F.pad(c.cumsum(1)[:, :-1], (0, 0, 1, 0)).reshape(-1, step)
+        inner = blocks - 1 - num
+        middle = run_suffix[1 : 1 + inner] + run_prefix[1 + num : 1 + num + inner]
+        rows = torch.cat([prefix[:num], middle, suffix[blocks - num :]])
+    out = rows.reshape(-1)[:length]
+    return out.to(w1d.dtype)
 
 
 def _window_kernel(

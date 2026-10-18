@@ -34,7 +34,7 @@ for the exactness rule, THEORY §2.6 on the operator, the USAGE walk through a
 that held only at the top. The full 126,736-geometry sweep passes on both
 paths.
 
-**2025 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
+**2852 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
 deselected, plus two full-sweep gates behind `PATCHCRAFT_SWEEP_FULL=1`
 that enumerate all 126,736 legal geometries. CI is green on
 {Ubuntu, Windows} x {3.12, 3.13, 3.14} on the pure path, plus a two-OS job that
@@ -48,12 +48,22 @@ run on `ubuntu-26.04` by name, for as long as the item below holds.
 
 ## What is in flight
 
-**On `main` since 0.6.0, unreleased:** nine images in the GUIDE, drawn by
-`tools/make_guide_figures.py` and checked by `tests/test_docs_figures.py`, and
-the CI arrangement for the Ubuntu move below, and the GitHub Actions pinned to
-exact versions, with Dependabot proposing the updates, and a dry run of the
-release workflow that publishes nothing. Nothing that ships in a wheel has
-changed; the next sdist carries the images.
+**On `main` since 0.6.0, unreleased: three fixes that change what ships.**
+`stitch` builds its hann and gaussian denominator without the cancellation
+that, from 0.5.0, missed by thousands of eps on the last `patch - stride` rows
+and columns and reached zero at large patches; the accelerator takes only a
+plain tensor, where it used to lose forward-mode tangents and, with a null
+pointer, crash the interpreter; and without the accelerator a first call can
+be compiled with `fullgraph=True` or exported strictly. The first two keep
+promises the documentation already made and the third breaks nothing, so
+they call for 0.6.1; CHANGELOG.md has the measurements.
+
+Alongside them, and shipping nothing in a wheel: nine images in the GUIDE,
+drawn by `tools/make_guide_figures.py` and checked by
+`tests/test_docs_figures.py`, which the next sdist carries; the CI arrangement
+for the Ubuntu move below; the GitHub Actions pinned to exact versions, with
+Dependabot proposing the updates; and a dry run of the release workflow that
+publishes nothing.
 
 **The Ubuntu move is in flight until 2026-11-19.** GitHub moves
 `ubuntu-latest` from Ubuntu 24.04 to 26.04 between 2026-10-19 and 2026-11-19,
@@ -132,10 +142,12 @@ yet.
 ## What the project still declines to claim
 
 No external project has consumed the library, and that consumption is this
-project's own stated gate for calling the shape settled. No CUDA path has ever
-executed, in CI or outside it. Three of the five accelerated wheels, the two
-macOS ones and the aarch64 one, are built and have their contents checked, and
-their kernel has never run in CI.
+project's own stated gate for calling the shape settled. CI has no CUDA job.
+The one CUDA run was by hand, once, on an RTX 3060 with torch 2.14.0+cu130: it
+checked `stitch`'s window sums and round trips, that a call makes no
+synchronizing op, and that it captures into a CUDA graph. Three of the five
+accelerated wheels, the two macOS ones and the aarch64 one, are built and have
+their contents checked, and their kernel has never run in CI.
 
 ## Also outstanding, outside the 1.0 path
 

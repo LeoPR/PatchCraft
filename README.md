@@ -108,7 +108,7 @@ assert not torch.equal(scrambled, patches)                   # and the wrong pix
 
 The second one is a stride that does not cover the image. On a 128 by 128 image with `patch=32, stride=20` the grid stops at pixel 112, which leaves 3840 of the 16384 pixels at zero, and a hand-rolled `fold` returns that partly black image without complaining.
 
-Writing the tile-and-blend loop by hand costs 17 non-blank lines against 3 here, and the two results agree to about 1.2e-05 on a value in [0, 1], more than 300 times smaller than one 8-bit step, the two routes differing only in the order they sum a separable window. [The guide](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) runs both versions side by side.
+Writing the tile-and-blend loop by hand costs 17 non-blank lines against 3 here, and the two results agree to about 2.4e-07 on a value in [0, 1], more than 16,000 times smaller than one 8-bit step, the two routes differing only in the order they sum a separable window. [The guide](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) runs both versions side by side.
 
 ## The geometry has to cover the image
 
@@ -144,7 +144,7 @@ The round trip of a float image is exact when every value in the count map is a 
 
 ## Status
 
-**Pre-1.0**, and the badge above is the current release. While the leading digit is zero the middle one is the compatibility boundary, so `0.y.z` is safe to take and a new `0.y` is where an output value or a signature is allowed to move. [CHANGELOG.md](CHANGELOG.md) records every such change with the measurement behind it.
+**Pre-1.0**, and the badge above is the current release. While the leading digit is zero the middle one is the compatibility boundary: a new `0.y.z` is safe to take, because it moves an output only to keep a promise the documentation already made, and a new `0.y` is where a promised value or a signature may move. [CHANGELOG.md](CHANGELOG.md) records every such change with the measurement behind it.
 
 CI is green on {Ubuntu, Windows} x {Python 3.12, 3.13, 3.14} with the newest torch, and on the declared floor, Python 3.12 with torch 2.6, numpy 1.26, pillow 10.1 and Rust 1.82, with `ruff check` and `mypy --strict` in the same run. The package is typed and ships `py.typed`.
 

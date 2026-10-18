@@ -41,8 +41,15 @@ cargo test --manifest-path accel/Cargo.toml
 
 ## What it may and may not do
 
-It returns `None` and lets torch handle the call for any tensor that is not
-CPU-resident, not float32 or float64, or attached to the autograd graph. It
-never raises for its own absence. Its summation order per output pixel matches
+It takes only a plain CPU tensor, float32 or float64, and returns `None` for
+anything else, so that torch handles the call: a tensor that requires grad or
+is a forward-mode dual, a tensor subclass, a tensor with the negative bit set,
+a call under `torch.jit.trace` or a dispatch mode such as `make_fx`, with or
+without `pre_dispatch`, a tensor whose `data_ptr()` raises or is null, as
+`torch.vmap`, `torch.func` transforms, `FakeTensorMode` and wrapper
+subclasses produce, and a tensor whose pointer is misaligned, as a view of a
+byte buffer at an odd offset can be. The native entry point itself also
+refuses a null or misaligned pointer with `ValueError`. It never raises
+for its own absence. Its summation order per output pixel matches
 ATen `col2im`, which is what makes the two paths bit-identical rather than
 merely close.

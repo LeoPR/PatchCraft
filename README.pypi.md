@@ -102,7 +102,7 @@ assert scrambled.shape == patches.shape                      # the right shape
 assert not torch.equal(scrambled, patches)                   # and the wrong pixels
 ```
 
-The saving is real on the other side too. Tiling an image, running a per-patch model and blending the result back with a Hann window costs 17 non-blank lines by hand against 3 with `extract` and `stitch`, and the two outputs agree to about 1.2e-05 on a value in [0, 1], summation-order rounding more than 300 times smaller than one 8-bit step.
+The saving is real on the other side too. Tiling an image, running a per-patch model and blending the result back with a Hann window costs 17 non-blank lines by hand against 3 with `extract` and `stitch`, and the two outputs agree to about 2.4e-07 on a value in [0, 1], summation-order rounding more than 16,000 times smaller than one 8-bit step.
 
 ## The geometry has to cover the image
 
@@ -128,7 +128,7 @@ The everyday shorthand is that `stride == patch_size` and `stride == patch_size 
 
 ## Status
 
-This is pre-1.0, so both the output values and the API shape can still move. While the leading digit is zero the middle one is the compatibility boundary, which makes a new `0.y.z` safe to take and a new `0.y` the place where a change is allowed to land, and the [changelog](https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md) records each one with the measurement behind it. The suite collects 1657 tests and passes on Python 3.12, 3.13 and 3.14, on Ubuntu and on Windows alike.
+This is pre-1.0, so both the output values and the API shape can still move. While the leading digit is zero the middle one is the compatibility boundary, which makes a new `0.y.z` safe to take, since it moves an output only to keep a promise the documentation already made, and a new `0.y` the place where a promised value or a signature may move, and the [changelog](https://github.com/LeoPR/PatchCraft/blob/main/CHANGELOG.md) records each one with the measurement behind it. The suite collects 2889 tests and passes on Python 3.12, 3.13 and 3.14, on Ubuntu and on Windows alike.
 
 Where it applies today: on GPU the functions accept CUDA tensors and keep the device, and the Rust kernel is CPU-only, so it does not accelerate there; every figure on this page is a CPU figure, so check exactness on your device before relying on it. No external project consumes the published API yet, which is the gate this project set for calling the shape settled.
 

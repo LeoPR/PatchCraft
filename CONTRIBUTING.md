@@ -190,6 +190,8 @@ PatchCraft/
 │   ├── test_cache.py
 │   ├── test_integer.py             integer images through extract and reconstruct, the exact mean
 │   ├── test_vmap.py                torch.vmap over the primitives, pinned to a plain loop
+│   ├── test_forward_ad.py          forward-mode AD through the fold, both paths
+│   ├── test_accel_eligibility.py   which tensors the native kernel may take, and which it must decline
 │   ├── test_exactness.py           falsifies the count-map predicate over the legal space
 │   ├── test_operator.py            extract as a matrix U: the fold is U^T, reconstruct and stitch are least squares
 │   ├── test_reference.py           naive loop-based reference for the fast paths
@@ -305,9 +307,12 @@ under any rule keyed on whether values changed:
 - `0.5.2` floored the `stitch` denominator by the dtype's tiny instead of an
   absolute `1e-6`, changing hann output at patch 99 and above. The same
   promise, the same kind of violation, so also a **z**.
-- `0.3.0` moved `stitch` output by ULPs through a different summation order.
+- `0.3.0` moved `stitch` output through a different summation order.
   Nothing was wrong before, so behaviour the documentation endorsed changed.
-  A **y**.
+  A **y**. Its notes said the move was by ULPs; measured on 0.6.0, the new
+  window denominator cancelled on the last `patch - stride` rows and columns,
+  by thousands of eps and at large patches to zero. That was a defect of its
+  own, and 0.6.1 fixes it as a **z**, under the promise 0.5.2 kept.
 - `0.5.0` made `tilings` return 73 specs where it returned 100. The
   enumeration's output set is the contract. A **y**.
 

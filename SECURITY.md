@@ -32,8 +32,13 @@ the Python side validates with `check_fold_geometry` first, and the kernel
 trusts that. This is the sharpest edge in the library. A defect that let an
 unvalidated geometry reach `patchcraft._accel.fold_weighted` would be an
 out-of-bounds write rather than an exception, and it is the thing most worth
-reporting. `PATCHCRAFT_ACCEL=0` disables the native path entirely, and the
-universal wheel does not contain it at all.
+reporting. The bridge hands the kernel only a plain CPU tensor whose pointers
+are real and aligned; up to 0.6.0, a tensor from `torch.func.functionalize`,
+`FakeTensorMode` or a wrapper subclass reached it with a null pointer and the
+interpreter died with an access violation, and a view of a byte buffer at an
+odd offset reached it misaligned. The native entry point now refuses a null
+or misaligned pointer too. `PATCHCRAFT_ACCEL=0` disables the native path
+entirely, and the universal wheel does not contain it at all.
 
 **`Cache` uses the path you give it, and validates nothing beyond expanding
 `~`.** That is deliberate and it is what every established library does with a

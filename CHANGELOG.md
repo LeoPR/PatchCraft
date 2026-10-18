@@ -109,6 +109,110 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   file is still a no-op at any age, because PyPI checks for duplicates
   before the date.
 
+### Fixed
+
+- **`stitch` builds its hann and gaussian denominator without cancelling.**
+  From 0.3.0 (first released in 0.5.0) each 1-D window sum was the
+  difference of two cumulative sums of its stride residue, and on the last
+  `patch - stride` rows and columns, where every covering patch sees the
+  pixel near its far edge, the two partial sums were large and their
+  difference a few small edge weights. Measured on 0.6.0 with all-ones
+  patches, the same at torch 2.6 and 2.14, in float32 hann: 2.4e-03 above 1
+  at 288x288, patch 256, stride 32 (2.0e+04 eps); a single 256 patch missed
+  by 6,696 eps at stride 128 and by 4.1e-02 at stride 1; and the sum reached
+  exactly zero first at patch 616 and stride 1, so the floor divided covered
+  pixels by the smallest normal and a 1x616 strip came back near 2e33 (inf
+  in float16). At those geometries gaussian missed by up to 1,359 eps, at
+  patch 256 and stride 1, and float64 hann by up to 3.6e+05 eps there and
+  4.3e+06 on the strip. Each sum now has nothing subtracted: prefix and
+  suffix sums of the window's stride-long blocks and, where an axis has
+  fewer patches than blocks, a suffix sum of one chunk of them plus a prefix
+  sum of the next. On the CPU and CUDA they accumulate in float64, so a
+  float32 sum is rounded once, to the correctly rounded value, which 0 of
+  1,262,902 sums missed at patches from 256 to 4096, and a float64 sum is
+  rounded at each addition. A pixel covered K times then comes back within
+  `(K + 1)·eps·|v|`, the bound `reconstruct` carries, and in half
+  precision bit for bit, measured at coverages up to 1,089; every case above
+  is now within 3 eps, and THEORY §9.2 and §9.9 state both bounds and where
+  the second holds. On the CPU only that band changes: against a frozen copy
+  of the old function, 2,747,856 of 2,747,856 window sums outside it are
+  bit-identical, over 3,600 window geometries in float32 and float64, and
+  the accelerated and pure paths stay bit-identical. On CUDA, measured once
+  outside CI on an RTX 3060 with torch 2.14.0+cu130, the float32 sums now
+  match the CPU's bit for bit, where 0.6.0's differed from them, so float32
+  values outside the band move there as well, by at most `4.4·eps·|v|` at
+  3x127x127, patch 64, stride 1; float64 values do not move. The sums stay
+  on the patches' device, as they did, and on a device other than the CPU,
+  CUDA and meta, such as MPS, which lacks float64 and was not measured, they
+  accumulate in the window's own dtype. They cost about what they did. Per
+  axis, over 172 geometries with one thread, in three runs at torch 2.14 and
+  one at 2.6, they take a median of 0.54 to 0.59 of the old time, and never
+  more than 0.8, where the axis has at least as many patches as blocks, and
+  a median of 1.07 to 1.16 times, slower in most of them, where it has fewer.
+  With the same kernel binary, a whole `stitch` call takes as long
+  as on 0.6.0 or less where every axis has at least as many patches as
+  blocks, as at 3x512x512 with patch 64 and stride 32, 3x127x127 with patch
+  64 and stride 1, and a 1x2047 strip at patch 1024 and stride 1, and up to
+  8 percent longer, about 0.1 ms, where an axis has fewer, as at 3x264x264
+  with patch 256 and stride 8. The new tests in `tests/test_stitch.py`
+  (`test_round_trip_within_the_count_bound`, `test_stitch_of_ones_is_one`,
+  `test_window_fold_is_a_direct_sum`), with
+  `test_hann_corner_band_survives_large_patches`, which held the computed
+  denominator only to 1e-9 and now holds the count bound, fail 212 of 295
+  cases on 0.6.0 at torch 2.6 and 216 at torch 2.14. Two earlier entries said
+  otherwise and are corrected here: 0.3.0's "hann/gaussian may differ by
+  ULPs (summation order)" and 0.5.1's attribution of the 1.17e-05 in GUIDE
+  §1 to summation order. That number was this defect; GUIDE §1 now prints
+  2.384185791015625e-07, which is summation order, and the three READMEs
+  quote it.
+- **The accelerator takes only a plain tensor.** Up to 0.6.0 it handed a
+  call back to torch only when the patches required grad and, from 0.5.6,
+  when their `data_ptr()` raised. Measured on 0.6.0 at torch 2.6 and 2.14,
+  that let through:
+  - a `torch.autograd.forward_ad` dual, which came back without its tangent
+    in 88 of 96 calls (six geometries, four operations, four dtypes) with
+    the accelerator and in none without it, so `torch.func.linearize` and
+    the forward-mode `jacobian` returned zeros (`torch.func.jvp` and reverse
+    mode were never affected);
+  - tensors whose `data_ptr()` is null rather than raising, from
+    `torch.func.functionalize`, `FakeTensorMode`, wrapper subclasses and a
+    non-strict `torch.export` at torch 2.6: the kernel read and wrote
+    through the pointer and the interpreter died with an access violation;
+  - `torch.jit.trace` and `make_fx` in real mode, with and without
+    `pre_dispatch`, which recorded programs that replay stale memory,
+    because the kernel's writes are not ops;
+  - a `__torch_function__` subclass, returned as a plain Tensor, and a
+    tensor with the negative bit set, such as `z.conj().imag`, folded with
+    the wrong sign;
+  - a tensor viewed from a byte buffer at an odd offset, as
+    `torch.frombuffer(..., offset=1)` makes, whose misaligned pointer the
+    kernel read through, which Rust leaves undefined;
+  - `torch.vmap` under `torch.compile`, which raised.
+  The kernel now runs only for a plain CPU tensor with non-null, aligned
+  pointers, with no graph, tangent or negative bit, outside any tracer or
+  dispatch mode; under `torch.compile` those checks run outside the trace,
+  where they see the real tensors, and the tangent is asked only after the
+  pointer read, since `unpack_dual` raises on a vmap tensor. The native entry
+  point also refuses a null or misaligned pointer with `ValueError`. A plain
+  tensor still takes the kernel, with the same bits as before, and compiled
+  code still reaches it through a graph break, as in 0.6.0.
+  `tests/test_forward_ad.py` and `tests/test_accel_eligibility.py` fail 230
+  of their 258 accelerated cases on 0.6.0 at both torch ends, and their pure
+  cases pass there, as they should, but for the one of the next entry.
+- **Without the accelerator, a first call can be traced.** The bridge looked
+  the accelerator up at the first call, and Dynamo cannot trace an import, so
+  on an install without it `torch.compile(..., fullgraph=True)` and a strict
+  `torch.export` of a function that calls `reconstruct` or `stitch` raised
+  until an eager call had made the lookup. It now happens at import, which
+  adds about a millisecond to it. Under `PATCHCRAFT_ACCEL=0` the extension
+  still stays unloaded and the import only looks for its file, so an install
+  without one records the absence and can trace a first call made after the
+  variable is cleared. An extension that raises while it
+  loads now counts as absent, as the bridge's docstring always said; 0.6.0
+  raised from the first call instead.
+  `test_without_the_accelerator_a_first_call_compiles_as_one_graph` fails on
+  0.6.0 at both torch ends.
+
 ## [0.6.0] - 2026-10-11
 
 A new `0.y` because `resize` gains a parameter, `antialias`, whose default

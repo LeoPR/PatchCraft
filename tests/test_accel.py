@@ -92,6 +92,42 @@ def test_fold_weighted_rejects_ineligible_dtype(
     assert _accel.fold_weighted(patches, (3, 16, 16), (2, 2), None) is None
 
 
+def test_an_import_under_accel_0_records_a_missing_extension(
+    fresh_accel, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Under PATCHCRAFT_ACCEL=0 the lookup at import loads nothing, but an
+    install without the extension records its absence, so a process that
+    turns the variable on later still compiles its first call as one graph:
+    Dynamo cannot trace the import a later lookup would make."""
+    monkeypatch.setitem(sys.modules, "patchcraft._accel_native", None)
+    monkeypatch.setenv("PATCHCRAFT_ACCEL", "0")
+    _accel._lookup_at_import()
+    assert _accel._checked and _accel._module is None
+    monkeypatch.setenv("PATCHCRAFT_ACCEL", "1")
+    patches = torch.rand(49, 3, 4, 4)
+
+    def fold(p: torch.Tensor) -> torch.Tensor:
+        return reconstruct(p, (3, 16, 16), 2)
+
+    torch._dynamo.reset()
+    assert bit_equal(torch.compile(fold, fullgraph=True, backend="eager")(patches), fold(patches))
+
+
+def test_an_import_under_accel_0_leaves_a_present_extension_unloaded(
+    fresh_accel, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Finding the extension's file loads nothing, and leaves the lookup open,
+    so the first call after the variable is turned on loads it."""
+    spec = types.SimpleNamespace(name="patchcraft._accel_native")
+    fake = types.SimpleNamespace(_ABI_VERSION=1, __spec__=spec)
+    monkeypatch.setitem(sys.modules, "patchcraft._accel_native", fake)
+    monkeypatch.setenv("PATCHCRAFT_ACCEL", "0")
+    _accel._lookup_at_import()
+    assert not _accel._checked and _accel._module is None
+    monkeypatch.setenv("PATCHCRAFT_ACCEL", "1")
+    assert _accel.accel_available() is True
+
+
 @real_accel
 def test_fold_weighted_matches_manual_fold() -> None:
     """The native numerator equals the F.fold composition, both kernel modes."""

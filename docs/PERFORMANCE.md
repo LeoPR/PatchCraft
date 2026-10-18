@@ -98,9 +98,8 @@ wheel is, and says so.
 
 ## What these numbers do not say
 
-**Nothing here was measured on a GPU.** No CUDA path in this library has ever
-executed, in CI or anywhere else. The accelerator declines any tensor that is
-not CPU-resident and torch handles it.
+**Nothing here was measured on a GPU.** The accelerator declines any tensor
+that is not CPU-resident and torch handles it.
 
 **One hot path only.** `extract`, `pair`, `resize`, the metrics and the cache
 are untouched by the accelerator, and a pipeline dominated by any of those

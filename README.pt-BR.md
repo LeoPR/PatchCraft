@@ -108,7 +108,7 @@ assert not torch.equal(scrambled, patches)                   # e os pixels errad
 
 O segundo é um stride, a distância de um patch para o próximo, que não cobre a imagem. Numa imagem de 128 por 128 com `patch=32, stride=20`, a grade para no pixel 112, o que deixa 3840 dos 16384 pixels em zero, e um `fold` escrito à mão devolve essa imagem parcialmente preta sem reclamar.
 
-Escrever o laço de recortar e remontar à mão custa 17 linhas não vazias contra 3 aqui, e os dois resultados concordam em cerca de 1,2e-05 num valor em [0, 1], mais de 300 vezes menos que um degrau de 8 bits, com as duas rotas diferindo só na ordem em que somam uma janela separável. [O manual](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) roda as duas versões lado a lado.
+Escrever o laço de recortar e remontar à mão custa 17 linhas não vazias contra 3 aqui, e os dois resultados concordam em cerca de 2,4e-07 num valor em [0, 1], mais de 16 mil vezes menos que um degrau de 8 bits, com as duas rotas diferindo só na ordem em que somam uma janela separável. [O manual](docs/GUIDE.md#1-why-not-unfold-and-fold-directly) roda as duas versões lado a lado.
 
 ## A geometria precisa cobrir a imagem
 
@@ -144,7 +144,7 @@ O round-trip de uma imagem float é exato quando todo valor do mapa de cobertura
 
 ## Estado
 
-**Pré-1.0**, e o badge acima mostra a versão atual. Enquanto o primeiro dígito for zero, quem marca a fronteira de compatibilidade é o do meio: um `0.y.z` novo é seguro de pegar, e é num `0.y` novo que um valor de saída ou uma assinatura pode mudar. O [CHANGELOG.md](CHANGELOG.md) registra cada uma dessas mudanças com a medição por trás dela.
+**Pré-1.0**, e o badge acima mostra a versão atual. Enquanto o primeiro dígito for zero, quem marca a fronteira de compatibilidade é o do meio: um `0.y.z` novo é seguro de pegar, porque só muda uma saída para cumprir uma promessa que a documentação já fazia, e é num `0.y` novo que um valor prometido ou uma assinatura pode mudar. O [CHANGELOG.md](CHANGELOG.md) registra cada uma dessas mudanças com a medição por trás dela.
 
 A CI está verde em {Ubuntu, Windows} x {Python 3.12, 3.13, 3.14} com o torch mais novo, e no piso declarado, Python 3.12 com torch 2.6, numpy 1.26, pillow 10.1 e Rust 1.82, com `ruff check` e `mypy --strict` na mesma execução. O pacote é tipado e distribui o `py.typed`.
 

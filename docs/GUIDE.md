@@ -205,13 +205,13 @@ print("lines:", statements(tile_and_blend_by_hand), "by hand,",
 ```
 (3, 128, 128) torch.float32
 bit-identical: False
-max_abs difference: 1.1742115020751953e-05
+max_abs difference: 2.384185791015625e-07
 lines: 17 by hand, 3 with patchcraft
 ```
 
-Seventeen non-blank lines against three, for a result that agrees to about 1.2e-05 on a value in [0, 1].
+Seventeen non-blank lines against three, for a result that agrees to about 2.4e-07 on a value in [0, 1].
 
-**That number is not 0.0, and the reason is worth a sentence.** The two versions compute the same quantity by different routes. `stitch` builds its denominator from two 1-D window folds, because a separable kernel allows it, while the hand-rolled version folds a replicated 2-D kernel. Same value, different summation order, so the float result differs in the last few bits. Nothing here is a correctness gap.
+**That number is not 0.0, and the reason is worth a sentence.** The two versions compute the same quantity by different routes. `stitch` builds its denominator from two 1-D window folds, because a separable kernel allows it, while the hand-rolled version folds a replicated 2-D kernel. Same value, different summation order, so the float result differs in the last few bits: 2.4e-07 is two units in the last place of a value near 1. Nothing here is a correctness gap.
 
 The exception is `weight="uniform"`, where `stitch` agrees with `reconstruct` under `torch.equal`, because on an overlapping grid it hands the call to `reconstruct`. On a non-overlapping grid `reconstruct` only rearranges, while `stitch` computes `0.0 + x`, which turns a `-0.0` into `+0.0` and may change the bits of a NaN. The two zeros compare equal, and the NaN stays a NaN.
 
@@ -956,7 +956,7 @@ The table below is the one place that records what each call allocates, which is
 | `per_patch_mse`, `per_patch_psnr` | two `(L, C, h, w)` stacks | `(L,)` in float64 | one value per patch |
 | `resize` | one tensor or `PIL.Image`, `target_size`, `backend`, `antialias` | the type it received | one resized image |
 | `Cache` | `root`, `namespace`, `version` | a content-addressed store | files on disk, zstd payloads when installed |
-| `accel_available` | nothing | `bool`, true when this install has the native extension | nothing beyond a cached import probe on first call |
+| `accel_available` | nothing | `bool`, true when this install has the native extension | nothing; the extension is probed once, when `patchcraft` is imported, or, if `PATCHCRAFT_ACCEL=0` was set then, at the first call after it is cleared |
 
 Four of those symbols sit off to the side of the main loop, and together they fit in one screen.
 
@@ -1007,11 +1007,11 @@ A zone plate, whose rings get finer from the centre outwards, is reduced here fr
 
 **Before 1.0, and with no external consumer yet.** A real project consuming the published API is the gate [ROADMAP.md](ROADMAP.md) sets for calling the shape settled. Until then a new `0.y` may still change what comes out, so pin the `0.y` you tested against with `~=0.y.0` to take its fixes only.
 
-What is verified is this. The full local run of `pytest -m "not gpu"` passes 2025 tests, skips 32 cases, and deselects 5 GPU tests, in under a minute on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Those eight run the newest torch, and one more job runs the whole suite on both paths at the declared floor: Python 3.12, torch 2.6, numpy 1.26 and pillow 10.1, with the kernel built by Rust 1.82. While GitHub moves `ubuntu-latest` to Ubuntu 26.04, until 2026-11-19, three of those jobs also run on `ubuntu-26.04` by name: a pure cell on Python 3.14, the accelerated job and the floor. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
+What is verified is this. The full local run of `pytest -m "not gpu"` passes 2852 tests, skips 32 cases, and deselects 5 GPU tests, in under two minutes on this machine, so run `pytest` yourself for the number in your environment. Of those skips, 30 are geometries that do not cover exactly and 2 are the full 126,736-geometry sweep, which is a local gate you arm with `PATCHCRAFT_SWEEP_FULL=1`. CI runs the same suite plus `ruff check` and `mypy --strict` on Ubuntu and Windows against Python 3.12, 3.13 and 3.14, and all six cells are green. Those six are forced onto the pure-torch path, so a separate two-cell job on Ubuntu and Windows builds the Rust kernel and runs the whole suite through it. Those eight run the newest torch, and one more job runs the whole suite on both paths at the declared floor: Python 3.12, torch 2.6, numpy 1.26 and pillow 10.1, with the kernel built by Rust 1.82. While GitHub moves `ubuntu-latest` to Ubuntu 26.04, until 2026-11-19, three of those jobs also run on `ubuntu-26.04` by name: a pure cell on Python 3.14, the accelerated job and the floor. Releases reach PyPI through Trusted Publishing on a tag push. The package is typed and it ships `py.typed`.
 
 Where the evidence is thinner, this is what it means for you.
 
-**On GPU, it works and does not accelerate.** `extract`, `reconstruct`, `stitch` and `resize` keep the device you hand them, and the Rust kernel is CPU-only, so it steps aside. No CUDA path has run in CI or anywhere else and every measurement on this page is CPU, so check exactness on your device before you rely on it.
+**On GPU, it works and does not accelerate.** `extract`, `reconstruct`, `stitch` and `resize` keep the device you hand them, and the Rust kernel is CPU-only, so it steps aside. CI has no CUDA job, and every measurement on this page is CPU; the one CUDA run was by hand, on a single RTX 3060, and covered `stitch`'s window sums and round trips. Check exactness on your device before you rely on it.
 
 **On macOS and aarch64, the kernel ships built but unexercised.** Every geometry in the suite is checked with `torch.equal` against the pure path, and that job runs on Ubuntu and Windows x86_64. On the other wheels, compare one run against `PATCHCRAFT_ACCEL=0` on your own data.
 

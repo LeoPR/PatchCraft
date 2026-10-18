@@ -321,8 +321,10 @@ but never zero.
 ... )
 True
 
->>> # weight="hann" blends overlap seams away; with unmodified patches the
->>> # round-trip is exact, corners included, because the window never hits 0.
+>>> # weight="hann" blends overlap seams away. The window never hits 0, so
+>>> # nothing is lost, corners included: this constant image comes back
+>>> # exactly, and in general a pixel covered K times comes back within
+>>> # (K + 1) * eps * |v| of its value v (THEORY §9.9).
 >>> out_hann = stitch(patches_small, image_shape=img_small.shape,
 ...                    stride=4, weight="hann")
 >>> out_hann[0, 0, 0].item()   # corner: small edge weight, still recovered

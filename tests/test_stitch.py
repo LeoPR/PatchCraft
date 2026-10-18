@@ -96,7 +96,8 @@ class TestUniformEqualsReconstruct:
 
 class TestHann:
     """Hann window emphasizes patch centers and is strictly positive everywhere,
-    so unmodified patches round-trip exactly under any tiling (§2.5)."""
+    so unmodified patches round-trip under any tiling, within the count bound
+    in floating point (§2.5)."""
 
     def test_unmodified_overlap_recovers_image(self) -> None:
         """With overlap, unmodified patches recover the full image under Hann."""
@@ -406,10 +407,13 @@ def test_hann_corner_band_survives_large_patches(patch):
     corner = _window_kernel("hann", patch, patch, torch.float64, torch.device("cpu")).min()
     assert corner < 1e-6, "geometry no longer exercises the defect"
 
+    from tests._rng import coverage_counts, within_pixel_bound
+
     img = rand_image(1, patch * 2, patch * 2, torch.float64, seed=patch)
     patches = extract(img, patch, stride=patch // 2)
     got = stitch(patches, img.shape, stride=patch // 2, weight="hann")
-    assert (got - img).abs().max().item() < 1e-9
+    s = patch // 2
+    assert within_pixel_bound(got, img, coverage_counts(patch * 2, patch * 2, patch, patch, s, s))
 
 
 def test_denominator_floor_is_dtype_relative_not_absolute():
@@ -421,3 +425,167 @@ def test_denominator_floor_is_dtype_relative_not_absolute():
     for dtype in (torch.float32, torch.float64):
         corner = _window_kernel("hann", 1024, 1024, dtype, torch.device("cpu")).min().item()
         assert corner > torch.finfo(dtype).tiny * 1e3
+
+
+# ------------------------------------- Window denominator, a direct sum (defect) --
+#
+# From 0.3.0 to 0.6.0 each 1-D window sum was the difference of two cumulative
+# sums of its stride residue, which cancelled on the last (patch - stride) rows
+# and columns, where every covering patch sees the pixel near its far edge.
+# Measured on 0.6.0, float32 hann: all-ones patches came back 2.4e-03 above 1
+# at 288x288, patch 256, stride 32 (2.0e+04 eps), a single 256 patch at
+# stride 128 missed by 6,696 eps, and the sum reached exactly zero first at
+# patch 616 and stride 1, so the floor divided covered pixels by the smallest
+# normal and a 1x616 strip came back near 2e33. Of the two tests above, the
+# second checks the window's corner weight alone, and the first checked this
+# denominator only to 1e-9 in float64, which the cancellation stayed under:
+# 421, 1,400 and 245 eps at its three patches. It now holds the count bound.
+
+# (h, w, patch, stride), each covering its image exactly.
+_DENOMINATOR_GEOMETRIES = [
+    (288, 288, 256, 32),            # two patches per axis, a band of 224
+    (256, 256, 256, 128),           # one patch at a stride below its size
+    (264, 264, 256, 8),             # 32 terms per residue
+    (512, 512, 128, 64),            # half overlap, as docs/PERFORMANCE.md measures
+    (288, 96, (256, 64), (16, 8)),  # rectangular in every parameter
+    (1, 616, (1, 616), (1, 1)),     # the sum cancelled to exactly zero here
+    (96, 96, 64, 1),                # coverage up to 33 per axis, 1,089 in all
+]
+_DENOMINATOR_DTYPES = [torch.float32, torch.float64, torch.float16, torch.bfloat16]
+
+
+def _pair(v: int | tuple[int, int]) -> tuple[int, int]:
+    return (v, v) if isinstance(v, int) else v
+
+
+@pytest.fixture(params=["1", "0"], ids=["accel", "pure"])
+def both_paths(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> str:
+    monkeypatch.setenv("PATCHCRAFT_ACCEL", request.param)
+    return str(request.param)
+
+
+@pytest.mark.parametrize("dtype", _DENOMINATOR_DTYPES, ids=str)
+@pytest.mark.parametrize("weight", ["hann", "gaussian"])
+@pytest.mark.parametrize(("h", "w", "patch", "stride"), _DENOMINATOR_GEOMETRIES)
+def test_round_trip_within_the_count_bound(
+    both_paths: str,
+    dtype: torch.dtype,
+    weight: str,
+    h: int,
+    w: int,
+    patch: int | tuple[int, int],
+    stride: int | tuple[int, int],
+) -> None:
+    """stitch(extract(x)) is within (K + 1) * eps * |x| of x, K the coverage.
+
+    That is the bound reconstruct carries outside the count-map rule (THEORY
+    §9.2), and THEORY §2.5 counts the roundings behind it. Half precision
+    accumulates in float32, far below its own resolution at these coverages,
+    so the cast back lands on the input bit for bit.
+    """
+    from tests._rng import coverage_counts, within_pixel_bound
+
+    ph, pw = _pair(patch)
+    sh, sw = _pair(stride)
+    img = rand_image(2, h, w, dtype, seed=h * 7 + w + ph + sh)
+    out = stitch(extract(img, patch, stride), img.shape, stride, weight=weight)  # type: ignore[arg-type]
+    assert out.dtype == dtype
+    if dtype in (torch.float16, torch.bfloat16):
+        assert bit_equal(out, img)
+    else:
+        assert within_pixel_bound(out, img, coverage_counts(h, w, ph, pw, sh, sw))
+
+
+@pytest.mark.parametrize("dtype", _DENOMINATOR_DTYPES, ids=str)
+@pytest.mark.parametrize("weight", ["hann", "gaussian"])
+@pytest.mark.parametrize(("h", "w", "patch", "stride"), _DENOMINATOR_GEOMETRIES)
+def test_stitch_of_ones_is_one(
+    both_paths: str,
+    dtype: torch.dtype,
+    weight: str,
+    h: int,
+    w: int,
+    patch: int | tuple[int, int],
+    stride: int | tuple[int, int],
+) -> None:
+    """All-ones patches come back within (K + 1) * eps of 1, and exactly 1 in
+    half precision. It does not depend on drawn data, whose seeded half
+    precision bits differ between torch 2.6 and 2.14."""
+    from tests._rng import coverage_counts, within_pixel_bound
+
+    ph, pw = _pair(patch)
+    sh, sw = _pair(stride)
+    n = extract(torch.zeros(1, h, w), patch, stride).shape[0]
+    out = stitch(torch.ones(n, 2, ph, pw, dtype=dtype), (2, h, w), stride, weight=weight)  # type: ignore[arg-type]
+    target = torch.ones(2, h, w, dtype=dtype)
+    if dtype in (torch.float16, torch.bfloat16):
+        assert bit_equal(out, target)
+    else:
+        assert within_pixel_bound(out, target, coverage_counts(h, w, ph, pw, sh, sw))
+
+
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64], ids=str)
+@pytest.mark.parametrize("kind", ["hann", "gaussian"])
+@pytest.mark.parametrize(
+    ("n", "step", "num"),
+    [(256, 32, 1), (256, 32, 9), (128, 64, 7), (128, 16, 2), (32, 16, 31), (512, 8, 2),
+     (616, 1, 1), (64, 1, 70), (7, 3, 4), (5, 5, 3), (256, 8, 32), (256, 4, 64),
+     (64, 1, 3), (100, 3, 7), (256, 8, 17), (256, 4, 33), (616, 1, 33)],
+)
+def test_window_fold_is_a_direct_sum(
+    dtype: torch.dtype, kind: str, n: int, step: int, num: int
+) -> None:
+    """Each float32 window sum is its exact sum rounded once, and each float64
+    one is within h * eps of the exact sum of its h terms.
+
+    The float32 claim rests on float64 holding the exact sum, which the test
+    checks before it relies on it; the float64 sum is rounded at each of its
+    additions. The cumsum difference broke both, by 1.0e+04 eps for hann at
+    n=256, step=32, num=1 in float32, and returned 0 at n=616, step=1. Both
+    branches are covered: at least as many patches as window blocks, whose
+    prefix and suffix sums reach 64 terms here, and fewer, whose runs reach
+    33. The runs are the cases that would catch a float32 accumulation, since
+    torch's CPU cumsum already accumulates float32 in double. The tenth case
+    does not overlap and passed before too.
+    """
+    from fractions import Fraction
+
+    from patchcraft.stitch import _fold_window_1d, _window_1d
+
+    length = (num - 1) * step + n
+    w = _window_1d(kind, n, dtype, torch.device("cpu"))  # type: ignore[arg-type]
+    got = _fold_window_1d(w, length, num, step).tolist()
+    vals = w.tolist()
+    eps = torch.finfo(dtype).eps
+    for y in range(length):
+        terms = [vals[y - i * step] for i in range(num) if 0 <= y - i * step < n]
+        ref = math.fsum(terms)
+        if dtype == torch.float32:
+            assert Fraction(ref) == sum(map(Fraction, terms)), "float64 lost the exact sum"
+            want = torch.tensor(ref, dtype=torch.float64).to(torch.float32).item()
+            assert got[y] == want, (y, got[y], want)
+        else:
+            assert abs(got[y] - ref) <= len(terms) * eps * ref, (y, got[y], ref)
+
+
+@pytest.mark.parametrize("dtype", _DENOMINATOR_DTYPES, ids=str)
+@pytest.mark.parametrize("weight", ["hann", "gaussian"])
+@pytest.mark.parametrize(
+    ("shape", "patch", "stride"),
+    [((3, 16, 16), 4, 2), ((1, 10, 10), 8, 2)],  # more patches than blocks, and fewer
+)
+def test_meta_patches_come_back_as_a_meta_image(
+    both_paths: str,
+    dtype: torch.dtype,
+    weight: str,
+    shape: tuple[int, int, int],
+    patch: int,
+    stride: int,
+) -> None:
+    """A meta tensor has a shape and a dtype and no data, which is how a caller
+    sizes a pipeline or counts its FLOPs before computing anything. The
+    window sums stay on the window's device, so the image stays on meta."""
+    n = extract(torch.zeros(1, *shape[1:]), patch, stride).shape[0]
+    patches = torch.empty(n, shape[0], patch, patch, dtype=dtype, device="meta")
+    out = stitch(patches, shape, stride, weight=weight)  # type: ignore[arg-type]
+    assert out.device.type == "meta" and out.shape == shape and out.dtype == dtype

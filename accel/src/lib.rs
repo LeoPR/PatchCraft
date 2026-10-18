@@ -51,14 +51,39 @@ fn fold_add(
     let kernel_len = ph
         .checked_mul(pw)
         .ok_or_else(|| PyValueError::new_err("kernel size overflow"))?;
+    // A slice may not be built from a null or a misaligned pointer, whatever
+    // its length. The Python caller declines both: a data_ptr() of 0 is what
+    // torch.func.functionalize and FakeTensorMode hand out, and a tensor viewed
+    // from a byte buffer at an offset can start off its dtype's alignment.
+    // This is the second line, for any caller that reaches the function
+    // directly.
+    let align = match dtype {
+        "f32" => std::mem::align_of::<f32>(),
+        "f64" => std::mem::align_of::<f64>(),
+        other => {
+            return Err(PyValueError::new_err(format!(
+                "dtype must be \"f32\" or \"f64\", got {other:?}"
+            )));
+        }
+    };
+    if patches_ptr == 0 || out_ptr == 0 || kernel_ptr == Some(0) {
+        return Err(PyValueError::new_err("null data pointer"));
+    }
+    if patches_ptr % align != 0
+        || out_ptr % align != 0
+        || kernel_ptr.is_some_and(|p| p % align != 0)
+    {
+        return Err(PyValueError::new_err("misaligned data pointer"));
+    }
 
     match dtype {
         "f32" => unsafe {
-            // SAFETY: the Python caller guarantees the pointers reference
-            // contiguous, correctly sized, aligned, live buffers for the
-            // duration of this synchronous call, and `out` is exclusively
-            // owned. Slices are built before the GIL release so no raw
-            // pointers cross into the closure.
+            // SAFETY: the checks above rule out null and misaligned pointers,
+            // and the Python caller guarantees they reference contiguous,
+            // correctly sized, live buffers for the duration of this
+            // synchronous call, and that `out` is exclusively owned. Slices
+            // are built before the GIL release so no raw pointers cross into
+            // the closure.
             let patches = std::slice::from_raw_parts(patches_ptr as *const f32, patches_len);
             let out = std::slice::from_raw_parts_mut(out_ptr as *mut f32, out_len);
             let k = kernel_ptr.map(|p| std::slice::from_raw_parts(p as *const f32, kernel_len));
@@ -71,11 +96,7 @@ fn fold_add(
             let k = kernel_ptr.map(|p| std::slice::from_raw_parts(p as *const f64, kernel_len));
             py.allow_threads(|| kernel::fold_add(patches, out, l, c, ph, pw, h, w, sh, sw, k));
         },
-        other => {
-            return Err(PyValueError::new_err(format!(
-                "dtype must be \"f32\" or \"f64\", got {other:?}"
-            )));
-        }
+        _ => unreachable!("dtype was checked above"),
     }
     Ok(())
 }
