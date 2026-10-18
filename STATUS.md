@@ -37,9 +37,10 @@ paths.
 **2852 tests pass** under `pytest -m "not gpu"`, with 32 skipped and 5
 deselected, plus two full-sweep gates behind `PATCHCRAFT_SWEEP_FULL=1`
 that enumerate all 126,736 legal geometries. CI is green on
-{Ubuntu, Windows} x {3.12, 3.13, 3.14} on the pure path, plus a two-OS job that
-builds the Rust kernel and runs the whole suite through it, all at the newest
-torch, and a job at the declared floor (Python 3.12, torch 2.6, numpy 1.26,
+{Ubuntu, Windows} x {3.12, 3.13, 3.14} on the pure path, plus a job that builds
+the Rust kernel and runs the whole suite through it on Ubuntu and Windows
+x86_64, macOS arm64 and Linux aarch64, all at the newest torch, and a job at
+the declared floor (Python 3.12, torch 2.6, numpy 1.26,
 pillow 10.1, Rust 1.82) that runs it on both paths. Three of those jobs also
 run on `ubuntu-26.04` by name, for as long as the item below holds.
 
@@ -60,8 +61,9 @@ they call for 0.6.1; CHANGELOG.md has the measurements.
 
 Alongside them, and shipping nothing in a wheel: nine images in the GUIDE,
 drawn by `tools/make_guide_figures.py` and checked by
-`tests/test_docs_figures.py`, which the next sdist carries; the CI arrangement
-for the Ubuntu move below; the GitHub Actions pinned to exact versions, with
+`tests/test_docs_figures.py`, which the next sdist carries; the accelerated
+suite on macOS arm64 and Linux aarch64; the CI arrangement for the Ubuntu move
+below; the GitHub Actions pinned to exact versions, with
 Dependabot proposing the updates; and a dry run of the release workflow that
 publishes nothing.
 
@@ -145,9 +147,10 @@ No external project has consumed the library, and that consumption is this
 project's own stated gate for calling the shape settled. CI has no CUDA job.
 The one CUDA run was by hand, once, on an RTX 3060 with torch 2.14.0+cu130: it
 checked `stitch`'s window sums and round trips, that a call makes no
-synchronizing op, and that it captures into a CUDA graph. Three of the five
-accelerated wheels, the two macOS ones and the aarch64 one, are built and have
-their contents checked, and their kernel has never run in CI.
+synchronizing op, and that it captures into a CUDA graph. Of the five
+accelerated wheels, the macOS x86_64 one is the only kernel that has never run
+in CI: torch has published no macOS x86_64 wheel since 2.3.0, below the
+declared floor, so no job can install torch on that platform.
 
 ## Also outstanding, outside the 1.0 path
 

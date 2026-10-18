@@ -108,6 +108,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   recreate only the GitHub Release once PyPI has all seven. An identical
   file is still a no-op at any age, because PyPI checks for duplicates
   before the date.
+- **The accelerated suite runs on macOS arm64 and Linux aarch64.**
+  `release.yml` builds those two wheels on `macos-latest` and
+  `ubuntu-24.04-arm`, but their kernel had never run in CI: the accelerated
+  job ran on x86_64 Ubuntu and Windows only. Both runners now join it, and the
+  whole suite passes through the kernel on both, every geometry checked with
+  `torch.equal` against the pure path. The macOS x86_64 wheel is still
+  untested, because torch has published no macOS x86_64 wheel since 2.3.0,
+  below the declared floor.
 
 ### Fixed
 
