@@ -95,7 +95,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, ubuntu-26.04]
+        # macos-latest (arm64) and ubuntu-24.04-arm are the runners release.yml
+        # builds those two wheels on, so the kernel they ship runs the whole
+        # suite on its own platform here. The macOS x86_64 wheel cannot: torch
+        # has published no macOS x86_64 wheel since 2.3.0, below the floor.
+        os: [ubuntu-latest, windows-latest, ubuntu-26.04, macos-latest, ubuntu-24.04-arm]
     steps:
       - uses: actions/checkout@v5.1.0
         with:
