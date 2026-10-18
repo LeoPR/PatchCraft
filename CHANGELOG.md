@@ -4,7 +4,18 @@ All notable changes to PatchCraft will be documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.1] - 2026-10-18
+
+A fix release. `stitch` with hann or gaussian builds its denominator without
+the cancellation that, from 0.5.0, missed by thousands of eps on the last
+`patch - stride` rows and columns and reached zero at large patches; the
+accelerator takes only a plain CPU tensor, where it lost forward-mode
+tangents, crashed on null pointers and recorded wrong programs under tracers;
+and an install without the accelerator compiles a first call as one graph.
+On the CPU no returned value changes outside the cancelled band. The
+accelerated suite now also runs on macOS arm64 and Linux aarch64. The full
+suite passes on both code paths at the declared floor and at the newest
+releases, and the 126,736-geometry sweep passes on both paths.
 
 ### Added
 
@@ -1468,7 +1479,8 @@ First public release. Public API stable; signatures will only change in 1.x.
 - [`README.md`](README.md) covers installation, the car-vs-track metaphor,
   validation lab.
 
-[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/LeoPR/PatchCraft/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.6.1
 [0.6.0]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.6.0
 [0.5.7]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.7
 [0.5.6]: https://github.com/LeoPR/PatchCraft/releases/tag/v0.5.6

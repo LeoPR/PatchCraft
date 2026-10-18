@@ -1,4 +1,4 @@
-# STATUS: 2026-10-11
+# STATUS: 2026-10-18
 
 > The snapshot. Where things are *right now*, and who each open item waits on.
 > Where things **are** is [MAP.md](MAP.md); the rules are [AGENTS.md](AGENTS.md);
@@ -6,10 +6,19 @@
 
 ## Where the project is
 
-**0.6.0 is on PyPI**, published through Trusted Publishing on a tag push: one
+**0.6.1 is on PyPI**, published through Trusted Publishing on a tag push: one
 sdist, five `cp312-abi3` platform wheels carrying the Rust accelerator, and one
 universal `py3-none-any` wheel. There is no extra to enable and no second
 package.
+
+0.6.1 is a fix release. `stitch` builds its hann and gaussian denominator
+without the cancellation that, from 0.5.0, missed by thousands of eps on the
+last `patch - stride` rows and columns and reached zero at large patches; the
+accelerator takes only a plain CPU tensor, where it lost forward-mode
+tangents and, with a null pointer, crashed the interpreter; and without the
+accelerator a first call can be compiled with `fullgraph=True` or exported
+strictly. The first two keep promises the documentation already made and the
+third breaks nothing, which is why it is a `0.y.z`.
 
 0.6.0 added `resize(..., antialias=None)`, keyword-only with the default that
 changes no call, and made `stitch` with the uniform window hand an overlapping
@@ -49,23 +58,13 @@ run on `ubuntu-26.04` by name, for as long as the item below holds.
 
 ## What is in flight
 
-**On `main` since 0.6.0, unreleased: three fixes that change what ships.**
-`stitch` builds its hann and gaussian denominator without the cancellation
-that, from 0.5.0, missed by thousands of eps on the last `patch - stride` rows
-and columns and reached zero at large patches; the accelerator takes only a
-plain tensor, where it used to lose forward-mode tangents and, with a null
-pointer, crash the interpreter; and without the accelerator a first call can
-be compiled with `fullgraph=True` or exported strictly. The first two keep
-promises the documentation already made and the third breaks nothing, so
-they call for 0.6.1; CHANGELOG.md has the measurements.
-
-Alongside them, and shipping nothing in a wheel: nine images in the GUIDE,
-drawn by `tools/make_guide_figures.py` and checked by
-`tests/test_docs_figures.py`, which the next sdist carries; the accelerated
-suite on macOS arm64 and Linux aarch64; the CI arrangement for the Ubuntu move
-below; the GitHub Actions pinned to exact versions, with
-Dependabot proposing the updates; and a dry run of the release workflow that
-publishes nothing.
+**Nothing unreleased.** With 0.6.1 came, shipping nothing in a wheel: nine
+images in the GUIDE, drawn by `tools/make_guide_figures.py`, checked by
+`tests/test_docs_figures.py` and carried by the sdist; the accelerated suite
+on macOS arm64 and Linux aarch64; the CI arrangement for the Ubuntu move
+below; the GitHub Actions pinned to exact versions, with Dependabot proposing
+the updates; and a dry run of the release workflow that publishes nothing,
+which also starts when the Rust source changes.
 
 **The Ubuntu move is in flight until 2026-11-19.** GitHub moves
 `ubuntu-latest` from Ubuntu 24.04 to 26.04 between 2026-10-19 and 2026-11-19,
@@ -159,4 +158,6 @@ declared floor, so no job can install torch on that platform.
 found it to be the one item missing from the publishing pattern, and it is the
 kind that cannot be applied retroactively: Zenodo mints a DOI per release from
 the moment it is connected, and every release before that has none, permanently.
-One authorisation. **Waits on the owner.**
+The owner connected the repository on 2026-10-18, so 0.6.1 is the first release
+Zenodo archives. Its concept DOI goes into `CITATION.cff` once Zenodo mints it.
+**Waits on the 0.6.1 record.**
