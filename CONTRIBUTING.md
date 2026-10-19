@@ -42,7 +42,7 @@ pytest
 pytest -m "not gpu"        # skip GPU-requiring tests
 ```
 
-CI runs the full suite on every push to `main` and on every pull request against it. See [`.github/workflows/test.yml`](.github/workflows/test.yml). Matrix is `{ubuntu-latest, windows-latest} × {python 3.12, 3.13, 3.14}` for the pure path, plus a job for the accelerated one on Ubuntu and Windows x86_64, macOS arm64 and Linux aarch64, and a job at the declared floor, which runs both paths. While GitHub moves `ubuntu-latest` from Ubuntu 24.04 to 26.04, until 2026-11-19, one pure cell, the accelerated job and the floor job also run on `ubuntu-26.04` by name. [`release.yml`](.github/workflows/release.yml) builds on `ubuntu-24.04`, and moving it is a separate change, which the comment at its top describes. To run the same checks locally before pushing:
+CI runs the full suite on every push to `main` and on every pull request against it. See [`.github/workflows/test.yml`](.github/workflows/test.yml). Matrix is `{ubuntu-latest, windows-latest} × {python 3.12, 3.13, 3.14}` for the pure path, plus a job for the accelerated one on Ubuntu and Windows x86_64, macOS arm64 and Linux aarch64, and a job at the declared floor, which runs both paths, and a job in the `ubuntu:26.10` container, which builds the kernel with that release's python3 and Rust and runs both paths. While GitHub moves `ubuntu-latest` from Ubuntu 24.04 to 26.04, until 2026-11-19, one pure cell, the accelerated job and the floor job also run on `ubuntu-26.04` by name. [`release.yml`](.github/workflows/release.yml) builds on `ubuntu-24.04`, and moving it is a separate change, which the comment at its top describes. To run the same checks locally before pushing:
 
 ```
 ruff check src tests tools

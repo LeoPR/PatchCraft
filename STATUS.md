@@ -49,9 +49,11 @@ that enumerate all 126,736 legal geometries. CI is green on
 {Ubuntu, Windows} x {3.12, 3.13, 3.14} on the pure path, plus a job that builds
 the Rust kernel and runs the whole suite through it on Ubuntu and Windows
 x86_64, macOS arm64 and Linux aarch64, all at the newest torch, and a job at
-the declared floor (Python 3.12, torch 2.6, numpy 1.26,
-pillow 10.1, Rust 1.82) that runs it on both paths. Three of those jobs also
-run on `ubuntu-26.04` by name, for as long as the item below holds.
+the declared floor (Python 3.12, torch 2.6, numpy 1.26, pillow 10.1, Rust
+1.82) that runs it on both paths. One more job runs it on both paths inside
+the Ubuntu 26.10 container, which has no GitHub runner, with the kernel built
+by that release's own python3 and Rust. Three of those jobs also run on
+`ubuntu-26.04` by name, for as long as the item below holds.
 
 **The surface is 20 names**, pinned by `tests/test_public_api.py` with
 `inspect.signature`.

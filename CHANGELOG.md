@@ -10,8 +10,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **A DOI.** Zenodo archives every release from 0.6.1 on, and
   `CITATION.cff`, the three READMEs and the BibTeX entry in GUIDE §9 now
-  carry the concept DOI, 10.5281/zenodo.23461081, which resolves to the latest version. The
-  0.6.1 record is 10.5281/zenodo.23461082.
+  carry the concept DOI, 10.5281/zenodo.23461081, which resolves to the
+  latest version. The 0.6.1 record is 10.5281/zenodo.23461082.
+
+### Changed
+
+- **The suite runs on Ubuntu 26.10.** GitHub has no runner for that release,
+  so a job runs in the `ubuntu:26.10` container, builds the accelerator with
+  the release's own python3 (3.14) and Rust (1.97) and runs the whole suite
+  on both paths with the versions `uv.lock` pins. Checked by hand before the
+  job existed: in that container, the published 0.6.1 wheel and the sdist
+  built with the distribution's Rust pass the suite on both paths.
 
 ## [0.6.1] - 2026-10-18
 
