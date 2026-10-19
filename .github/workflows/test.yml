@@ -186,3 +186,53 @@ jobs:
         env:
           PATCHCRAFT_ACCEL: "0"
         run: .venv/bin/python -m pytest -m "not gpu"
+
+  test-distro:
+    # The newest Ubuntu, 26.10, which has no GitHub runner: the job runs in its
+    # container, with the release's own python3 and Rust building the
+    # accelerator, as a user of that release builds from the sdist, and the
+    # versions uv.lock pins. It moves to each new Ubuntu release, and goes back
+    # to a runner label once GitHub publishes one for a release this new.
+    name: ubuntu:26.10 / system python3 / distro Rust
+    runs-on: ubuntu-24.04
+    container: ubuntu:26.10
+    env:
+      PATCHCRAFT_REQUIRE_EXTENSION: "1"
+      UV_PYTHON: /usr/bin/python3
+      UV_PYTHON_DOWNLOADS: never
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: System packages
+        # git before the checkout, so it clones with the tags setuptools-scm
+        # needs instead of downloading a tarball.
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq python3 python3-venv rustc cargo gcc git ca-certificates
+          python3 --version
+          rustc --version
+          ldd --version | head -n 1
+
+      - uses: actions/checkout@v5.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: latest-known
+          enable-cache: true
+          prune-cache: true
+
+      - name: Install project with dev + cache extras
+        run: uv sync --locked --extra cache --extra dev
+
+      - name: Accelerator is built with the distribution's Rust
+        run: uv run python -c "import patchcraft, sys; assert patchcraft.accel_available(); print(sys.version)"
+
+      - name: Pytest, accelerated
+        run: uv run pytest -m "not gpu"
+
+      - name: Pytest, pure torch
+        env:
+          PATCHCRAFT_ACCEL: "0"
+        run: uv run pytest -m "not gpu"
