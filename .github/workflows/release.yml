@@ -95,7 +95,7 @@ jobs:
           # checkout hides it and the fallback is a silent 0.1.dev1.
           fetch-depth: 0
       # The same pin and settings as test.yml, whose comment gives the reasons.
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           version: latest-known
           enable-cache: true
@@ -141,7 +141,7 @@ jobs:
           fetch-depth: 0
       # The same pin as test.yml. No cache: from v10, enable-cache's default,
       # auto, is off on tag pushes.
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           version: latest-known
       - run: uv build

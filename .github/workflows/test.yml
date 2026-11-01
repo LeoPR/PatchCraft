@@ -58,7 +58,7 @@ jobs:
         # cache as v7 saved it: v9 stopped pruning by default, and unpruned a
         # Linux key would hold about 3 GB of torch and CUDA wheels, against
         # GitHub's 10 GB per repository.
-        uses: astral-sh/setup-uv@v10.2.0
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: latest-known
           enable-cache: true
@@ -108,7 +108,7 @@ jobs:
 
       - name: Install uv
         # The same pin and settings as the test job, for the same reasons.
-        uses: astral-sh/setup-uv@v10.2.0
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: latest-known
           enable-cache: true
@@ -159,7 +159,7 @@ jobs:
       - name: Install uv
         # The same pin as the test job. enable-cache keeps its default, auto,
         # which caches on push and pull_request, so the cache is pruned here too.
-        uses: astral-sh/setup-uv@v10.2.0
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: latest-known
           prune-cache: true
@@ -217,7 +217,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.2.0
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: latest-known
           enable-cache: true
